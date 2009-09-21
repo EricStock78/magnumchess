@@ -1,0 +1,1 @@
+java -Xms150m -Xmx1024m -classpath "build/classes" Main
