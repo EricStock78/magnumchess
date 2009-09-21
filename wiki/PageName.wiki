@@ -1,5 +1,4 @@
 #labels Phase-Requirements
-#Goals of Project
 
 = Magnum Chess -- Goals of Project =
 
@@ -21,4 +20,3 @@ CEGT http://www.husvankempen.de/nunn/
 
 ==Goal 3==
 I would like to use the engine to explore other computer chess algorithms. For example, I plan to switch from the alpha-beta search algorithm to MTD(f).  I also would be interested in adding a parallel search algorithm to take advantage of multi-core processors.
-
