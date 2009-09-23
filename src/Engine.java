@@ -35,9 +35,9 @@ public final class Engine {
 	
 	private static final int SEARCH_END = 7;	
 	
-        private static final int NO_ATTACK_BONUS = 10;
-        private static final int DEFENCE_BONUS = 10;
-        private static int fCount;
+    private static final int NO_ATTACK_BONUS = 10;
+    private static final int DEFENCE_BONUS = 10;
+    private static int fCount;
 	private static int thisDepth;
 	private static int thisDepth2;
 	private static int[] index32 = new int[32];
@@ -45,7 +45,7 @@ public final class Engine {
 	private static boolean infinite = false;			//flag for infinite time controls
 	private int histDiv = 50;
 	private int ancient;
-	private int perfit = 0;
+	private long perft = 0;
 	//private Evaluation eval;
 	private int lastVal = 0;	
 		
@@ -707,12 +707,12 @@ public final class Engine {
 				from = getPos(pieces);		
 				toSquares = Board.getAttackBoard(from);
 				
-				if(Board.wCastle != Global.NO_CASTLE) {							//are castle moves possible?
+				if(Board.wCastle > Global.CASTLED) {							//are castle moves possible?
 					
 					long castle = Board.getWKingCastle(from);
 					if(Board.wCastle == Global.LONG_CASTLE)
 						castle &= Global.set_Mask[2];
-					if(Board.wCastle == Global.SHORT_CASTLE)
+                    else if(Board.wCastle == Global.SHORT_CASTLE)
 						castle &= Global.set_Mask[6];
 					toSquares |=castle;
 				}
@@ -726,7 +726,7 @@ public final class Engine {
 					to = getPos(bit);
 					if(from == 4 && to == 2)
 						type = Global.LONG_CASTLE;
-					if(from == 4 && to == 6)
+                    else if(from == 4 && to == 6)
 						type = Global.SHORT_CASTLE;
 					moveOrder[index] = Hist2[from][to];
 					//moveOrder[index] += SEE.getSEE2(side,to,from) * 10000;
@@ -976,11 +976,11 @@ public final class Engine {
 				from = getPos(pieces);		
 				toSquares = Board.getAttackBoard(from);
 				
-				if(Board.bCastle != Global.NO_CASTLE) {							//are castle moves possible?
+				if(Board.bCastle > Global.CASTLED) {							//are castle moves possible?
 					long castle = Board.getBKingCastle(from);
 					if(Board.bCastle == Global.LONG_CASTLE)
 						castle &= Global.set_Mask[58];
-					if(Board.bCastle == Global.SHORT_CASTLE)
+                    else if(Board.bCastle == Global.SHORT_CASTLE)
 						castle &= Global.set_Mask[62];
 					toSquares |=castle;
 				}
@@ -1002,7 +1002,7 @@ public final class Engine {
 					to = getPos(bit)+32;
 					if(from == 60 && to == 58)
 						type = Global.LONG_CASTLE;
-					if(from == 60 && to == 62)
+                    else if(from == 60 && to == 62)
 						type = Global.SHORT_CASTLE;
 					moveOrder[index] = Hist[from][to];
 					//moveOrder[index] += SEE.getSEE2(side,to,from) * 10000;
@@ -1083,14 +1083,20 @@ public final class Engine {
 				value = SEE.getSEE(side,to,from,passant);
 				if(value > cutoff) {
 					type = Global.ORDINARY_MOVE;
-					if(to == passant)
-						type = Global.EN_PASSANT_CAP;
-					if(to/8 == 7)
-						type = Global.PROMO_Q;
 					cP = Board.piece_in_square[to];
-					value += 60;
-					//value *=
-                                        Captures[index++] = MoveFunctions.makeMove(to,from,5,cP,type,value);	
+                    value += 60;
+                    if(to == passant)
+						type = Global.EN_PASSANT_CAP;
+                    else if(to/8 == 7) {
+                        Captures[index++] = MoveFunctions.makeMove(to,from,5,cP,Global.PROMO_B,value);
+                        Captures[index++] = MoveFunctions.makeMove(to,from,5,cP,Global.PROMO_N,value);
+                        Captures[index++] = MoveFunctions.makeMove(to,from,5,cP,Global.PROMO_R,value);
+
+						type = Global.PROMO_Q;
+                    }
+
+					
+                    Captures[index++] = MoveFunctions.makeMove(to,from,5,cP,type,value);	
 				}
 			}
 			while (rAttack != 0) {
@@ -1101,12 +1107,17 @@ public final class Engine {
 				value = SEE.getSEE(side,to,from,passant);
 				if(value > cutoff) {
 					type = Global.ORDINARY_MOVE;
-					if(to == passant)
-						type = Global.EN_PASSANT_CAP;
-					if(to/8 == 7)
-						type = Global.PROMO_Q;
 					cP = Board.piece_in_square[to];
-					value += 60;
+                    value += 60;
+                    if(to == passant)
+						type = Global.EN_PASSANT_CAP;
+                    else if(to/8 == 7) {
+						Captures[index++] = MoveFunctions.makeMove(to,from,5,cP,Global.PROMO_B,value);
+                        Captures[index++] = MoveFunctions.makeMove(to,from,5,cP,Global.PROMO_N,value);
+                        Captures[index++] = MoveFunctions.makeMove(to,from,5,cP,Global.PROMO_R,value);
+
+                        type = Global.PROMO_Q;
+                    }
 					Captures[index++] = MoveFunctions.makeMove(to,from,5,cP,type,value);	
 				}
 			}
@@ -1120,7 +1131,12 @@ public final class Engine {
 				if(value > cutoff) {
 					type = Global.PROMO_Q;
 					value += 60;
-				    Captures[index++] = MoveFunctions.makeMove(to,from,5,-1,type,value);	
+				    Captures[index++] = MoveFunctions.makeMove(to,from,5,-1,Global.PROMO_B,value);
+                    Captures[index++] = MoveFunctions.makeMove(to,from,5,-1,Global.PROMO_N,value);
+                    Captures[index++] = MoveFunctions.makeMove(to,from,5,-1,Global.PROMO_R,value);
+
+
+                    Captures[index++] = MoveFunctions.makeMove(to,from,5,-1,type,value);
 				}
 			}
 				
@@ -1246,13 +1262,18 @@ public final class Engine {
 				from = to + 9;
 				value = SEE.getSEE(side,to,from,passant);
 				if(value > cutoff)  {
-					type = Global.ORDINARY_MOVE;
-					if(to == passant)
-						type = Global.EN_PASSANT_CAP;
-					if(to/8 == 0)
-						type = Global.PROMO_Q;
 					cP = Board.piece_in_square[to];
 					value += 60;
+                    type = Global.ORDINARY_MOVE;
+					if(to == passant)
+						type = Global.EN_PASSANT_CAP;
+                    else if(to/8 == 0) {
+                        Captures[index++] = MoveFunctions.makeMove(to,from,11,cP,Global.PROMO_B,value);
+                        Captures[index++] = MoveFunctions.makeMove(to,from,11,cP,Global.PROMO_N,value);
+                        Captures[index++] = MoveFunctions.makeMove(to,from,11,cP,Global.PROMO_R,value);
+
+						type = Global.PROMO_Q;
+                    }
 					Captures[index++] = MoveFunctions.makeMove(to,from,11,cP,type,value);	
 				}
 			}
@@ -1263,13 +1284,19 @@ public final class Engine {
 				from = to + 7;
 				value = SEE.getSEE(side,to,from,passant);
 				if(value > cutoff) {
-					type = Global.ORDINARY_MOVE;
-					if(to == passant)
-						type = Global.EN_PASSANT_CAP;
-					if(to/8 == 0)
-						type = Global.PROMO_Q;
 					cP = Board.piece_in_square[to];
 					value += 60;
+                    type = Global.ORDINARY_MOVE;
+					if(to == passant)
+						type = Global.EN_PASSANT_CAP;
+                    else if(to/8 == 0)   {
+                        Captures[index++] = MoveFunctions.makeMove(to,from,11,cP,Global.PROMO_B,value);
+                        Captures[index++] = MoveFunctions.makeMove(to,from,11,cP,Global.PROMO_N,value);
+                        Captures[index++] = MoveFunctions.makeMove(to,from,11,cP,Global.PROMO_R,value);
+
+						type = Global.PROMO_Q;
+                    }
+
 					Captures[index++] = MoveFunctions.makeMove(to,from,11,cP,type,value);	
 				}
 			}
@@ -1281,7 +1308,10 @@ public final class Engine {
 				value = 35;
 				if(value > cutoff) {
 					value += 60;
-					Captures[index++] = MoveFunctions.makeMove(to,from,11,-1,Global.PROMO_Q,value);	
+					Captures[index++] = MoveFunctions.makeMove(to,from,11,-1,Global.PROMO_B,value);
+                    Captures[index++] = MoveFunctions.makeMove(to,from,11,-1,Global.PROMO_N,value);
+                    Captures[index++] = MoveFunctions.makeMove(to,from,11,-1,Global.PROMO_R,value);
+                    Captures[index++] = MoveFunctions.makeMove(to,from,11,-1,Global.PROMO_Q,value);
 				}
 			}
 			
@@ -1534,24 +1564,33 @@ public final class Engine {
                 //if attacking piece is a white pawn ( black moving )
                 //System.out.println("piece pos is "+piece);
                 
-                while( temp != 0) {
-			type = Global.ORDINARY_MOVE;
-			fromBit = temp & -temp;
-			temp ^= fromBit;
-			int from = getPos(fromBit);
-			if(SEE.isPinned(side,attackFrom,from))
-				continue;
-			value = SEE.getSEE(side,attackFrom, from, -1);
-			if(value >= 0)
-				value += 10000;
-			else 
-				value = 0;
-			if(Board.piece_in_square[from] % 6==5) {
-				if(attackFrom/8 == 0 || attackFrom/8 == 7)
-					type = Global.PROMO_Q;
-			}
-			moveOrder[index] = value;
-			escapes[index++] = MoveFunctions.makeMove(attackFrom,from,Board.piece_in_square[from],cP,type,value);
+            while( temp != 0) {
+                type = Global.ORDINARY_MOVE;
+                fromBit = temp & -temp;
+                temp ^= fromBit;
+                int from = getPos(fromBit);
+                if(SEE.isPinned(side,attackFrom,from))
+                    continue;
+                value = SEE.getSEE(side,attackFrom, from, -1);
+                if(value >= 0)
+                    value += 10000;
+                else
+                    value = 0;
+                if(Board.piece_in_square[from] % 6==5) {
+                    if(attackFrom/8 == 0 || attackFrom/8 == 7) {
+                        moveOrder[index] = value;
+                        escapes[index++] = MoveFunctions.makeMove(attackFrom,from,Board.piece_in_square[from],cP,Global.PROMO_N,value);
+                        moveOrder[index] = value;
+                        escapes[index++] = MoveFunctions.makeMove(attackFrom,from,Board.piece_in_square[from],cP,Global.PROMO_R,value);
+                        moveOrder[index] = value;
+                        escapes[index++] = MoveFunctions.makeMove(attackFrom,from,Board.piece_in_square[from],cP,Global.PROMO_B,value);
+
+                        type = Global.PROMO_Q;
+                    }
+
+                }
+                moveOrder[index] = value;
+                escapes[index++] = MoveFunctions.makeMove(attackFrom,from,Board.piece_in_square[from],cP,type,value);
 		}
 		//piece = getPos(attackFrom);
                 //if attacking piece is a white pawn ( black moving )
@@ -2261,12 +2300,63 @@ private int Max(int side,int depth,int alpha,int beta,boolean nMove,int wasExten
 	
 	
 	}	
+    public void PerftTest(int depth) {
+        perft = 0;
+        Perft(Board.getTurn(),depth);
+        System.out.println("Perft value is "+perft);
 
-	
-		
-	
+    }
+	public void Divide(int depth) {
+		int index;
+		boolean inCheck = false;
+		int side = Board.getTurn();
+        if(inCheck(side))
+			inCheck = true;
 
-	private void Perfit(int side,int depth,int alpha,int beta) {
+        int[] moveArr = new int[128];
+		if(!inCheck) {
+			int index2 = getCaptures(side, moveArr, Integer.MIN_VALUE);
+			index = getMoves(side, moveArr,index2);
+		} else {
+			index = getCheckEscapes(side,moveArr);
+		}
+	    for(int i = index-1; i >=0; i--) {
+			perft = 0;
+            int reps = Magnum.makeMove(moveArr[i],false,false);		//make the move;
+			//print out the to and from algebraic positions
+			int to = MoveFunctions.getTo(moveArr[i]);
+            int from = MoveFunctions.getFrom(moveArr[i]);
+            int piece = MoveFunctions.getPiece(moveArr[i]);
+
+            String output = HistoryWriter.getUCIMove(to, from, piece);
+            System.out.print(output);
+            int theP = Board.piece_in_square[to];
+            /*
+            if(to == 5 && from == 14) {
+                System.out.println("piece in question is"+theP);
+                Divide(1);
+                //break;
+            }
+*/
+            if(!inCheck && inCheck(side)) {
+				Magnum.unMake(moveArr[i],false,false);
+				continue;
+			}
+
+			if(reps==3)
+				return;
+			else
+				Perft(-side,depth-1);
+			Magnum.unMake(moveArr[i],false,false);
+			System.out.println(" "+perft);
+
+		}
+
+
+
+
+    }
+	private void Perft(int side,int depth) {
 	
 		int reps;
 		
@@ -2274,7 +2364,7 @@ private int Max(int side,int depth,int alpha,int beta,boolean nMove,int wasExten
 		if(inCheck(side))
 			inCheck = true;
 		if(depth<=0) {
-			perfit++;
+			perft++;
 			return;
 		}
 		int index;
@@ -2286,7 +2376,10 @@ private int Max(int side,int depth,int alpha,int beta,boolean nMove,int wasExten
 			index = getCheckEscapes(side,moveArr);
 		}
 		for(int i = index-1; i >=0; i--) {
-			reps = Magnum.makeMove(moveArr[i],false,false);		//make the move;
+			//int to = MoveFunctions.getTo(moveArr[i]);
+            //int from = MoveFunctions.getFrom(moveArr[i]);
+            
+            reps = Magnum.makeMove(moveArr[i],false,false);		//make the move;
 			
 			if(!inCheck && inCheck(side)) {
 				Magnum.unMake(moveArr[i],false,false);
@@ -2296,7 +2389,7 @@ private int Max(int side,int depth,int alpha,int beta,boolean nMove,int wasExten
 			if(reps==3)
 				return;
 			else 	
-				Perfit(-side,depth-1,-beta,-alpha);
+				Perft(-side,depth-1);
 			Magnum.unMake(moveArr[i],false,false);
 			
 			

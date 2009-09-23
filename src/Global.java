@@ -3,8 +3,8 @@ abstract class Global {
 													"bRook","bKnight","bBishop","bQueen","bKing","bPawn"};
 
 	public static final int NO_CASTLE = 0;
-        public static final int CASTLED = 1;
-	public static final int BOTH_CASTLE = 4;
+    public static final int CASTLED = 1;
+	public static final int BOTH_CASTLE = 7;
 	public static final int ORDINARY_MOVE = 0;
 	public static final int SHORT_CASTLE = 2;
 	public static final int LONG_CASTLE = 3;
@@ -12,7 +12,7 @@ abstract class Global {
 	public static final int PROMO_Q = 5;
 	public static final int PROMO_R = 6;
 	public static final int PROMO_B = 7;
-	public static final int PROMO_N = 8;
+	public static final int PROMO_N = 1;
 	
 	public static int REPSIZE = 16384;
 	public static  int HASHSIZE = 262144;				//8 mb initial hashsize

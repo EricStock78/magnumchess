@@ -249,10 +249,10 @@ public final class Board extends java.util.Observable{
 		initQueenDist();
 		pHash = new int[64][12];
 		pHash2 = new int[64][12];
-		bCastleHash = new int[5];
-		bCastleHash2 = new int[5];
-		wCastleHash = new int[5];
-		wCastleHash2 = new int[5];
+		bCastleHash = new int[8];
+		bCastleHash2 = new int[8];
+		wCastleHash = new int[8];
+		wCastleHash2 = new int[8];
 		passantHashW = new int[8];
 		passantHashW2 = new int[8];
 		passantHashB = new int[8];
@@ -697,7 +697,7 @@ public final class Board extends java.util.Observable{
             }
             
             //now process the side to move information
-            
+         
             char c = fen.charAt(0);
             fen = fen.substring(fen.indexOf(" ")+1);
             if(c == 'w') {
@@ -737,11 +737,23 @@ public final class Board extends java.util.Observable{
                 }
                 
             }
-            
-            //skiping passant square until able to test it
-            //To Do add code for fen passant square info and test it
-            
-            
+
+            //process the passant square
+            //get the first character - if it is a '-', then no passant square
+            c = fen.charAt(0);
+            if(c != '-') {
+                token = fen.substring(0,fen.indexOf(" "));
+                //System.out.println("passant square is "+token);
+                int pSq = HistoryWriter.getNumericPosition(token);
+                //System.out.println("passant int is "+pSq);
+                if(turn == -1)                  //white moving
+                    passantB = pSq;
+                else
+                    passantW = pSq;
+            }
+            fen = fen.substring(fen.indexOf(" "));
+
+
             //now process the drawCount
             
             fen = fen.substring(fen.indexOf(" ")+1); 
@@ -933,7 +945,7 @@ public final class Board extends java.util.Observable{
 		bHashMove = rand.nextInt() & Integer.MAX_VALUE;
 		bHashMove2 = rand.nextInt();
 			
-		for(i=0;i<5;i++) {
+		for(i=0;i<8;i++) {
 			bCastleHash[i] = rand.nextInt() & Integer.MAX_VALUE;
 			bCastleHash2[i] = rand.nextInt();
 			wCastleHash[i] = rand.nextInt() & Integer.MAX_VALUE;
@@ -2795,22 +2807,38 @@ public final class Board extends java.util.Observable{
 			
 		}
 		
-		if(wCastle != Global.NO_CASTLE && wCastle != Global.CASTLED) {
+		if(wCastle > Global.CASTLED) {
 			if(thePiece == 4)
 				wCastle = Global.NO_CASTLE;
 			else if(to == 7 || from == 7) {
-				wCastle &= Global.LONG_CASTLE; 
+				if(wCastle == Global.SHORT_CASTLE)
+                    wCastle = Global.NO_CASTLE;
+                else
+                    wCastle = Global.LONG_CASTLE;
 			}else if(to == 0 || from == 0) {
-                            wCastle &= Global.SHORT_CASTLE;  
+                if(wCastle == Global.LONG_CASTLE)
+                    wCastle = Global.NO_CASTLE;
+                else
+                    wCastle = Global.SHORT_CASTLE;
 			}		
 		}
-		if(bCastle != Global.NO_CASTLE && bCastle != Global.CASTLED) {
+		if(bCastle > Global.CASTLED) {
 			if(thePiece == 10)
 				bCastle = Global.NO_CASTLE;
 			else if(to == 63 || from == 63) {
-                            bCastle &= Global.LONG_CASTLE;
+                if(bCastle == Global.SHORT_CASTLE)
+                    bCastle = Global.NO_CASTLE;
+                else
+                    bCastle = Global.LONG_CASTLE;
+                
+                //bCastle &= Global.LONG_CASTLE;
 			}else if(to == 56 || from == 56) {
-                            bCastle &= Global.SHORT_CASTLE;
+                if(bCastle == Global.LONG_CASTLE)
+                    bCastle = Global.NO_CASTLE;
+                else
+                    bCastle = Global.SHORT_CASTLE;
+
+                //bCastle &= Global.SHORT_CASTLE;
 			}		
 		}				
 		hashValue ^= bCastleHash[bCastle];

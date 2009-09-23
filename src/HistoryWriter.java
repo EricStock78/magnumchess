@@ -505,6 +505,19 @@ public final class HistoryWriter {
 		}
 		return pieces;
 	}
+
+    //method converts a 2 character string representing an algebraic chess position
+    //to an integer representing a square
+
+    public static int getNumericPosition(String st) {
+
+        for(int i=0; i<64; i++) {
+            if(st.equals(boardString[i]))
+                return i;
+        }
+        return -1;
+    }
+
 	public static void setAlgebraicNotes() {
 		int file;
 		int rank;

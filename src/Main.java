@@ -54,7 +54,22 @@ public class Main
 			
 			if ("isready".equals( cmd ))
 				System.out.println("readyok");
-			if(cmd.startsWith("position")) {
+
+            if(cmd.startsWith("perft")) {
+                cmd = cmd.substring(5);
+                cmd = cmd.trim();
+                int depth = Integer.parseInt(cmd.substring(0));
+                theSearch.PerftTest(depth);
+
+            }
+            if(cmd.startsWith("divide")) {
+                cmd = cmd.substring(6);
+                cmd = cmd.trim();
+                int depth = Integer.parseInt(cmd.substring(0));
+                theSearch.Divide(depth);
+
+            }
+            if(cmd.startsWith("position")) {
 				if(cmd.indexOf(("startpos"))!= -1) {
 				
 					int mstart = cmd.indexOf("moves");
@@ -65,15 +80,15 @@ public class Main
 					}
 				} else {			//reading in a fen string
 					int mstart = cmd.indexOf("moves");
-					if(mstart>-1) {
+					if(mstart> -1) {
                                                 //String moves = cmd.substring(mstart+5);
 						//Magnum.undoAll();
 						//HistoryWriter.acceptMoves(moves);
                                             //System.out.println("Here1");
 						Magnum.undoAll();
-                                                String fen = cmd.substring(cmd.indexOf("fen")+4,mstart-1);
+                        String fen = cmd.substring(cmd.indexOf("fen")+4,mstart-1);
 						Board.acceptFen(fen);
-                                                String moves = cmd.substring(mstart+5);
+                        String moves = cmd.substring(mstart+5);
 						
 						HistoryWriter.acceptMoves(moves);
                                                 //HistoryWriter.acceptFen(fen);
