@@ -1,6 +1,11 @@
 import java.io.*;
 public class Main
 {
+    public static final int DEFAULT_WTIME = 1000;
+    public static final int DEFAULT_BTIME = 1000;
+    public static final int DEFAULT_WINC = 0;
+    public static final int DEFAULT_BINC = 0;
+    
 	public static BufferedReader reader;
 	public static String cmd;
 	public static Engine theSearch;
@@ -15,7 +20,7 @@ public class Main
 		reader = new BufferedReader(new InputStreamReader(System.in));
 		theSearch = new Engine(Magnum);
 		HistoryWriter.setAlgebraicNotes();
-		printGreeting();
+		//printGreeting();
 		getCmd();
 		} catch(Exception ex) {
 			System.out.print("info string ");
@@ -51,7 +56,11 @@ public class Main
 		System.out.println("uciok");
 		while(true) {
 			cmd = reader.readLine();
-			
+			if(cmd.startsWith("quit"))
+                System.exit(0);
+
+
+
 			if ("isready".equals( cmd ))
 				System.out.println("readyok");
 
@@ -158,36 +167,52 @@ public class Main
 					try {
 						searchDepth = 49;
 						
+                        String temp;
 						int index = cmd.indexOf("wtime");
-						String temp = cmd.substring(index+5);
-						temp = temp.trim();
-						wtime = Integer.parseInt(temp.substring(0,temp.indexOf(" ")));
+
+                        if (index == -1)
+                            wtime = DEFAULT_WTIME;
+                        else {
+                            temp = cmd.substring(index+5).trim();
+                            wtime = Integer.parseInt(temp.substring(0,temp.indexOf(" ")));
+                        }
 						
 						index = cmd.indexOf("btime");
-						temp = cmd.substring(index+5);
-						temp = temp.trim();
-						btime = Integer.parseInt(temp.substring(0,temp.indexOf(" ")));
+                        if (index == -1)
+                            btime = DEFAULT_BTIME;
+                        else {
+                            temp = cmd.substring(index+5).trim();
+                            btime = Integer.parseInt(temp.substring(0,temp.indexOf(" ")));
+                        }
 						
 						index = cmd.indexOf("winc");
-						temp = cmd.substring(index+4);
-						temp = temp.trim();
-						winc = Integer.parseInt(temp.substring(0,temp.indexOf(" ")));
+                        if (index == -1)
+                            winc = DEFAULT_WINC;
+                        else {
+                            temp = cmd.substring(index+4).trim();
+                            winc = Integer.parseInt(temp.substring(0,temp.indexOf(" ")));
+                        }
 						
 						index = cmd.indexOf("binc");
-						temp = cmd.substring(index+4);
-						temp = temp.trim();
-						if(temp.indexOf(" ")!=-1)
-							binc = Integer.parseInt(temp.substring(0,temp.indexOf(" ")));
-						else	
-							binc = Integer.parseInt(temp.substring(0));	
-						
+                        if (index == -1)
+                            binc = DEFAULT_BINC;
+                        else {
+                            temp = cmd.substring(index+4);
+                            temp = temp.trim();
+                            if(temp.indexOf(" ")!=-1)
+    							binc = Integer.parseInt(temp.substring(0,temp.indexOf(" ")));
+    						else
+    							binc = Integer.parseInt(temp.substring(0));
+                        }
 						
 						if(Magnum.getTurn()==1)			//black moving
 							movetime = btime/40+binc;
 						else	
 							movetime = wtime/40+winc;
 					}
-					catch(NumberFormatException ex) {}
+					catch(NumberFormatException ex) {
+                        ex.printStackTrace(System.err);
+                    }
 				
 				}
 				
@@ -219,6 +244,8 @@ public class Main
 				GUI board = new GUI();	
 				break;
 			}
+            if(cmd.startsWith("quit"))
+                System.exit(0);
 		}		
 	}		
 
