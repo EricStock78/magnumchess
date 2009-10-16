@@ -278,8 +278,8 @@ public final class Board extends java.util.Observable{
 			int temp = Global.Diag2Groups[j];
 			Global.diag2Masks[temp] |= (long)1<<j;
 		}	
-		for(int i=0;i<15;i++) 
-			System.out.println("diag 2 at "+i+" is "+Global.diag2Masks[i]);	
+		//for(int i=0;i<15;i++)
+		//	System.out.println("diag 2 at "+i+" is "+Global.diag2Masks[i]);
 		for(int i=0;i<64;i++) {
 			Global.set_Mask[i] = (long)1<<i;
 		}	
