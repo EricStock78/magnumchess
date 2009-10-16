@@ -1,0 +1,7 @@
+[PolyGlot]
+
+EngineCommand = MagnumChess.exe
+
+[Engine]
+
+Hash = 64
