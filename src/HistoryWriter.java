@@ -101,12 +101,37 @@ public final class HistoryWriter {
 		String st = "";
 		st = st.concat(boardString[from]);
 		st = st.concat(boardString[to]);
-		if(piece%6==5&& (to/8==0||to/8==7))
-			st.concat("q");
+		if(piece%6==5 && (to/8==0 || to/8==7))
+			st = st.concat("q");
 		return st;
 		
 		
-	}	
+	}
+    public static String getUCIMove(int move) {
+		int to = MoveFunctions.getTo(move);
+        int from = MoveFunctions.getFrom(move);
+        int piece = MoveFunctions.getPiece(move);
+
+        String st = "";
+		st = st.concat(boardString[from]);
+		st = st.concat(boardString[to]);
+		if(piece%6==5 && (to/8==0 || to/8==7)) {
+			int type = MoveFunctions.moveType(move);
+            if(type == Global.PROMO_Q)
+               st = st.concat("q");
+            else if(type == Global.PROMO_B)
+               st = st.concat("b");
+            else if(type == Global.PROMO_N)
+               st = st.concat("n");
+            else if(type == Global.PROMO_R)
+               st = st.concat("r");
+        }
+        return st;
+
+
+	}
+
+
 	public void reset() {
 		history.clear();
 	}	

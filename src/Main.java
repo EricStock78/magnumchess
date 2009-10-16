@@ -5,6 +5,7 @@ public class Main
     public static final int DEFAULT_BTIME = 1000;
     public static final int DEFAULT_WINC = 0;
     public static final int DEFAULT_BINC = 0;
+    public static final int DEFAULT_TOGO = 40;
     
 	public static BufferedReader reader;
 	public static String cmd;
@@ -46,7 +47,9 @@ public class Main
 		int btime=0;
 		int winc=0;
 		int binc=0;
-		
+		int togo = 0;
+
+
 		boolean clock = false;					//playing using time controls
 		boolean infinite = false;				//infinite time controls
 		System.out.println("id name Magnum");
@@ -205,10 +208,20 @@ public class Main
     							binc = Integer.parseInt(temp.substring(0));
                         }
 						
+                        index = cmd.indexOf("movestogo");
+                        if(index == -1) 
+                            togo = DEFAULT_TOGO;
+                        else {
+                            temp = cmd.substring(index+9).trim();
+                            togo = Integer.parseInt(temp);
+                            
+                        }
+
+
 						if(Magnum.getTurn()==1)			//black moving
-							movetime = btime/40+binc;
+							movetime = Math.max(0,(btime/togo + binc)-200);
 						else	
-							movetime = wtime/40+winc;
+							movetime = Math.max(0,(wtime/togo + winc)-200);
 					}
 					catch(NumberFormatException ex) {
                         ex.printStackTrace(System.err);

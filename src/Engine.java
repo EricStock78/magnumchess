@@ -290,7 +290,9 @@ public final class Engine {
 			//System.out.println("pawn hash miss is "+Global.pawnHashMiss);
 			//Global.pawnHashMiss = 0;
 			//Global.pawnHashHits = 0;
-			return HistoryWriter.getUCIMove((best >> 6) & 63, best & 63, (best >> 12) & 15);
+			//System.out.println(HistoryWriter.getUCIMove(56, 48, 5));
+            return HistoryWriter.getUCIMove(best);
+            //return HistoryWriter.getUCIMove((best >> 6) & 63, best & 63, (best >> 12) & 15);
 		}
 		return "";
 	}
