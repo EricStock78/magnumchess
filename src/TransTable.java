@@ -36,7 +36,7 @@ public final class TransTable {
 		int index = key*3;
 		Table[index] = lock;
 		Table[index+1] = lock2;
-                Table[index+2] = value;    
+        Table[index+2] = value;    
 	}
 	
 	//public final void addHash(int key,int lock, int lock2,int to,int from,int value,int depth,int type,int nullFail,int ancient) {

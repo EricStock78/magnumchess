@@ -56,6 +56,9 @@ public class Main
 		System.out.println("id author Eric Stock");
 		
 		System.out.println("option name Hash type spin default 8 min 8 max 512");
+        System.out.println("option name Evaluation Table type spin default 4 min 1 max 64");
+        System.out.println("option name Pawn Table type spin default 4 min 1 max 64");
+        
 		System.out.println("uciok");
 		while(true) {
 			cmd = reader.readLine();
@@ -115,10 +118,7 @@ public class Main
 			}	
 			if(cmd.startsWith("setoption")) {
 				int index = cmd.indexOf("Hash");
-				if(index == -1)
-					System.out.println("info string option not recognized");
-				else {
-					
+				if(index != -1)  {
 					index = cmd.indexOf("value");
 					cmd = cmd.substring(index+5);
 					cmd = cmd.trim();
@@ -126,11 +126,25 @@ public class Main
 					Global.HASHSIZE = hashSize*32768;
 					theSearch.resetHash();
 					System.out.println("info string hashsize is "+hashSize);
-				}	
-				//int index = cmd.indexOf("name");
-				//cmd = cmd.substring(index+4);
-				//cmd = cmd.trim();
-					
+				} else if(cmd.indexOf("Evaluation Table")!= -1) {
+                    index = cmd.indexOf("value");
+                    cmd = cmd.substring(index+5);
+					cmd = cmd.trim();
+					int evalSize = Integer.parseInt(cmd.substring(0));
+                    Global.EvalHASHSIZE = evalSize * 87381;
+                    Evaluation2.reSizeEvalHash();
+                    System.out.println("info string evalHash is "+evalSize);
+                } else if(cmd.indexOf("Pawn Table") != -1) {
+                    index = cmd.indexOf("value");
+                    cmd = cmd.substring(index+5);
+					cmd = cmd.trim();
+					int evalSize = Integer.parseInt(cmd.substring(0));
+                    Global.EvalHASHSIZE = evalSize * 43690;
+                    Evaluation2.reSizeEvalHash();
+                    System.out.println("info string pawnHash is "+evalSize);
+                }  else {
+                    System.out.println("info string command not recognized");
+                }
 			}
 			
 			
@@ -185,15 +199,21 @@ public class Main
                             btime = DEFAULT_BTIME;
                         else {
                             temp = cmd.substring(index+5).trim();
-                            btime = Integer.parseInt(temp.substring(0,temp.indexOf(" ")));
+                            if(temp.indexOf(" ")!=-1)
+                                btime = Integer.parseInt(temp.substring(0,temp.indexOf(" ")));
+                            else
+                                btime = Integer.parseInt(temp);
                         }
 						
 						index = cmd.indexOf("winc");
                         if (index == -1)
                             winc = DEFAULT_WINC;
                         else {
-                            temp = cmd.substring(index+4).trim();
-                            winc = Integer.parseInt(temp.substring(0,temp.indexOf(" ")));
+                            temp = cmd.substring(index+4).trim();      
+                            if(temp.indexOf(" ")!=-1)
+                                winc = Integer.parseInt(temp.substring(0,temp.indexOf(" ")));
+                            else 
+                                winc = Integer.parseInt(temp);
                         }
 						
 						index = cmd.indexOf("binc");
@@ -205,7 +225,7 @@ public class Main
                             if(temp.indexOf(" ")!=-1)
     							binc = Integer.parseInt(temp.substring(0,temp.indexOf(" ")));
     						else
-    							binc = Integer.parseInt(temp.substring(0));
+    							binc = Integer.parseInt(temp);
                         }
 						
                         index = cmd.indexOf("movestogo");
@@ -218,7 +238,7 @@ public class Main
                         }
 
 
-						if(Magnum.getTurn()==1)			//black moving
+						if(Board.getTurn()==1)			//black moving
 							movetime = Math.max(0,(btime/togo + binc)-200);
 						else	
 							movetime = Math.max(0,(wtime/togo + winc)-200);

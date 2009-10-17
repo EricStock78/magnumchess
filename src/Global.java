@@ -16,8 +16,8 @@ abstract class Global {
 	
 	public static int REPSIZE = 16384;
 	public static  int HASHSIZE = 262144;				//8 mb initial hashsize
-	public static int PawnHASHSIZE = 436906;		//10mb initial pawn hash table
-	public static int EvalHASHSIZE = 2621440;               //10bm initial eval hash table
+	public static int PawnHASHSIZE = 174762;            //4mb initial pawn hash table
+	public static int EvalHASHSIZE = 349524;              //4mb initial eval hash table
 	public static long[] diag1Masks = new long[15];
 	public static long[] diag2Masks = new long[15];
 	public static long[] fileMasks = new long[8];					//used to isolate all pieces on a rank

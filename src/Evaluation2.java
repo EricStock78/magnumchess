@@ -210,8 +210,15 @@ public class Evaluation2 {
     	EvalTable.clearEvalHash();
 
     }
-    
-    
+
+    //this method creates a new eval hash based on input from the UCI gui
+    public static final void reSizeEvalHash() {
+        EvalTable = new TransTable(Global.EvalHASHSIZE,2);
+    }
+    //this method creates a new pawn hash based on input from the UCI gui
+    public static final void reSizePawnHash() {
+        PawnTable = new TransTable(Global.PawnHASHSIZE,1);
+    }
     
     // method int popCount(long bitset)
     // takes a long integer and returns the number of bits set

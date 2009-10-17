@@ -5,3 +5,5 @@ EngineCommand = MagnumChess.exe
 [Engine]
 
 Hash = 64
+Evaluation Table = 4
+Pawn Table = 4
