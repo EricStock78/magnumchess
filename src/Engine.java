@@ -82,6 +82,12 @@ public final class Engine {
 	}		
 	public static void resetHash() {
 		HashTable = new TransTable(Global.HASHSIZE,0);
+        //add code to reset the eval table
+
+        //add code to reset the pawn table
+
+
+
 	}
 	
 	
