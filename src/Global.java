@@ -112,8 +112,10 @@ abstract class Global {
 	
 	
 	
-	public static final int values[] = new int[] {500,325,350,900,2000,100,500,325,350,900,2000,100};	
-	public static final int SEEvalues[] = new int[] {25,15,16,47,60,5,25,15,16,47,60,5};
+	public static final int values[] = new int[] {500,325,350,900,2000,100,500,325,350,900,2000,100};
+    public static final int mvvValues[] = new int[] {150,100,100,200,0,50,150,100,100,200,0,50};
+
+	public static final int SEEvalues[] = new int[] {25,17,17,45,60,5,25,17,17,45,60,5};
 	//public static final int SEEvalues[] = new int[] {500,300,330,950,2000,100,500,300,330,950,2000,100};	
 
 	public static final int researchDiff[] = new int[] {0,5,15,40,100,250,600,1000,2000};

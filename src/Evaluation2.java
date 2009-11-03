@@ -42,7 +42,7 @@ public class Evaluation2 {
     private static final int ROOK_BEHIND_QUEEN = 12;
     private static final int ROOK_7TH_RANK = 35;
     private static final int QUEEN_ROOK_7TH_RANK = 100;
-    private static final int HUNG_PENALTY = 25;
+    private static final int HUNG_PENALTY = 15;
     private static final int TWO_BISHOP_BONUS = 10;
     private static final int KING_PAWN_OPEN_FILE = 5;
     private static final int ENEMY_KING_PAWN_OPEN_FILE = 20;
@@ -378,15 +378,15 @@ public class Evaluation2 {
         if(Board.totalValue > 2500) {
                 wkingSafety = getKingSafetyWhite();
                 bkingSafety = getKingSafetyBlack();
-               weakAttackScore += getWeakAttackScore();
+               //weakAttackScore += getWeakAttackScore();
         }else {
             endKingSafety = getEndGameKing();
-            weakAttackScore += getWeakAttackScore();
-            weakAttackScore *= 2;
+            //weakAttackScore += getWeakAttackScore();
+            //weakAttackScore *= 2;
         }
         
              
-        finalScore = side * (material + pawnScore + weakAttackScore + (mobility * MOBILITY_BONUS) + (centre * CENTER_BONUS) + develop + castle + trapped + wkingSafety + bkingSafety + endKingSafety +tempo + hung + passScore + bishopEval + knightEval + rookEval + queenEval);
+        finalScore = side * (material + pawnScore + (mobility * MOBILITY_BONUS) + (centre * CENTER_BONUS) + develop + castle + trapped + wkingSafety + bkingSafety + endKingSafety +tempo + hung + passScore + bishopEval + knightEval + rookEval + queenEval);
         /*
         if(EvalTable.hasEvalHash(evalKey,Board.hashValue,Board.hashValue2)) {
             //System.out.println("hit");    

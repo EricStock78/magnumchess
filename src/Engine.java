@@ -117,18 +117,27 @@ public final class Engine {
 		ancient = (Magnum.getCount()/2) % 8;			//ancient node value betweeen 0 and 7;
 		infinite = inf;
 		//Evaluation2.getEval(t);
-                if((Board.getCount()/2 % 8) == 7) {
-			HashTable.clearHash();
-			Evaluation2.clearPawnHash();
-			Evaluation2.clearEvalHash();
+
+        if((Board.getCount()/2 % 8) == 7) {
+			//HashTable.clearHash();
+			//Evaluation2.clearPawnHash();
+			//Evaluation2.clearEvalHash();
 			for(int i = 0; i<64; i++) {
 				for(int j = 0; j < 64; j++) {
 					Hist[i][j] = 0;
 					Hist2[i][j] = 0;
 				}
 			}
-		}
-		theSide = Board.getTurn();
+		} else {
+            for(int i = 0; i<64; i++) {
+			   for(int j = 0; j < 64; j++) {
+				 Hist[i][j] /= 10;
+				 Hist2[i][j] /= 10;
+			   }
+		    }
+        }
+
+        theSide = Board.getTurn();
 		mills1 = System.currentTimeMillis();
 		mills2 = mills1 + time;
 		stop = false;
@@ -142,17 +151,7 @@ public final class Engine {
 		fCount = 0;
 		
 		
-                for(int i = 0; i<64; i++) {
-			for(int j = 0; j < 64; j++) {
-				Hist[i][j] /= 10;
-				Hist2[i][j] /= 10;
-				//if(Hist[i][j] > 50)
-				//	System.out.print("hist[i][j] is "+Hist[i][j]);
-				//Hist[i][j] = Math.min(15,Hist[i][j]/2);
-				//Hist2[i][j] = Math.min(15,Hist2[i][j]/2);
-				//System.out.print("hist[i][j] is "+Hist[i][j]);
-			}
-		}
+        
 		if(!inCheck(theSide)) {
 			int[] capArr = new int[60];
 			index = getMoves(theSide, moveArr,0);	
@@ -1050,7 +1049,6 @@ public final class Engine {
 		long fromBit;
 		long toBit;
 		int passant;
-		//long friends;
 		long enemies;
 		int to;
 		int from;
@@ -1059,9 +1057,7 @@ public final class Engine {
 		int cP;
 		int type;
 		long pMask;
-		//int toSq;
-		//int toSq2;
-		//int bit;
+		
 		if (side == -1) {			//white moving
 			passant = Board.getPassantB();
 			if(passant == -1)
@@ -1088,46 +1084,49 @@ public final class Engine {
 				lAttack ^= toBit;
 				to = getPos(toBit);
 				from = to-7;
-				value = SEE.getSEE(side,to,from,passant);
-				if(value > cutoff) {
-					type = Global.ORDINARY_MOVE;
-					cP = Board.piece_in_square[to];
-                    value += 60;
-                    if(to == passant)
-						type = Global.EN_PASSANT_CAP;
-                    else if(to/8 == 7) {
-                        Captures[index++] = MoveFunctions.makeMove(to,from,5,cP,Global.PROMO_B,value);
-                        Captures[index++] = MoveFunctions.makeMove(to,from,5,cP,Global.PROMO_N,value);
-                        Captures[index++] = MoveFunctions.makeMove(to,from,5,cP,Global.PROMO_R,value);
+				
+                type = Global.ORDINARY_MOVE;
+                cP = Board.piece_in_square[to];
+                if(to == passant) {
+                    value = 54;
+                    type = Global.EN_PASSANT_CAP;
+                }else if(to/8 == 7) {
+                    Captures[index++] = MoveFunctions.makeMove(to,from,5,cP,Global.PROMO_B,0);
+                    Captures[index++] = MoveFunctions.makeMove(to,from,5,cP,Global.PROMO_N,0);
+                    Captures[index++] = MoveFunctions.makeMove(to,from,5,cP,Global.PROMO_R,0);
+                    value = 220;
+                    type = Global.PROMO_Q;
+                } else
+                    value = Global.mvvValues[cP] + 4;
 
-						type = Global.PROMO_Q;
-                    }
 
-					
-                    Captures[index++] = MoveFunctions.makeMove(to,from,5,cP,type,value);	
-				}
+                Captures[index++] = MoveFunctions.makeMove(to,from,5,cP,type,value);
+
 			}
 			while (rAttack != 0) {
 				toBit = rAttack & -rAttack;
 				rAttack ^= toBit;
 				to = getPos(toBit);
 				from = to-9;
-				value = SEE.getSEE(side,to,from,passant);
-				if(value > cutoff) {
-					type = Global.ORDINARY_MOVE;
-					cP = Board.piece_in_square[to];
-                    value += 60;
-                    if(to == passant)
-						type = Global.EN_PASSANT_CAP;
-                    else if(to/8 == 7) {
-						Captures[index++] = MoveFunctions.makeMove(to,from,5,cP,Global.PROMO_B,value);
-                        Captures[index++] = MoveFunctions.makeMove(to,from,5,cP,Global.PROMO_N,value);
-                        Captures[index++] = MoveFunctions.makeMove(to,from,5,cP,Global.PROMO_R,value);
 
-                        type = Global.PROMO_Q;
-                    }
-					Captures[index++] = MoveFunctions.makeMove(to,from,5,cP,type,value);	
-				}
+
+                
+				
+                type = Global.ORDINARY_MOVE;
+                cP = Board.piece_in_square[to];
+                if(to == passant) {
+                    value = 54;
+                    type = Global.EN_PASSANT_CAP;
+                }else if(to/8 == 7) {
+                    value = 220;
+                    Captures[index++] = MoveFunctions.makeMove(to,from,5,cP,Global.PROMO_B,0);
+                    Captures[index++] = MoveFunctions.makeMove(to,from,5,cP,Global.PROMO_N,0);
+                    Captures[index++] = MoveFunctions.makeMove(to,from,5,cP,Global.PROMO_R,0);
+                    type = Global.PROMO_Q;
+                } else
+                    value = Global.mvvValues[cP] + 4;
+                Captures[index++] = MoveFunctions.makeMove(to,from,5,cP,type,value);
+				
 			}
 			
 			while(promo != 0) {
@@ -1135,17 +1134,14 @@ public final class Engine {
 				promo ^= toBit;
 				to = getPos(toBit);
 				from = to-8;
-				value = 35;
-				if(value > cutoff) {
-					type = Global.PROMO_Q;
-					value += 60;
-				    Captures[index++] = MoveFunctions.makeMove(to,from,5,-1,Global.PROMO_B,value);
-                    Captures[index++] = MoveFunctions.makeMove(to,from,5,-1,Global.PROMO_N,value);
-                    Captures[index++] = MoveFunctions.makeMove(to,from,5,-1,Global.PROMO_R,value);
-
-
-                    Captures[index++] = MoveFunctions.makeMove(to,from,5,-1,type,value);
-				}
+                value = 0;                                                              //score low promotions 0
+                Captures[index++] = MoveFunctions.makeMove(to,from,5,-1,Global.PROMO_B,value);
+                Captures[index++] = MoveFunctions.makeMove(to,from,5,-1,Global.PROMO_N,value);
+                Captures[index++] = MoveFunctions.makeMove(to,from,5,-1,Global.PROMO_R,value);
+                type = Global.PROMO_Q;
+                value = 220;
+                Captures[index++] = MoveFunctions.makeMove(to,from,5,-1,type,value);
+				
 			}
 				
 			
@@ -1160,12 +1156,10 @@ public final class Engine {
 					toBit = toSquares & -toSquares;
 					toSquares ^= toBit;
 					to = getPos(toBit);
-					value = SEE.getSEE(side,to,from,-1);
-					if (value >= cutoff) {
-						cP = Board.piece_in_square[to];
-						value += 60;
-						Captures[index++] = MoveFunctions.makeMove(to,from,1,cP,Global.ORDINARY_MOVE,value);		
-					}
+                    cP = Board.piece_in_square[to];
+                    value = Global.mvvValues[cP] + 3;
+                    Captures[index++] = MoveFunctions.makeMove(to,from,1,cP,Global.ORDINARY_MOVE,value);
+
 				}
 			}
 			pieces = Board.whitebishops;
@@ -1179,12 +1173,10 @@ public final class Engine {
 					toBit = toSquares & -toSquares;
 					toSquares ^= toBit;
 					to = getPos(toBit);
-					value = SEE.getSEE(side,to,from,-1);
-					if (value >= cutoff) {
-						cP = Board.piece_in_square[to];
-						value += 60;
-						Captures[index++] = MoveFunctions.makeMove(to,from,2,cP,Global.ORDINARY_MOVE,value);		
-					}
+                    cP = Board.piece_in_square[to];
+                    value = Global.mvvValues[cP] + 3;
+                    Captures[index++] = MoveFunctions.makeMove(to,from,2,cP,Global.ORDINARY_MOVE,value);
+
 				}
 			}
 			pieces = Board.whitequeen;
@@ -1198,12 +1190,10 @@ public final class Engine {
 					toBit = toSquares & -toSquares;
 					toSquares ^= toBit;
 					to = getPos(toBit);
-					value = SEE.getSEE(side,to,from,-1);
-					if (value >= cutoff) {
-						cP = Board.piece_in_square[to];
-						value += 60;
-						Captures[index++] = MoveFunctions.makeMove(to,from,3,cP,Global.ORDINARY_MOVE,value);			
-					}
+                    cP = Board.piece_in_square[to];
+                    value = Global.mvvValues[cP] + 1;
+                    Captures[index++] = MoveFunctions.makeMove(to,from,3,cP,Global.ORDINARY_MOVE,value);
+
 				}
 			}
 			pieces = Board.whiterooks;
@@ -1217,12 +1207,10 @@ public final class Engine {
 					toBit = toSquares & -toSquares;
 					toSquares ^= toBit;
 					to = getPos(toBit);
-					value = SEE.getSEE(side,to,from,-1);
-					if (value >= cutoff) {
-						cP = Board.piece_in_square[to];
-						value += 60;
-						Captures[index++] = MoveFunctions.makeMove(to,from,0,cP,Global.ORDINARY_MOVE,value);			
-					}
+                    cP = Board.piece_in_square[to];
+                    value = Global.mvvValues[cP] + 2;
+                    Captures[index++] = MoveFunctions.makeMove(to,from,0,cP,Global.ORDINARY_MOVE,value);
+
 				}
 			}
 			pieces = Board.whiteking;
@@ -1234,13 +1222,11 @@ public final class Engine {
 				while (toSquares != 0) {
 					toBit = toSquares & -toSquares;
 					toSquares ^= toBit;
-					to = getPos(toBit);
-					value = SEE.getSEE(side,to,from,-1);
-					if (value >= cutoff) {
-						cP = Board.piece_in_square[to];
-						value += 60;
-						Captures[index++] = MoveFunctions.makeMove(to,from,4,cP,Global.ORDINARY_MOVE,value);		
-					}
+					to = getPos(toBit);     
+                    cP = Board.piece_in_square[to];
+                    value = Global.mvvValues[cP];
+                    Captures[index++] = MoveFunctions.makeMove(to,from,4,cP,Global.ORDINARY_MOVE,value);
+
 				}
 			}	
 		} else {					//black moving
@@ -1268,59 +1254,59 @@ public final class Engine {
 				lAttack ^= toBit;
 				to = getPos(toBit);
 				from = to + 9;
-				value = SEE.getSEE(side,to,from,passant);
-				if(value > cutoff)  {
-					cP = Board.piece_in_square[to];
-					value += 60;
-                    type = Global.ORDINARY_MOVE;
-					if(to == passant)
-						type = Global.EN_PASSANT_CAP;
-                    else if(to/8 == 0) {
-                        Captures[index++] = MoveFunctions.makeMove(to,from,11,cP,Global.PROMO_B,value);
-                        Captures[index++] = MoveFunctions.makeMove(to,from,11,cP,Global.PROMO_N,value);
-                        Captures[index++] = MoveFunctions.makeMove(to,from,11,cP,Global.PROMO_R,value);
 
-						type = Global.PROMO_Q;
-                    }
-					Captures[index++] = MoveFunctions.makeMove(to,from,11,cP,type,value);	
-				}
+                cP = Board.piece_in_square[to];
+                type = Global.ORDINARY_MOVE;
+                if(to == passant) {
+                    value = 54;
+                    type = Global.EN_PASSANT_CAP;
+                }else if(to/8 == 0) {
+                    value = 0;
+                    Captures[index++] = MoveFunctions.makeMove(to,from,11,cP,Global.PROMO_B,value);
+                    Captures[index++] = MoveFunctions.makeMove(to,from,11,cP,Global.PROMO_N,value);
+                    Captures[index++] = MoveFunctions.makeMove(to,from,11,cP,Global.PROMO_R,value);
+                    value = 220;
+                    type = Global.PROMO_Q;
+                } else
+                    value = Global.mvvValues[cP] + 4;
+				Captures[index++] = MoveFunctions.makeMove(to,from,11,cP,type,value);	
 			}
 			while(rAttack != 0) {
 				toBit = rAttack & -rAttack;
 				rAttack ^= toBit;
 				to = getPos(toBit);
 				from = to + 7;
-				value = SEE.getSEE(side,to,from,passant);
-				if(value > cutoff) {
-					cP = Board.piece_in_square[to];
-					value += 60;
-                    type = Global.ORDINARY_MOVE;
-					if(to == passant)
-						type = Global.EN_PASSANT_CAP;
-                    else if(to/8 == 0)   {
-                        Captures[index++] = MoveFunctions.makeMove(to,from,11,cP,Global.PROMO_B,value);
-                        Captures[index++] = MoveFunctions.makeMove(to,from,11,cP,Global.PROMO_N,value);
-                        Captures[index++] = MoveFunctions.makeMove(to,from,11,cP,Global.PROMO_R,value);
+				
+                cP = Board.piece_in_square[to];
 
-						type = Global.PROMO_Q;
-                    }
+                type = Global.ORDINARY_MOVE;
+                if(to == passant) {
+                    type = Global.EN_PASSANT_CAP;
+                    value = 54;
+                }else if(to/8 == 0)   {
+                    value = 0;
+                    Captures[index++] = MoveFunctions.makeMove(to,from,11,cP,Global.PROMO_B,value);
+                    Captures[index++] = MoveFunctions.makeMove(to,from,11,cP,Global.PROMO_N,value);
+                    Captures[index++] = MoveFunctions.makeMove(to,from,11,cP,Global.PROMO_R,value);
+                    value = 220;
+                    type = Global.PROMO_Q;
+                } else
+                    value = Global.mvvValues[cP] + 4;
+                Captures[index++] = MoveFunctions.makeMove(to,from,11,cP,type,value);
 
-					Captures[index++] = MoveFunctions.makeMove(to,from,11,cP,type,value);	
-				}
 			}
 			while(promo != 0) {
 				toBit = promo & -promo;
 				promo ^= toBit;
 				to = getPos(toBit);
 				from = to + 8;
-				value = 35;
-				if(value > cutoff) {
-					value += 60;
-					Captures[index++] = MoveFunctions.makeMove(to,from,11,-1,Global.PROMO_B,value);
-                    Captures[index++] = MoveFunctions.makeMove(to,from,11,-1,Global.PROMO_N,value);
-                    Captures[index++] = MoveFunctions.makeMove(to,from,11,-1,Global.PROMO_R,value);
-                    Captures[index++] = MoveFunctions.makeMove(to,from,11,-1,Global.PROMO_Q,value);
-				}
+				value = 220;
+				
+                Captures[index++] = MoveFunctions.makeMove(to,from,11,-1,Global.PROMO_B,0);
+                Captures[index++] = MoveFunctions.makeMove(to,from,11,-1,Global.PROMO_N,0);
+                Captures[index++] = MoveFunctions.makeMove(to,from,11,-1,Global.PROMO_R,0);
+                Captures[index++] = MoveFunctions.makeMove(to,from,11,-1,Global.PROMO_Q,value);
+				
 			}
 			
 			pieces = Board.blackknights;
@@ -1334,12 +1320,10 @@ public final class Engine {
 					toBit = toSquares & -toSquares;
 					toSquares ^= toBit;
 					to = getPos(toBit);
-					value = SEE.getSEE(side,to,from,-1);
-					if (value >= cutoff) {
-						cP = Board.piece_in_square[to];
-						value += 60;
-						Captures[index++] = MoveFunctions.makeMove(to,from,7,cP,Global.ORDINARY_MOVE,value);		
-					}
+                    cP = Board.piece_in_square[to];
+                    value = Global.mvvValues[cP] + 3;
+                    Captures[index++] = MoveFunctions.makeMove(to,from,7,cP,Global.ORDINARY_MOVE,value);
+
 				}
 			}
 			pieces = Board.blackbishops;
@@ -1353,12 +1337,10 @@ public final class Engine {
 					toBit = toSquares & -toSquares;
 					toSquares ^= toBit;
 					to = getPos(toBit);
-					value = SEE.getSEE(side,to,from,-1);
-					if (value >= cutoff) {
-						cP = Board.piece_in_square[to];
-						value += 60;
-						Captures[index++] = MoveFunctions.makeMove(to,from,8,cP,Global.ORDINARY_MOVE,value);	
-					}
+                    cP = Board.piece_in_square[to];
+                    value = Global.mvvValues[cP] + 3;
+                    Captures[index++] = MoveFunctions.makeMove(to,from,8,cP,Global.ORDINARY_MOVE,value);
+					
 				}
 			}
 			pieces = Board.blackqueen;
@@ -1372,13 +1354,10 @@ public final class Engine {
 					toBit = toSquares & -toSquares;
 					toSquares ^= toBit;
 					to = getPos(toBit);
-					value = SEE.getSEE(side,to,from,-1);
-					if (value >= cutoff) {
-						cP = Board.piece_in_square[to];
-						value += 60;
-						Captures[index++] = MoveFunctions.makeMove(to,from,9,cP,Global.ORDINARY_MOVE,value);	
-						
-					}
+                    cP = Board.piece_in_square[to];
+                    value = Global.mvvValues[cP] + 1;
+                    Captures[index++] = MoveFunctions.makeMove(to,from,9,cP,Global.ORDINARY_MOVE,value);
+					
 				}
 			}
 			pieces = Board.blackrooks;
@@ -1392,12 +1371,10 @@ public final class Engine {
 					toBit = toSquares & -toSquares;
 					toSquares ^= toBit;
 					to = getPos(toBit);
-					value = SEE.getSEE(side,to,from,-1);
-					if (value >= cutoff) {
-						cP = Board.piece_in_square[to];
-						value += 60;
-						Captures[index++] = MoveFunctions.makeMove(to,from,6,cP,Global.ORDINARY_MOVE,value);	
-					}
+                    cP = Board.piece_in_square[to];
+                    value = Global.mvvValues[cP] + 2;
+                    Captures[index++] = MoveFunctions.makeMove(to,from,6,cP,Global.ORDINARY_MOVE,value);
+					
 				}
 			}
 			pieces = Board.blackking;
@@ -1410,12 +1387,10 @@ public final class Engine {
 					toBit = toSquares & -toSquares;
 					toSquares ^= toBit;
 					to = getPos(toBit);
-					value = SEE.getSEE(side,to,from,-1);
-					if (value >= cutoff) {
-						cP = Board.piece_in_square[to];
-						value += 60;
-						Captures[index++] = MoveFunctions.makeMove(to,from,10,cP,Global.ORDINARY_MOVE,value);		
-					}
+                    cP = Board.piece_in_square[to];
+                    value = value = Global.mvvValues[cP];
+                    Captures[index++] = MoveFunctions.makeMove(to,from,10,cP,Global.ORDINARY_MOVE,value);
+					
 				}
 			}	
 		}
@@ -1429,7 +1404,7 @@ public final class Engine {
 		long bishops;
 		long queen;
 		long rooks;
-		long pawns;
+		//long pawns;
 		long knights;
 		long king;
 		int kingPos;
@@ -1444,7 +1419,7 @@ public final class Engine {
 			bishops = Board.blackbishops;
 			queen = Board.blackqueen;
 			rooks = Board.blackrooks;
-			pawns = Board.blackpawns;
+			//pawns = Board.blackpawns;
 			knights = Board.blackknights;
 		} else {					//black moving
 			friends = Board.blackpieces;
@@ -1453,7 +1428,7 @@ public final class Engine {
 			bishops = Board.whitebishops;
 			queen = Board.whitequeen;
 			rooks = Board.whiterooks;
-			pawns = Board.whitepawns;
+			//pawns = Board.whitepawns;
 			knights = Board.whiteknights;
 		}
 		kingPos = getPos(king);
@@ -1477,7 +1452,7 @@ public final class Engine {
 		while( temp != 0) {
 			fromBit = temp & -temp;
 			attackFrom = getPos(fromBit);
-			int diff = Math.abs(kingPos - attackFrom);
+			//int diff = Math.abs(kingPos - attackFrom);
 			if((attackFrom/8) == (kingPos/8))
 				toSquares &= ((~Global.rankMasks[kingPos/8])^Global.set_Mask[attackFrom]);
 			else 
@@ -1833,8 +1808,7 @@ private int Max(int side,int depth,int alpha,int beta,boolean nMove,int wasExten
 		int key = (Board.hashValue % Global.HASHSIZE);
 		int extend = 0;
 		
-		if (!nMove && !iid && inCheck(side)){
-		//if (inCheck(side)){
+        if (!nMove && !iid && inCheck(side)) {
 			isInCheck = true;			
 			if(!iid) {
 				extend++;
@@ -1924,7 +1898,7 @@ private int Max(int side,int depth,int alpha,int beta,boolean nMove,int wasExten
 			
 			if(value>=beta) 
 				HashTable.addHash(key,Board.hashValue,Board.hashValue2,hashMove,value,depth,HASH_BETA,0,ancient);
-			if(value<=alpha) 
+            else if(value<=alpha)
 				HashTable.addHash(key,Board.hashValue,Board.hashValue2,hashMove,value,depth,HASH_ALPHA,0,ancient);
 			else 
 				HashTable.addHash(key,Board.hashValue,Board.hashValue2,hashMove,value,depth,HASH_EXACT,0,ancient);
@@ -1986,7 +1960,16 @@ private int Max(int side,int depth,int alpha,int beta,boolean nMove,int wasExten
 		int hashCount = 0;
 		int bestFullMove = 0;
 		int[] hashArr = new int[8];
-		//hashCount = 0;
+		int[] badCapArr = new int[50];
+        int noBadCap = 0;
+
+        int passant;
+        if(side == -1)
+            passant = Board.getPassantB();
+        else
+            passant = Board.getPassantW();
+
+        //hashCount = 0;
                 //Evaluation2.getEval(1);
 	while(state != SEARCH_END) {
 			
@@ -1994,7 +1977,7 @@ private int Max(int side,int depth,int alpha,int beta,boolean nMove,int wasExten
 			case(SEARCH_HASH):
 				hashCount = getHashMoves(key, hashArr);
 				
-				if(hashCount == 0 && depth > 3 && !nMove  && !isInCheck ) {
+				if(hashCount == 0 && depth > 3  && !isInCheck ) {
 					//HashTable.clearPosition(key);
 					Max(side,depth-2,alpha,beta,true,0,true);
 					//thisDepth--;
@@ -2089,7 +2072,8 @@ private int Max(int side,int depth,int alpha,int beta,boolean nMove,int wasExten
 					hashCount = markPreviousMoves(moveArr,index,0,hashArr,hashCount);
 				capIndex = index;
 				endIndex = 0;
-				break;
+
+                break;
 			case(KILLER_MOVES):
 				index = 0;
 				totalHash = hashCount+noKillers;
@@ -2141,8 +2125,9 @@ private int Max(int side,int depth,int alpha,int beta,boolean nMove,int wasExten
 				*/
 				break;
 			case(BAD_CAPS):	
-				index = badCapStart; 
-				endIndex = 0;
+				index = noBadCap;
+				moveArr = badCapArr;
+                endIndex = 0;
 				break;
 		}	
 		
@@ -2152,24 +2137,39 @@ private int Max(int side,int depth,int alpha,int beta,boolean nMove,int wasExten
 			theMove = moveArr[i];
 			
 			if (moveArr[i] == -200000)  continue;
-			
-			if(state == GOOD_CAPTURES && ((MoveFunctions.getValue(theMove)-60) < 0))	{
-				badCapStart = i+1;
-				break;
-			}
-				
-			pExtend = 0;
-		
-			reps = Magnum.makeMove(theMove,false,true);		//make the move;
-			
-			if (!isInCheck && inCheck(side)) {
-				Magnum.unMake(theMove,false,true);								//cant leave king in check
-				continue;
-			}
-			
-			oneLegal = true;
 			to = MoveFunctions.getTo(theMove);
 			from = MoveFunctions.getFrom(theMove);
+            int type = MoveFunctions.moveType(theMove);
+			//if(state == GOOD_CAPTURES && ((MoveFunctions.getValue(theMove)-60) < 0))	{
+			/*
+            if(state == GOOD_CAPTURES && thisDepth == 1) {
+                int v = MoveFunctions.getValue(theMove);
+                System.out.println("value is "+v);
+                System.out.println("the move is "+theMove);
+            }
+*/
+            if(state == GOOD_CAPTURES &&
+                    ((type == Global.ORDINARY_MOVE && (Global.SEEvalues[Board.piece_in_square[from]] > Global.SEEvalues[Board.piece_in_square[to]] && SEE.getSEE(side,to,from,passant) < 0))
+                    || (type == Global.EN_PASSANT_CAP && SEE.getSEE(side,to,from,passant) < 0)))  { //((MoveFunctions.getValue(theMove)-60) < 0))	{
+                badCapArr[noBadCap++] = theMove;
+                continue;
+                //badCapStart = i+1;
+				//break;
+			} else if(state == GOOD_CAPTURES && MoveFunctions.getValue(theMove) == 0) continue;
+            
+				
+			pExtend = 0;
+		   
+            reps = Magnum.makeMove(theMove,false,true);		//make the move;
+
+            if (!isInCheck && inCheck(side)) {
+                Magnum.unMake(theMove,false,true);								//cant leave king in check
+				continue;
+			}
+
+
+			oneLegal = true;
+			
 			piece = MoveFunctions.getPiece(theMove);
 			/*
 			if(isInCheck && inCheck(side)) {
@@ -2286,7 +2286,10 @@ private int Max(int side,int depth,int alpha,int beta,boolean nMove,int wasExten
 			return bMove;
 		
 		}
-		if(fprune && noPrune>0) {
+		if(hType == HASH_ALPHA)                         //if all moves are poor, then don't want a move stored in TT
+            bestFullMove = 0;
+
+        if(fprune && noPrune>0) {
 			if(hType == HASH_EXACT)
 				hType = HASH_BETA;
 			if(hType == HASH_ALPHA)	
@@ -2413,34 +2416,66 @@ private int Max(int side,int depth,int alpha,int beta,boolean nMove,int wasExten
 		//int thePiece;
 		int bValue;
 		boolean isInCheck = false;
-		if(depth > 0 && inCheck(side)) {
+		int testValue = 0;
+        if(depth > 0 && inCheck(side)) {
 			isInCheck = true;
 			index = getCheckEscapes(side,capArr);
 			if(index == 0)
 				return -20000+thisDepth;
 			bValue = -20000+thisDepth;
 		}else {
-                        //value = Board.getValue()*side;
+            
+              value = Evaluation2.getEval(side);
 			
-                    
-                    value = Evaluation2.getEval(side);
-			
-                       //value = Evaluation.getEval(side,alpha);
-                        if (value > alpha) {
+            if (value > alpha) {
 				alpha = value;
 			}	
 			if (alpha >= beta)
 				return alpha;
-			index = getCaptures(side, capArr, Math.max(0, (alpha - value)/20));
-		
+			index = getCaptures(side, capArr,0);
+
 			if (index == 0 ) 
 				return value;
 			bValue = value;
+            testValue = value;
 		}
-		
-		//boolean oneLegal = false;
+		int passant;
+        if(side == -1)
+            passant = Board.getPassantB();
+        else
+            passant = Board.getPassantW();
+
 		for(int i = index-1; i >=0; i--) {
-			Magnum.makeMove(capArr[i],false,false);		//make the move;
+			 
+            int to = MoveFunctions.getTo(capArr[i]);
+			int from = MoveFunctions.getFrom(capArr[i]);
+            int type = MoveFunctions.moveType(capArr[i]);
+
+            if(!isInCheck && ((type == Global.ORDINARY_MOVE || type == Global.EN_PASSANT_CAP )&& (SEE.getSEE(side,to,from,passant) <=
+                Math.max(0,(alpha - testValue)/20)    ))){
+               continue;
+
+
+           }else if(!isInCheck && MoveFunctions.getValue(capArr[i]) == 0) continue;           //if it is a promotion other than queen skip
+
+
+            //if(!isInCheck && (type != Global.ORDINARY_MOVE  || (SEE.getSEE(side,to,from,passant) <= (alpha - testValue)/20))) continue;
+/*
+            int pc = MoveFunctions.getPiece(capArr[i]) % 6;
+            if(!isInCheck && pc != 4 && type == Global.EN_PASSANT_CAP && inCheck(side)) continue;
+            else if(!isInCheck && pc != 4 && type != Global.EN_PASSANT_CAP && SEE.isPinned(side,to,from)) continue;
+*/
+
+            Magnum.makeMove(capArr[i],false,false);		//make the move;
+
+/*
+            if(!isInCheck && (pc == 4) && inCheck(side)) {
+               Magnum.unMake(capArr[i],false,true);
+               continue;
+           }
+*/
+
+            
 			if(!isInCheck && inCheck(side)) {
 				Magnum.unMake(capArr[i],false,false);
 				continue;

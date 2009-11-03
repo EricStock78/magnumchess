@@ -42,7 +42,7 @@ public final class TransTable {
 	//public final void addHash(int key,int lock, int lock2,int to,int from,int value,int depth,int type,int nullFail,int ancient) {
 	public final void addHash(int key,int lock, int lock2,int move,int value,int depth,int type,int nullFail,int ancient) {
 		
-		long temp,temp2;
+		//long temp,temp2;
 		int index = key*8;
 		move &= 8388607;
 		if(Table[index]==0)  {
@@ -174,13 +174,13 @@ public final class TransTable {
 		Table[key*8] = 0;
 		Table[key*8+4] = 0;
 	}
-	
+	/*
 	public boolean isAncient(int key,int probe) {
 		if(((Table[key*8+3+probe]>>>25)&1)==1)
 			return true;
 		else
 			return false;
-	}		
+	}*/
 	public void setNew(int key,int probe,int ancient) {
 		Table[key*8+3+probe] &= mask2;
 		Table[key*8+3+probe] |= (ancient<<25);
