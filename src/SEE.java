@@ -15,7 +15,7 @@ public class SEE {
     }
     public static boolean isPinned(int side, int to, int from) {
     	int relation;
-    	int fromPos;								//position of moving piece 
+    	
     	long enemies;
     	long king;							
     	long temp;
@@ -238,7 +238,7 @@ public class SEE {
 
 	public static int getSEE(int side, int to, int from, int passant) {
 		
-		//if (isPinned(side, to, from)) 
+		//if (isPinned(side, to, from))
 		//	return -60;
 		long friends;
 		long enemies;
