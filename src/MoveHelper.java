@@ -1,37 +1,93 @@
+/**
+ * MoveHelper.java
+ *
+ * Version 2.0   
+ * 
+ * Copyright (c) 2010 Eric Stock
+ 
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+ 
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+ 
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
 
-public final class Chess{	
+/*
+ * MoveHelper.java
+ *
+ * follows singleton design pattern
+ * this class initializes and stores in memory arrays of attacks for non sliding pieces
+ * the pieces are king, pawns, and knight
+ * There are also functions to assist in rook, bishop and queen moves  - These perhaps
+ * don't belong here
+ * 
+ * To-do - some of the functions here should be placed in the Board.java class
+ *
+ * @version 	2.00 30 Jan 2010
+ * @author 	Eric Stock
+ */
+
+
+public final class MoveHelper{	
 	
-		
-	private static final int size = 64;
-	private static final int attacks = 256;
-	private static final long[] KingMoveBoard 	= new long[size];
-	private static final long[] WhitePawnMoveBoard		= new long[size];
-	private static final long[] WhitePawnAttackBoard 	= new long[size];
-	private static final long[] BlackPawnMoveBoard		= new long[size];
-	private static final long[] BlackPawnAttackBoard 	= new long[size];
-	private static final long[] KnightMoveBoard 		= new long[size];
-	private static final long[] WKingBoard = new long[attacks];
+    /** king moves for each square */
+	private final long[] KingMoveBoard = new long[64];
+	/** white pawn moves for each square */
+    private final long[] WhitePawnMoveBoard	= new long[64];
+	/** white pawn attack moves for each sqaure */
+    private final long[] WhitePawnAttackBoard = new long[64];
+	/** black pawn moves for each square */
+    private final long[] BlackPawnMoveBoard	= new long[64];
+	/** black pawn attack moves for each square */
+    private final long[] BlackPawnAttackBoard = new long[64];
+	/** knight moves for each square */
+    private final long[] KnightMoveBoard = new long[64];
+	/** castle moves based on rank occupancy */
+    private final long[] kingCastleBoard = new long[256];
 	
-	public Chess() {
-		
-		
-		int length;
-		
+    /** only instance of class due to singleton pattern */
+    private static final MoveHelper INSTANCE = new MoveHelper();	
+    
+	/*
+     * MoveHelper Constructor
+     *
+     * calls methods to fill arrays with needed values for move generation
+     */
+    private MoveHelper() {
 		initKingBoard(KingMoveBoard);
 		initWhitePawnMoveBoard(WhitePawnMoveBoard);
 		initWhitePawnAttackBoard(WhitePawnAttackBoard);
 		initKnightMoveBoard(KnightMoveBoard);
 		initBlackPawnMoveBoard(BlackPawnMoveBoard);
 		initBlackPawnAttackBoard(BlackPawnAttackBoard);
-	
-
-	for(int i=0;i<256;i++) {
-			setWKingCastle(i);
-			//setBKingCastle(i);
-	}
-	}; // End constructor
-	
-	
+        for(int i=0;i<256;i++) {
+			setKingCastle(i);
+        }
+	};
+	/*
+     * Method getInstance()
+     *
+     * returns initialized instance of class
+     * 
+     * @return MoveHelper - the object
+     * 
+     */
+	public static MoveHelper getInstance() {
+        return INSTANCE;
+    }    
 	
 	/***********************************************************************
 		Name:		getWhitePawnMove
@@ -39,9 +95,10 @@ public final class Chess{
 		Returns:	BitBoard
 		Description:This method returns 
 	***********************************************************************/
-	public static final long getWhitePawnMove(int square){
+	
+    public final long getWhitePawnMove(int square){
 		return WhitePawnMoveBoard[square];
-	}// End getWhitePawnMove
+	}
 	
 	/***********************************************************************
 		Name:		getBlackPawnMove
@@ -49,9 +106,9 @@ public final class Chess{
 		Returns:	BitBoard
 		Description:This method returns 
 	***********************************************************************/
-	public static final long getBlackPawnMove(int square){
+	public  final long getBlackPawnMove(int square){
 		return BlackPawnMoveBoard[square];
-	}// End getBlackPawnMove
+	}
 
 	/***********************************************************************
 		Name:		getKnightPosition
@@ -60,9 +117,9 @@ public final class Chess{
 		Description:This method returns a BitSet from KnightMoveBoard
 					specified via the parameter
 	***********************************************************************/
-	public static final long getKnightPosition(int square){
+    public final long getKnightPosition(int square){
 		return KnightMoveBoard[square];
-	}// End getKnightPostion
+	}
 	
 	/***********************************************************************
 		Name:		getKingPosition
@@ -71,9 +128,9 @@ public final class Chess{
 		Description:This method returns a BitSet from KingMoveBoard
 					specified via the parameter
 	***********************************************************************/
-	public static final long getKingPosition(int square){
+	public final long getKingPosition(int square){
 		return KingMoveBoard[square];
-	}// End getKingPosition
+	}
 	
 	/***********************************************************************
 		Name:		getWhitePawnAttack
@@ -82,9 +139,9 @@ public final class Chess{
 		Description:This method returns a BitSet from WhitePawnAttackBoard
 					specified via the parameter
 	***********************************************************************/
-	public static final long getWhitePawnAttack(int square){
+	public final long getWhitePawnAttack(int square){
 		return WhitePawnAttackBoard[square];
-	}// End getWhitePawnAttack
+	}
 	
 	/***********************************************************************
 		Name:		getBlackPawnAttack
@@ -93,9 +150,9 @@ public final class Chess{
 		Description:This method returns a BitSet from BlackPawnAttackBoard
 					specified via the parameter
 	***********************************************************************/
-	public static final long getBlackPawnAttack(int square){
+	public final long getBlackPawnAttack(int square){
 		return BlackPawnAttackBoard[square];
-	}// End getBlackPawnAttack
+	}
 	
 	/***********************************************************************
 		Name:		initKnightMoveBoard
@@ -104,12 +161,8 @@ public final class Chess{
 		Description:This method initializes the BitSet representing all 
 					of the moves a Knight can make
 	***********************************************************************/
-	private static final void initKnightMoveBoard(long[] board){
+	private final void initKnightMoveBoard(long[] board){
 		int square;
-		int row;
-		int x;
-		int column;
-		
 		for(square=0;square<64;square++){
 			// This next section on conditionals tests to 
 			// see if the knight is near the center of the 
@@ -168,7 +221,7 @@ public final class Chess{
 		Description:This method initializes the BitSet representing all of 
 					the possible attacks a Black pawn can dp
 	***********************************************************************/
-	private static final  void initBlackPawnAttackBoard(long[] board){
+	private final  void initBlackPawnAttackBoard(long[] board){
 		int square;
 		for(square=63;square>7;square--){
 			if(square%8 == 0){
@@ -182,22 +235,22 @@ public final class Chess{
 				board[square] |= (long)1<<(square-9);			
 			} 
 		}
-	}// End BlackPawnAttackBoard
+	}
 	
-	/***********************************************************************
-		Name:
-		Parameters:
-		Returns:
-		Description:
-	***********************************************************************/
-	private static final  void initBlackPawnMoveBoard(long[] board){
+	/*
+     * Method initBlackPawnMoveBoard
+     *
+     * initializes all black pawn moves for each sqare
+     * 
+     */
+	private final  void initBlackPawnMoveBoard(long[] board){
 		int square;
 		for(square=55;square>7;square--){
 				if(square>=48)
 					board[square] |= (long)1<<(square-16);
 				board[square] |= (long)1<<(square-8);
-		}// End for 
-	}// End initBlackPawnAttackBoard
+		}
+	}
 	
 	/***********************************************************************
 		Name:		initWhitePawnMoveBoard
@@ -206,7 +259,7 @@ public final class Chess{
 		Description:This method initializes the WhitePawnBoard. It accounts
 					for the first move principle for the pawns.
 	***********************************************************************/
-	private static final void initWhitePawnMoveBoard(long[] board){
+	private final void initWhitePawnMoveBoard(long[] board){
 		int square;
 		for(square=0;square<=55;square++){
 			if(square >= 8 && square <=15){
@@ -214,8 +267,8 @@ public final class Chess{
 			}
 			board[square] |= (long)1<<(square+8);
 		
-		}// End for 
-	}// End initWhitePawnMoveBoard
+		}
+	}
 	
 	/***********************************************************************
 		Name:		initWhitePawnAttackBoard
@@ -224,7 +277,7 @@ public final class Chess{
 		Description:This method initilaizes the BitSet representing all of
 					the possible attacks a white pawn can do
 	***********************************************************************/
-	private static final void initWhitePawnAttackBoard(long[] board){
+	private final void initWhitePawnAttackBoard(long[] board){
 		int square;
 		for(square=0;square<56;square++){
 			if(square%8 == 0){
@@ -236,9 +289,9 @@ public final class Chess{
 			else{
 				board[square] = (long)1<<(square+7);		//powOf2[squareTopLeft(square)];
 				board[square] |= (long)1<<(square+9);		//powOf2[squareTopRight(square)];
-			}// End if
-		}// End for
-	}// End initWhitePawnAttackBoard
+			}
+		}
+	}
 	
 	/***********************************************************************
 		Name:		initKingBoard
@@ -247,7 +300,7 @@ public final class Chess{
 		Description:This method initializes the BitSet representing the 
 					king move board
 	***********************************************************************/
-	private static final void initKingBoard(long[] board){
+	private final void initKingBoard(long[] board){
 		int square;
 		
 		for(square=0;square<64;square++){
@@ -275,27 +328,50 @@ public final class Chess{
 		}
 	}
 	
-	
-	
-	
-	public static final long getKingCastle(int file) {
-		return WKingBoard[file];
+	/*
+     * Method getKingCastle
+     *
+     * returns the potential castle moves 
+     * 
+     * @param int rank - the occupancy of the rank the king is on
+     * 
+     */
+	public final long getKingCastle(int rank) {
+		return kingCastleBoard[rank];
 	}
 
-	private static final void setWKingCastle(int file) {
+    /*
+     * Method setKingCastle
+     *
+     * initializes array of all potential castle moves
+     * 
+     * @param int rank - the occupancy of the rank the king is on
+     * ex// if the file is full (255) there are no castle moves
+     * 
+     */
+	private final void setKingCastle(int file) {
 		if(file>=144 && file < 160) {
-			WKingBoard[file] = (long)1<<6;
+			kingCastleBoard[file] = (long)1<<6;
 		}
 		long temp = file&31;
 		if(temp==17)
-			WKingBoard[file] |= (long)1<<2;
+			kingCastleBoard[file] |= (long)1<<2;
 	}
 	
-	
-	public static final long getDiag1Attack(int index1, int index2) {
+	/*
+     * Method getDiag1Attack
+     *
+     * calculates all sliding moves along diagonal pointing NW
+     * 
+     * @param int index1 - the index the diagonal sliding piece is on
+     * @param int index2 - the occupancy of the diagonal
+     * 
+     * @return long - a bitset representing the moves along this diagonal
+     * 
+     */
+	public final long getDiag1Attack(int index1, int index2) {
 		
 		int DistToLeft = 0;						//used to find spot in index2
-		int oldIndex2 = index2;
 		int temp = index1;	
 		index2 &= ((1<<Global.Diag1Length[index1])-1);
 		long diag = 0;
@@ -325,10 +401,20 @@ public final class Chess{
 		return diag;
 	}
 	
-	public static final long getDiag2Attack(int index1, int index2) {
+    /*
+     * Method getDiag1Attack
+     *
+     * calculates all sliding moves along diagonal pointing NE
+     * 
+     * @param int index1 - the index the diagonal sliding piece is on
+     * @param int index2 - the occupancy of the diagonal
+     * 
+     * @return long - a bitset representing the moves along this diagonal
+     * 
+     */
+	public final long getDiag2Attack(int index1, int index2) {
 		
 		int DistToLeft = 0;						//used to find spot in index2
-		int oldIndex2 = index2;
 		int temp = index1;	
 		index2 &= ((1<<Global.Diag2Length[index1])-1);
 		long diag = 0;
@@ -359,9 +445,18 @@ public final class Chess{
 		return diag;
 	}
 
-
-	
-	public static final long getRooksRank2(int index1,int index2) {
+	/*
+     * Method getRooksRank2
+     *
+     * calculates sliding moves along a rank
+     * 
+     * @param int index1 - the index the rank sliding piece is on
+     * @param int index2 - the occupancy of the diagonal
+     * 
+     * @return long - a bitset representing the moves along the rank
+     * 
+     */
+	public final long getRooksRank2(int index1,int index2) {
 	
 		long rank = 0; 
 		for(int i=index1+1;i<index1/8*8+8;i++)   {		//move up file and look for pieces in the way
@@ -373,10 +468,20 @@ public final class Chess{
 			if((index2&(long)1<<i%8)!=0) break;
 		}
 		return rank;
-}
+    }
 		
-	
-	public static final long getRooksFile2(int index1,int index2) {
+	/*
+     * Method getRooksFile2
+     *
+     * calculates sliding moves along a file
+     * 
+     * @param int index1 - the index the rank sliding piece is on
+     * @param int index2 - the occupancy of the diagonal
+     * 
+     * @return long - a bitset representing the moves along the file
+     * 
+     */
+	public final long getRooksFile2(int index1,int index2) {
 	
 		long file = 0;
 		 
@@ -389,8 +494,7 @@ public final class Chess{
 			if((index2&(long)1<<i/8)!=0) break;
 		}
 		return file;
-}
-	
+    }
 	
 }	
 		
