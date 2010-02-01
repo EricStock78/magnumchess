@@ -1,32 +1,86 @@
+/**
+ * HistoryWriter.java
+ *
+ * Version 2.0   
+ * 
+ * Copyright (c) 2010 Eric Stock
+ 
+Permission is hereby granted, free of charge, to any person obtaining
+a copy of this software and associated documentation files (the
+"Software"), to deal in the Software without restriction, including
+without limitation the rights to use, copy, modify, merge, publish,
+distribute, sublicense, and/or sell copies of the Software, and to
+permit persons to whom the Software is furnished to do so, subject to
+the following conditions:
+ 
+The above copyright notice and this permission notice shall be
+included in all copies or substantial portions of the Software.
+ 
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
+EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
+MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
+NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
+WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+ */
+
 import java.io.*;
-import javax.swing.JFileChooser;
 import java.util.ArrayList;
+
+/*
+ * HistoryWriter.java
+ * 
+ * To-do 
+ * It is doubtful whether all this functionality is needed as Magnum can be run with
+ * a UCI gui like Area
+ * Either eliminate most of this class and clean up the rest, or improve the GUI and this class up
+ *
+ *
+ * This class handles the follwoing:
+ * -conversion of chess formats (pgn,fen, etc)
+ * -saving and loading games from file
+ * 
+ */
+
 public final class HistoryWriter {
-	private static String[] boardString;			//algrebraic notation names of board positions
-	private static String[] pieceSt;			//abreviated names of pieces
-	private static Board Magnum;
+	
+    /** algebraic notation names 64 board positions */
+    private static String[] boardString;			
+    
+    /** abreviated names of pieces used for pgn notation */
+	private static String[] pieceSt;			
+	
+    /** instance of singleton Board class */
+    private static Board Magnum;
+    
+    /** use an array list to store all made moves */
 	private static ArrayList<String> history;
-	//private static ArrayList 
-	private static ArrayList loadedGame;
 	
-	
-	public HistoryWriter(Board m) {			//constructor
-		Magnum = m;
+	/*
+     * Constructor HistoryWriter
+     * 
+     * Initializes some arrays and calls setAlgebraicNotes method
+     * 
+     */
+	public HistoryWriter() {			//constructor
+		Magnum = Board.getInstance();
 		boardString = new String[64];
 		pieceSt = new String[12];
 		setAlgebraicNotes();		
 		history = new ArrayList<String>(100);
-		loadedGame = new ArrayList();
-		//System.out.println("removed is "+removeChar("R3=Q","="));
-	
 	}
-	public void writeHistory() {
-		GUI.removeText2();
-		for(int i=0;i<history.size();i++) {
-			GUI.printText2(history.get(i)+" ");
-		}	
-        }
 	
+    
+    /*
+     * method acceptMoves
+     * 
+     * parses moves out of a string of moves in algebraic notation
+     * makes these moves over the board
+     * 
+     * @param String moves - the moves to be parsed and made
+     * 
+     */ 
 	public static void acceptMoves(String moves) {
 		String move;
 		int from=0;
@@ -43,60 +97,68 @@ public final class HistoryWriter {
 			
 			if(move.length() == 4) {
 			
-			move = moves.substring(0,4);
-			String m1 = move.substring(0,2);
-			String m2 = move.substring(2,4);
-			for(int i=0;i<64;i++) {
-				if(boardString[i].equals(m1)) {
-					from = i;
-				}
-			}	
-			for(int i=0;i<64;i++) {
-				if(boardString[i].equals(m2))
-				to = i;
-			}	
-			int mv = MoveFunctions.makeMove(to,from);
-			Magnum.makeMove(mv,true,true);
-			if(moves.indexOf(" ")==-1) break;
-			moves = moves.substring(moves.indexOf(" "));
-			moves = removeFrontWhiteSpace(moves);
+                move = moves.substring(0,4);
+                String m1 = move.substring(0,2);
+                String m2 = move.substring(2,4);
+                for(int i=0;i<64;i++) {
+                    if(boardString[i].equals(m1)) {
+                        from = i;
+                    }
+                }	
+                for(int i=0;i<64;i++) {
+                    if(boardString[i].equals(m2))
+                    to = i;
+                }	
+                int mv = MoveFunctions.makeMove(to,from);
+                Magnum.makeMove(mv,true,true);
+                if(moves.indexOf(" ")==-1) break;
+                moves = moves.substring(moves.indexOf(" "));
+                moves = removeFrontWhiteSpace(moves);
 		
-		} else if(move.length() == 5) {				//promo move
-			move = moves.substring(0,5);
-			String m1 = move.substring(0,2);
-			String m2 = move.substring(2,4);
-			String m3 = move.substring(4,5);
-			for(int i=0;i<64;i++) {
-				if(boardString[i].equals(m1)) {
-					from = i;
-				}
-			}	
-			for(int i=0;i<64;i++) {
-				if(boardString[i].equals(m2))
-				to = i;
-			}	
-			int piece = piece_in_square[from];
-			int cp = piece_in_square[to];
-			if(m3.equals("q")) 
-				type = Global.PROMO_Q;
-			else if(m3.equals("n"))
-				type = Global.PROMO_N;
-			else if(m3.equals("b"))
-				type = Global.PROMO_B;
-			else if(m3.equals("r"))
-				type = Global.PROMO_R;
-			int mv = MoveFunctions.makeMove(to,from,piece,cp,type,0);
-			Magnum.makeMove(mv,true,true);
-			if(moves.indexOf(" ")==-1) break;
-			moves = moves.substring(moves.indexOf(" "));
-			moves = removeFrontWhiteSpace(moves);
-		}	
-	
-	}	
-		
-		
-	
-	}
+            } else if(move.length() == 5) {				//promo move
+                move = moves.substring(0,5);
+                String m1 = move.substring(0,2);
+                String m2 = move.substring(2,4);
+                String m3 = move.substring(4,5);
+                for(int i=0;i<64;i++) {
+                    if(boardString[i].equals(m1)) {
+                        from = i;
+                    }
+                }	
+                for(int i=0;i<64;i++) {
+                    if(boardString[i].equals(m2))
+                    to = i;
+                }	
+                int piece = piece_in_square[from];
+                int cp = piece_in_square[to];
+                if(m3.equals("q")) 
+                    type = Global.PROMO_Q;
+                else if(m3.equals("n"))
+                    type = Global.PROMO_N;
+                else if(m3.equals("b"))
+                    type = Global.PROMO_B;
+                else if(m3.equals("r"))
+                    type = Global.PROMO_R;
+                int mv = MoveFunctions.makeMove(to,from,piece,cp,type,0);
+                Magnum.makeMove(mv,true,true);
+                if(moves.indexOf(" ")==-1) break;
+                moves = moves.substring(moves.indexOf(" "));
+                moves = removeFrontWhiteSpace(moves);
+            }	
+        }	
+    }
+    
+    /*
+     * method getUCIMove
+     * 
+     * converts a move represented internally in the engine to algebraic notation 
+     * to be used in UCI communication
+     * 
+     * @param int to - to position of move
+     * @param int from - from position of move
+     * @param int piece - piece type
+     * 
+     */ 
 	public static String getUCIMove(int to,int from,int piece) {
 		String st = "";
 		st = st.concat(boardString[from]);
@@ -104,9 +166,17 @@ public final class HistoryWriter {
 		if(piece%6==5 && (to/8==0 || to/8==7))
 			st = st.concat("q");
 		return st;
-		
-		
 	}
+    
+    /*
+     * method getUCIMove
+     * 
+     * converts a move represented internally in the engine to algebraic notation 
+     * to be used in UCI communication
+     * 
+     * @param int move - move info packed into 32 bit int
+     *
+     */  
     public static String getUCIMove(int move) {
 		int to = MoveFunctions.getTo(move);
         int from = MoveFunctions.getFrom(move);
@@ -127,40 +197,74 @@ public final class HistoryWriter {
                st = st.concat("r");
         }
         return st;
-
-
 	}
 
-
+    /*
+     * method reset()
+     * 
+     * clears the array list containing all moves
+     *
+     */
 	public void reset() {
 		history.clear();
 	}	
-	public static String getLastMove() {
+	
+    /*
+     * method getLastMove
+     * 
+     * returns last move made over the board in algebraic notation
+     * 
+     * @return String - the last move made
+     *
+     */
+    public static String getLastMove() {
 		return history.get(history.size()-1);
 		
 	}
-	public void removeLastHistory() {
+	
+    /*
+     * method removeLastHistory
+     * 
+     * removes last move made over the board in algebraic notation
+     *
+     */
+    public void removeLastHistory() {
 		history.remove(history.size()-1);	
-		//writeHistory();
 	}	
-	public void historyToFile(File f) {
+	
+    /*
+     * method historyToFile
+     * 
+     * writes a .pgn file containing a chess game
+     * 
+     * @param File f - the file to write to
+     *
+     */
+    public void historyToFile(File f) {
 		File gameFile;
 		FileWriter fileWriter;
 		BufferedWriter writer;
-		JFileChooser chooser; 
 		try {
 			gameFile = f;
 			fileWriter = new FileWriter(gameFile);
 			writer = new BufferedWriter(fileWriter);
-		writer.write("[Event \"\"]\n[Site \"\"]\n[Date \"\"]\n[Round \"\"]\n[White \"\"]\n[Black \"\"]\n[TimeControl \"\"]\n[Result \"\"]\n");
-		for(int i=0;i<history.size();i++) {
-			writer.write(history.get(i));	
-				
-		}
-		writer.close();
-	} catch(Exception ex) {};
-}	
-	public void readHistory(File f) {
+            writer.write("[Event \"\"]\n[Site \"\"]\n[Date \"\"]\n[Round \"\"]\n[White \"\"]\n[Black \"\"]\n[TimeControl \"\"]\n[Result \"\"]\n");
+            for(int i=0;i<history.size();i++) {
+                writer.write(history.get(i));			
+            }
+            writer.close();
+        } catch(Exception ex) {ex.printStackTrace(System.out);}
+    }	
+	
+    /*
+     * method historyToFile
+     * 
+     * reads a .pgn file containing a chess game
+     * 
+     * @param File f - the file to write to
+     *
+     */
+    public void readHistory(File f) {
 		File gameFile;
 		FileReader fileReader;
 		BufferedReader reader;
@@ -171,21 +275,32 @@ public final class HistoryWriter {
 			fileReader = new FileReader(gameFile);
 			reader = new BufferedReader(fileReader);
 			line = null;
-			while((line= reader.readLine()) != null&& line.indexOf("]")!=-1||isEmptyLine(line));			//skip game info
-			processLine(line);
+			while((line= reader.readLine()) != null&& line.indexOf("]")!=-1||isEmptyLine(line))			//skip game info
+                processLine(line);
 			while((line=reader.readLine()) !=null&&!isEmptyLine(line))  {
 				processLine(line);
 			}	
-			
 			reader.close();	
 		}
-		catch(Exception ex) {
-		//ex.printStackTrace(System.out);
-		System.out.println("File Initialization Failed");
-		Magnum.newGame();};
-	
+		catch(Exception ex) {   
+            ex.printStackTrace(System.out);
+            System.out.println("File Initialization Failed");
+            Magnum.newGame();
+        }
 	}	
-	public boolean isEmptyLine(String st) {
+	
+    /*
+     * method isEmptyLine
+     * 
+     * recognizes empty lines when parsing a .pgn file
+     * These lines can then be skipped
+     * 
+     * @param String st - the line beign processed
+     * 
+     * @return boolean - is it blank?
+     *
+     */
+    private boolean isEmptyLine(String st) {
 		int index;
 		index = 0;
 		for(int i=0;i<st.length();i++) {	
@@ -194,9 +309,19 @@ public final class HistoryWriter {
 		}
 		if(index==0) return true;
 		else return false;
-	}		
+	}	
 	
-	public static String removeFrontWhiteSpace(String st) {
+    /*
+     * method removeFrontWhiteSpace
+     * 
+     * removes all white space from the start of the String being processed
+     * 
+     * @param String st - the line beign processed
+     * 
+     * @return String - the new string with the forward white space removed 
+     *
+     */
+	private static String removeFrontWhiteSpace(String st) {
 		int index;
 		index = 0;
 		for(int i=0;i<st.length();i++) {
@@ -206,7 +331,17 @@ public final class HistoryWriter {
 		return st.substring(index);
 	}
 	
-	public String removeEndWhiteSpace(String st) {
+    /*
+     * method removeEndWhiteSpace
+     * 
+     * removes all white space from the end of the String being processed
+     * 
+     * @param String st - the line beign processed
+     * 
+     * @return String - the new string with trailing white space removed 
+     *
+     */
+	private String removeEndWhiteSpace(String st) {
 		int index;
 		index = 0;
 		for(int i=0;i<st.length();i++) {
@@ -215,15 +350,27 @@ public final class HistoryWriter {
 		}
 		return st.substring(0,index+1);	
 	}
-	public String removeChar(String st, String s) {
+	
+    /*
+     * method removeEndWhiteSpace
+     * 
+     * removes all white space from the end of the String being processed
+     * 
+     * @param String st - the line beign processed
+     * @param char s = the character to remove
+     * 
+     * @return String - the new string with the char removed
+     *
+     */
+    public String removeChar(String st, char s) {
 		int index;
 		String temp;
 		String temp2;
 		index = -1;
 		temp = "";
 		temp2 = "";
-		for(int i=0;i<st.length();i++) {
-			if(st.charAt(i)==s.charAt(0))
+		for(int i=0; i<st.length(); i++) {
+			if(st.charAt(i) == s)
 				index = i;
 		}
 		if(index>-1) {
@@ -232,23 +379,22 @@ public final class HistoryWriter {
 		temp = temp.concat(temp2);
 		return temp;
 		} else
-		return st;
-		
+		return st;	
 	}	
-	public void processLine(String st) {
+	
+    /*
+     * method processLine
+     * 
+     * removes white space from the line and checks if there is a move left to process
+     * 
+     * @param String st - the line beng processed
+     *
+     */
+    public void processLine(String st) {
 		String move1;
 		String move2;
-		String toSt;			//string rep of board position being moved to
 		int start;
-		int from;
 		int end;
-		int temp;
-		int to;					//index of move to
-		int pos;
-		int[] piece_in_square;
-		long attackers;
-		to = -1;
-		from = -1;
 		start = st.indexOf(".")+1;
 		st = st.substring(start);
 		st = removeFrontWhiteSpace(st);
@@ -263,12 +409,18 @@ public final class HistoryWriter {
 			processMove(move2);
 		}
 	}		
-	public void processMove(String move1) 	{
+	
+    /*
+     * method processMove
+     * 
+     * interprets the move in algebraic/pgn form and makes this move
+     * 
+     * @param String move1 - the move to process
+     *
+     */
+    public void processMove(String move1) 	{
 		String toSt;			//string rep of board position being moved to
-		int start;
 		int from;
-		int end;
-		int temp;
 		int to;					//index of move to
 		int pos;
 		int[] piece_in_square;
@@ -277,15 +429,12 @@ public final class HistoryWriter {
 		long bit;
 		int rank;
 		int file;
-		boolean fileFlag;
-		boolean rankFlag;
 		
 		to = -1;
 		from = -1;
 		bit = 0;
-		//System.out.println("move is "+move1);
-		move1 = removeChar(move1,"+");
-		move1 = removeChar(move1,"=");
+		move1 = removeChar(move1,'+');
+		move1 = removeChar(move1,'=');
 		if((int)move1.charAt(0)==79) {
 			if(Magnum.getTurn()==1) {				//black moving
 				if(move1.lastIndexOf(79)>3)	{
@@ -304,7 +453,6 @@ public final class HistoryWriter {
 					Magnum.makeMove(mv,true,true);	
 				}
 			}	
-			
 		}	
 		else {
 			if(Magnum.getTurn()==-1)
@@ -314,7 +462,6 @@ public final class HistoryWriter {
 			if(move1.indexOf("Q")==move1.length()-1) 						//if promotion move, remove the "Q"
 				move1 = move1.substring(0,move1.length()-1);
 			toSt = move1.substring(move1.length()-2,move1.length());
-			//System.out.println("to st is "+toSt);
 			for(int i=0;i<64;i++) {
 				if(boardString[i].equals(toSt))
 					to = i;
@@ -375,6 +522,16 @@ public final class HistoryWriter {
 		}
 	}	
 	
+    /*
+     * method getPieces
+     * 
+     * returns the bitset containing the piece being moved
+     * 
+     * @param String st - the move being processed
+     * @param boolean side - true - black, false - white
+     *
+     * @return long - the bitset
+     */
 	public long getPieces(String st, boolean side) {
 		int p;
 		long temp;
@@ -382,50 +539,56 @@ public final class HistoryWriter {
 		switch(p) {
 			case(66):			//bishop 
 				if(side)
-					temp = Magnum.getBlackBishops();
+					temp = Magnum.blackbishops;
 				else
-					temp = Magnum.getWhiteBishops();
+					temp = Magnum.whitebishops;
 					break;
 			case(75):			//king
 				if(side)
-					temp = Magnum.getBlackKing();
+					temp = Magnum.blackking;
 				else
-					temp = Magnum.getWhiteKing();
+					temp = Magnum.whiteking;
 					break;
 			case(78):			//knight
 				if(side)
-					temp = Magnum.getBlackKnights();
+					temp = Magnum.blackknights;
 				else
-					temp = Magnum.getWhiteKnights();
+					temp = Magnum.whiteknights;
 					break;
 			case(82):			//rook
 				if(side)
-					temp = Magnum.getBlackRooks();
+					temp = Magnum.blackrooks;
 				else
-					temp = Magnum.getWhiteRooks();
+					temp = Magnum.whiterooks;
 					break;
 			case(81):			//queen
 				if(side)
-					temp = Magnum.getBlackQueen();
+					temp = Magnum.blackqueen;
 				else
-					temp = Magnum.getWhiteQueen();
+					temp = Magnum.whitequeen;
 					break;
 			default:				//pawn move
-				//if(p!=79) {
 				if(side)
-					temp = Magnum.getBlackPawns();
+					temp = Magnum.blackpawns;
 				else
-					temp = Magnum.getWhitePawns();
+					temp = Magnum.whitepawns;
 					break;
-				//}
-	}
-	return temp;	
-		
-}	
-		
-	public void addHistory(int to,int from,int[] p,int c) {
+        }
+        return temp;	
+    }	
+	
+    /*
+     * method addHistory
+     * 
+     * converts a move to algebraic notation and adds it to the history arraylist
+     * 
+     * @param int to - position moved to
+     * @param int from - position moved from
+     * @param int c - full move count of move
+     *
+     */
+	public void addHistory(int to,int from,int c) {
 		int count;
-		int[] piece_in_square;
 		String moveSt;
 		
 		long samePieces;			//long representing same type of pieces as the piece capturing
@@ -436,29 +599,26 @@ public final class HistoryWriter {
 		boolean sameRank;
 		
 		count = c;
-		piece_in_square = p;
 		moveSt = "";
-		//if(count%2==0)
-		//	moveSt = moveSt.concat(Integer.toString(1+count/2)+". ");
-		if(piece_in_square[from]==4 && Math.abs(to-from)==2) {		//white castle move
+		if(Magnum.piece_in_square[from]==4 && Math.abs(to-from)==2) {		//white castle move
 			if(to>from)				// kingside caslte
 				moveSt = moveSt.concat("O-O");
 			else					//queen side
 				moveSt = moveSt.concat("O-O-O");
 		}	
-		else if(piece_in_square[from]==10 && Math.abs(to-from)==2) {		//black castle move
+		else if(Magnum.piece_in_square[from]==10 && Math.abs(to-from)==2) {		//black castle move
 			if(to>from)				// kingside caslte
 				moveSt = moveSt.concat("O-O");
 			else					//queen side
 				moveSt = moveSt.concat("O-O-O");	
 		}
 		else {	
-			moveSt = moveSt.concat(pieceSt[piece_in_square[from]]);
-			int pType = piece_in_square[from]%6;
+			moveSt = moveSt.concat(pieceSt[Magnum.piece_in_square[from]]);
+			int pType = Magnum.piece_in_square[from]%6;
 				if(pType==3||pType==1||pType==0) {			//if queen,knight or rook, could have ambiguity
 					rank = from/8;
 					file = from%8;
-					samePieces = getSame(piece_in_square[from]);
+					samePieces = getSame(Magnum.piece_in_square[from]);
 					attackers = Magnum.getAttack2(to);
 					samePieces &= attackers;
 					samePieces ^= (long)1<<from;
@@ -482,14 +642,13 @@ public final class HistoryWriter {
 							moveSt = moveSt.concat(boardString[from].substring(0,1));
 					}
 				}	
-			if(piece_in_square[to]!=-1)      {				//capture move
-				if(piece_in_square[from]%6==5)				//pawn is moving
+			if(Magnum.piece_in_square[to]!=-1)      {				//capture move
+				if(Magnum.piece_in_square[from]%6==5)				//pawn is moving
 					moveSt = moveSt.concat(boardString[from].substring(0,1));
-				//else 	
 				moveSt = moveSt.concat("x");
 			}
 			moveSt = moveSt.concat(boardString[to]);
-			if(piece_in_square[from]%6==5) {			//pawn moving
+			if(Magnum.piece_in_square[from]%6==5) {			//pawn moving
 				if(to/8==0||to/8==7)					//promotion
 					moveSt = moveSt.concat("Q");
 			}
@@ -497,32 +656,39 @@ public final class HistoryWriter {
 		moveSt = moveSt.concat(" ");
 		if(count%2==1)
 			moveSt = moveSt.concat("\n");
-		//GUI.printText2(moveSt);
 		history.add(moveSt);
 	}
 	
-	
-	
-	public long getSame(int pType) {
+	/*
+     * method getSame
+     * 
+     * returns the bitset containing the specified piece type
+     * 
+     * @param int pType - type of piece
+     * 
+     * @return long - the bitset of requested piece type
+     *
+     */
+	private long getSame(int pType) {
 		long pieces;
 		switch(pType) {
 			case 0:				//white rook
-				pieces = Magnum.getWhiteRooks();
+				pieces = Magnum.whiterooks;
 				break;
 			case 1:				//white knight
-				pieces = Magnum.getWhiteKnights();
+				pieces = Magnum.whiteknights;
 				break;
 			case 3:
-				pieces = Magnum.getWhiteQueen();
+				pieces = Magnum.whitequeen;
 				break;
 			case 6:				//white rook
-				pieces = Magnum.getBlackRooks();
+				pieces = Magnum.blackrooks;
 				break;
 			case 7:				//white knight
-				pieces = Magnum.getBlackKnights();
+				pieces = Magnum.blackknights;
 				break;
 			case 9:
-				pieces = Magnum.getBlackQueen();
+				pieces = Magnum.blackqueen;
 				break;
 			default:
 				//this shouldn't happen
@@ -531,9 +697,17 @@ public final class HistoryWriter {
 		return pieces;
 	}
 
-    //method converts a 2 character string representing an algebraic chess position
-    //to an integer representing a square
-
+    /*
+     * method getNumericPosition
+     * 
+     * converts a 2 character string representing an algebraic chess position
+     * to an integer representing a square
+     * 
+     * @param String st - string representation of square
+     * 
+     * @return int - the numberic square representation (0 to 64)
+     *
+     */
     public static int getNumericPosition(String st) {
 
         for(int i=0; i<64; i++) {
@@ -543,7 +717,13 @@ public final class HistoryWriter {
         return -1;
     }
 
-	public static void setAlgebraicNotes() {
+    /*
+     * method setAlgebraicNotes
+     * 
+     * initializes arrays used to convert between internal numeric and algebraic notation
+     * 
+     */
+	private static void setAlgebraicNotes() {
 		int file;
 		int rank;
 		for(int i=0;i<12;i++) {
@@ -587,7 +767,6 @@ public final class HistoryWriter {
 			
 			}	
 		}
-		
 		
 		for(int i=0;i<64;i++) {
 			rank = i/8;
