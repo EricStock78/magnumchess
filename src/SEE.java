@@ -62,25 +62,31 @@ public class SEE {
     	int relation;
     	
     	long enemies;
-    	long king;							
-    	long temp;
-    	int nextPos;
+    	long king;
+
     	if(side==1) {
 			king = Board.blackking;
 			enemies = Board.whitepieces;
+
 		}
 		else {
 			king = Board.whiteking;
 			enemies = Board.blackpieces;
 		}
 
-    	int kingPos = Board.getPos(king);
+    	int kingPos = Long.numberOfTrailingZeros(king);
     	
     	if(kingPos == from) {
     	
     		return false;	
     	}
-    	enemies &= Board.slidePieces;
+      if(side==1) {
+			enemies &= (Board.whitequeen | Board.whitebishops | Board.whiterooks);
+		}
+		else {
+			enemies &= (Board.blackqueen | Board.blackbishops | Board.blackrooks);
+		}
+      //enemies &= Board.slidePieces;
     	
     	int difference = kingPos - from;
     	int rankDifference = kingPos/8 - from/8;
@@ -96,13 +102,15 @@ public class SEE {
     		else
     			relation = 99;		
     	}
+      long temp;
+    	int nextPos;
     	switch(relation) {
     		case(-9):	
     			if(Global.Diag2Groups[from] == Global.Diag2Groups[to]) return false;
     			
     			temp = Board.bitboard & Global.plus9[kingPos];
     			temp &= -temp;
-    			nextPos = Board.getPos(temp);	
+    			nextPos = Long.numberOfTrailingZeros(temp);
     			if(nextPos < from) return false;
     			if((Board.getAttack2(from) & enemies & Global.diag2Masks[Global.Diag2Groups[from]]) == 0) return false;
     			return true;
@@ -111,7 +119,7 @@ public class SEE {
     			
     			temp = Board.bitboard & Global.plus9[from];
     			temp &= -temp;
-    			nextPos = Board.getPos(temp);	
+    			nextPos = Long.numberOfTrailingZeros(temp);
     			if(nextPos < kingPos) return false;
     			if((Board.getAttack2(from) & enemies & Global.diag2Masks[Global.Diag2Groups[from]]) == 0) return false;
     			return true;
@@ -120,7 +128,7 @@ public class SEE {
     			
     			temp = Board.bitboard & Global.plus7[kingPos];
     			temp &= -temp;
-    			nextPos = Board.getPos(temp);	
+    			nextPos = Long.numberOfTrailingZeros(temp);
     			if(nextPos < from) return false;
     			if((Board.getAttack2(from) & enemies & Global.diag1Masks[Global.Diag1Groups[from]]) == 0) return false;
     			return true;
@@ -128,7 +136,7 @@ public class SEE {
     			if(Global.Diag1Groups[from] == Global.Diag1Groups[to]) return false;
     			temp = Board.bitboard & Global.plus7[from];
     			temp &= -temp;
-    			nextPos = Board.getPos(temp);	
+    			nextPos = Long.numberOfTrailingZeros(temp);
     			if(nextPos < kingPos) return false;
     			if((Board.getAttack2(from) & enemies & Global.diag1Masks[Global.Diag1Groups[from]]) == 0) return false;
     			return true;	
@@ -136,7 +144,7 @@ public class SEE {
     			if(from%8 == to%8) return false;
     			temp = Board.bitboard & Global.plus8[kingPos];
     			temp &= -temp;
-    			nextPos = Board.getPos(temp);	
+    			nextPos = Long.numberOfTrailingZeros(temp);
     			if(nextPos < from) return false;
     			if((Board.getAttack2(from) & enemies & Global.fileMasks[from%8]) == 0) return false;
     			return true;			
@@ -144,7 +152,7 @@ public class SEE {
     			if(from%8 == to%8) return false;
     			temp = Board.bitboard & Global.plus8[from];
     			temp &= -temp;
-    			nextPos = Board.getPos(temp);	
+    			nextPos = Long.numberOfTrailingZeros(temp);
     			if(nextPos < kingPos) return false;
     			if((Board.getAttack2(from) & enemies & Global.fileMasks[from%8]) == 0) return false;
     			return true;
@@ -152,7 +160,7 @@ public class SEE {
     			if(from/8 == to/8) return false;
     			temp = Board.bitboard & Global.plus1[kingPos];
     			temp &= -temp;
-    			nextPos = Board.getPos(temp);	
+    			nextPos = Long.numberOfTrailingZeros(temp);
     			if(nextPos < from) return false;
     			if((Board.getAttack2(from) & enemies & Global.rankMasks[from/8]) == 0) return false;
     			return true;	
@@ -160,7 +168,7 @@ public class SEE {
  				if(from/8 == to/8) return false;
     			temp = Board.bitboard & Global.plus1[from];
     			temp &= -temp;
-    			nextPos = Board.getPos(temp);	
+    			nextPos = Long.numberOfTrailingZeros(temp);
     			if(nextPos < kingPos) return false;
     			if((Board.getAttack2(from) & enemies & Global.rankMasks[from/8]) == 0) return false;
     			return true;
@@ -230,7 +238,7 @@ public class SEE {
 		int eCount = 0;
 		int fCount = 0;
 		
-        if(to == passant)
+      if(to == passant)
 			ePieces[0] = Global.values[5] << 6;
 		else {
             int cp = Board.piece_in_square[to];
@@ -242,7 +250,7 @@ public class SEE {
 		eCount = 1; 	
 		
         
-        fPieces[0] = (Global.values[Board.piece_in_square[from]] << 6 | from);
+      fPieces[0] = (Global.values[Board.piece_in_square[from]] << 6 | from);
 		fCount = 1;
 		
 		long attack = Board.getAttack2(to);
@@ -254,9 +262,9 @@ public class SEE {
         //    return ePieces[0];
         
         while(enemyDefenders != 0) {       
-            long temp2 = enemyDefenders & -enemyDefenders;
+         long temp2 = enemyDefenders & -enemyDefenders;
 			enemyDefenders ^= temp2;
-			int pos = Board.getPos(temp2);
+			int pos = Long.numberOfTrailingZeros(temp2);
 			ePieces[eCount++] = Global.values[Board.piece_in_square[pos]] << 6 | pos;
         } 
         
@@ -275,7 +283,7 @@ public class SEE {
         while(friendAttackers != 0) {       
             long temp2 = friendAttackers & -friendAttackers;
 			friendAttackers ^= temp2;
-			int pos = Board.getPos(temp2);
+			int pos = Long.numberOfTrailingZeros(temp2);
 			fPieces[fCount++] = Global.values[Board.piece_in_square[pos]] << 6 | pos;
         } 
         //sort friend attackers if more than 3 total attackers
@@ -317,14 +325,14 @@ public class SEE {
                 if((newAttack & friends) != 0) {
                     long temp2 = newAttack & -newAttack;
                     newAttack ^= temp2;
-                    int pos = Board.getPos(temp2);
+                    int pos = Long.numberOfTrailingZeros(temp2);
                     fPieces[fCount++] = Global.values[Board.piece_in_square[pos]] << 6 | pos;
                     if(fCount - moveNumber > 2)
                         SortCaptures(moveNumber + 1,fCount,fPieces);
                 } else if((newAttack & enemies) != 0) {
                     long temp2 = newAttack & -newAttack;
                     newAttack ^= temp2;
-                    int pos = Board.getPos(temp2);
+                    int pos = Long.numberOfTrailingZeros(temp2);
                     ePieces[eCount++] = Global.values[Board.piece_in_square[pos]] << 6 | pos;
                     if(eCount - moveNumber >= 2)
                         SortCaptures(moveNumber + 1,eCount,ePieces);
@@ -363,14 +371,14 @@ public class SEE {
                 if((newAttack & friends) != 0) {
                     long temp2 = newAttack & -newAttack;
                     newAttack ^= temp2;
-                    int pos = Board.getPos(temp2);
+                    int pos = Long.numberOfTrailingZeros(temp2);
                     fPieces[fCount++] = Global.values[Board.piece_in_square[pos]] << 6 | pos;
                     if(fCount - moveNumber > 2)
                         SortCaptures(moveNumber + 1,fCount,fPieces);
                 } else if((newAttack & enemies) != 0) {
                     long temp2 = newAttack & -newAttack;
                     newAttack ^= temp2;
-                    int pos = Board.getPos(temp2);
+                    int pos = Long.numberOfTrailingZeros(temp2);
                     ePieces[eCount++] = Global.values[Board.piece_in_square[pos]] << 6 | pos;
                     if(eCount - moveNumber >= 3)
                         SortCaptures(moveNumber + 2,eCount,ePieces);

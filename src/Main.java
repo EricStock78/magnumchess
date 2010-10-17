@@ -46,14 +46,14 @@ public class Main
     public static final int DEFAULT_BTIME = 1000;
     public static final int DEFAULT_WINC = 0;
     public static final int DEFAULT_BINC = 0;
-    public static final int DEFAULT_TOGO = 40;
+    public static final int DEFAULT_TOGO = 35;
     
-	public static BufferedReader reader;
-	public static String cmd;
-	public static Engine theSearch;
-	public static Board Board;
-	public static HistoryWriter writer;
-	public static Evaluation2 eval;
+    public static BufferedReader reader;
+    public static String cmd;
+    public static Engine theSearch;
+    public static Board Board;
+    public static HistoryWriter writer;
+    public static Evaluation2 eval;
     public static MoveFunctions moveFunctions;
     public static SEE see;
     
@@ -66,7 +66,7 @@ public class Main
      */ 
     public static void main(String args[]) throws IOException 
 	{	
-		try {
+        try {
             see = new SEE();
             eval = new Evaluation2();
             moveFunctions = new MoveFunctions();
@@ -79,9 +79,9 @@ public class Main
             printGreeting();
             getCmd();
         } catch(Exception ex) {
-			System.out.print("info string ");
-			System.out.println(ex);		
-			ex.printStackTrace();
+            System.out.print("info string ");
+            System.out.println(ex);
+            ex.printStackTrace();
 		}
 	}
 	
@@ -91,12 +91,12 @@ public class Main
      * prints a simple greeting message
      */ 
     public static void printGreeting() {
-		System.out.println("*****************MAGNUM CHESS***************");
-		System.out.println("*****************version 2.00***************");
-		System.out.println("to play in UCI mode type \"uci\"");
-		//System.out.println("to launch GUI type \"launch\"");
+        System.out.println("*****************MAGNUM CHESS***************");
+        System.out.println("*****************version 2.00***************");
+        System.out.println("to play in UCI mode type \"uci\"");
+        //System.out.println("to launch GUI type \"launch\"");
 		
-	}
+    }
 	/*
      * method uci
      * 
@@ -105,7 +105,8 @@ public class Main
      */ 
     public static void uci() throws IOException{
 		int movetime;
-		int searchDepth;
+		int maxMoveTime;
+      int searchDepth;
 		int wtime=0;
 		int btime=0;
 		int winc=0;
@@ -117,16 +118,21 @@ public class Main
 		System.out.println("id author Eric Stock");
 		
 		System.out.println("option name Hash type spin default 8 min 8 max 512");
-        System.out.println("option name Evaluation Table type spin default 4 min 1 max 64");
-        System.out.println("option name Pawn Table type spin default 4 min 1 max 64");
+      System.out.println("option name Evaluation Table type spin default 4 min 1 max 64");
+      System.out.println("option name Pawn Table type spin default 4 min 1 max 64");
         
 		System.out.println("uciok");
 		while(true) {
 			cmd = reader.readLine();
 			if(cmd.startsWith("quit"))
                 System.exit(0);
-
-			if ("isready".equals( cmd ))
+         else if(cmd.equals("eval_dump")) {
+            Evaluation2.getEval(1);
+            Evaluation2.printEvalTerms();
+            Evaluation2.getEval(-1);
+            Evaluation2.printEvalTerms();
+         }
+         else if ("isready".equals( cmd ))
 				System.out.println("readyok");
 
             if(cmd.startsWith("perft")) {
@@ -149,7 +155,8 @@ public class Main
 					if(mstart>-1) {
 						String moves = cmd.substring(mstart+5);
 						Board.undoAll();
-						HistoryWriter.acceptMoves(moves);
+
+                  HistoryWriter.acceptMoves(moves);
 					}
 				} else {			//reading in a fen string
 					int mstart = cmd.indexOf("moves");
@@ -165,7 +172,7 @@ public class Main
 					}
 				}
 			}	
-			if(cmd.startsWith("setoption")) {
+         else if(cmd.startsWith("setoption")) {
 				int index = cmd.indexOf("Hash");
 				if(index != -1)  {
 					index = cmd.indexOf("value");
@@ -196,8 +203,9 @@ public class Main
                 }
 			}
 			
-			if(cmd.startsWith("go")) {
+         else if(cmd.startsWith("go")) {
 				movetime = 0;
+            maxMoveTime = 0;
 				searchDepth = 0;
 				if(cmd.indexOf("depth")!=-1) {
 					try
@@ -207,6 +215,7 @@ public class Main
 						cmd = cmd.trim();
 						searchDepth = Integer.parseInt(cmd.substring(0));
 						movetime = 9999999;
+                  maxMoveTime = movetime;
 					}
 					catch(NumberFormatException ex) {}
 				}
@@ -217,19 +226,21 @@ public class Main
 						cmd = cmd.substring(index+8);
 						cmd = cmd.trim();
 						movetime = Integer.parseInt(cmd.substring(0));
-						searchDepth = 49;
+                  maxMoveTime = movetime;
+						searchDepth = 40;
 					}
 					catch(NumberFormatException ex) {}
 				}
 				else if(cmd.indexOf("infinite")!=-1) {
 					infinite = true;	
-					searchDepth = 49;
+					searchDepth = 40;
 					movetime = 1000;
+               maxMoveTime = movetime;
 					
 				}	
 				else {				//extract the clock times and increments
 					try {
-						searchDepth = 49;
+						searchDepth = 40;
 						
                         String temp;
 						int index = cmd.indexOf("wtime");
@@ -278,19 +289,25 @@ public class Main
                             temp = cmd.substring(index+9).trim();
                             togo = Integer.parseInt(temp);
                         }
-						if(Board.getTurn()==1)			//black moving
+						if(Board.getTurn()==1)	{		//black moving
 							movetime = Math.max(0,(btime/togo + binc)-200);
-						else	
+                     int  maxTimeLimit = (int)(((double)btime + (double)binc)*0.6);
+                     maxMoveTime = Math.min(movetime * 4, maxTimeLimit);
+                  }
+                  else {
 							movetime = Math.max(0,(wtime/togo + winc)-200);
-					}
+                     int  maxTimeLimit = (int)(((double)wtime + (double)winc)*0.6);
+                     maxMoveTime = Math.min(movetime * 4, maxTimeLimit);
+                  }
+               }
 					catch(NumberFormatException ex) {
                         ex.printStackTrace(System.err);
                     }
 				}
-				String move = theSearch.search(movetime,searchDepth,infinite);
+				String move = theSearch.search(movetime, maxMoveTime, searchDepth,infinite);
 				System.out.println("bestmove "+move);
 			}	
-			if(cmd.equals("ucinewgame")) {
+         else if(cmd.equals("ucinewgame")) {
 				Board.newGame();
 				Engine.resetHash();	
 			}

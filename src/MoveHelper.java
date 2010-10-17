@@ -44,22 +44,11 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 public final class MoveHelper{	
 	
     /** king moves for each square */
-	private final long[] KingMoveBoard = new long[64];
-	/** white pawn moves for each square */
-    private final long[] WhitePawnMoveBoard	= new long[64];
-	/** white pawn attack moves for each sqaure */
-    private final long[] WhitePawnAttackBoard = new long[64];
-	/** black pawn moves for each square */
-    private final long[] BlackPawnMoveBoard	= new long[64];
-	/** black pawn attack moves for each square */
-    private final long[] BlackPawnAttackBoard = new long[64];
-	/** knight moves for each square */
-    private final long[] KnightMoveBoard = new long[64];
-	/** castle moves based on rank occupancy */
-    private final long[] kingCastleBoard = new long[256];
+	private static final long[] KingMoveBoard = new long[64];
+   private static final long[] kingCastleBoard = new long[256];
 	
-    /** only instance of class due to singleton pattern */
-    private static final MoveHelper INSTANCE = new MoveHelper();	
+   /** only instance of class due to singleton pattern */
+   private static final MoveHelper INSTANCE = new MoveHelper();	
     
 	/*
      * MoveHelper Constructor
@@ -68,11 +57,6 @@ public final class MoveHelper{
      */
     private MoveHelper() {
 		initKingBoard(KingMoveBoard);
-		initWhitePawnMoveBoard(WhitePawnMoveBoard);
-		initWhitePawnAttackBoard(WhitePawnAttackBoard);
-		initKnightMoveBoard(KnightMoveBoard);
-		initBlackPawnMoveBoard(BlackPawnMoveBoard);
-		initBlackPawnAttackBoard(BlackPawnAttackBoard);
         for(int i=0;i<256;i++) {
 			setKingCastle(i);
         }
@@ -89,37 +73,7 @@ public final class MoveHelper{
         return INSTANCE;
     }    
 	
-	/***********************************************************************
-		Name:		getWhitePawnMove
-		Parameters:	int
-		Returns:	BitBoard
-		Description:This method returns 
-	***********************************************************************/
 	
-    public final long getWhitePawnMove(int square){
-		return WhitePawnMoveBoard[square];
-	}
-	
-	/***********************************************************************
-		Name:		getBlackPawnMove
-		Parameters:	int
-		Returns:	BitBoard
-		Description:This method returns 
-	***********************************************************************/
-	public  final long getBlackPawnMove(int square){
-		return BlackPawnMoveBoard[square];
-	}
-
-	/***********************************************************************
-		Name:		getKnightPosition
-		Parameters:	int
-		Returns:	BitSet
-		Description:This method returns a BitSet from KnightMoveBoard
-					specified via the parameter
-	***********************************************************************/
-    public final long getKnightPosition(int square){
-		return KnightMoveBoard[square];
-	}
 	
 	/***********************************************************************
 		Name:		getKingPosition
@@ -132,166 +86,7 @@ public final class MoveHelper{
 		return KingMoveBoard[square];
 	}
 	
-	/***********************************************************************
-		Name:		getWhitePawnAttack
-		Parameters:	int
-		Returns:	BitSet
-		Description:This method returns a BitSet from WhitePawnAttackBoard
-					specified via the parameter
-	***********************************************************************/
-	public final long getWhitePawnAttack(int square){
-		return WhitePawnAttackBoard[square];
-	}
 	
-	/***********************************************************************
-		Name:		getBlackPawnAttack
-		Parameters:	int
-		Returns:	BitSet
-		Description:This method returns a BitSet from BlackPawnAttackBoard
-					specified via the parameter
-	***********************************************************************/
-	public final long getBlackPawnAttack(int square){
-		return BlackPawnAttackBoard[square];
-	}
-	
-	/***********************************************************************
-		Name:		initKnightMoveBoard
-		Parameters:	BitSet
-		Returns:	None
-		Description:This method initializes the BitSet representing all 
-					of the moves a Knight can make
-	***********************************************************************/
-	private final void initKnightMoveBoard(long[] board){
-		int square;
-		for(square=0;square<64;square++){
-			// This next section on conditionals tests to 
-			// see if the knight is near the center of the 
-			// board where it can has a choice of eight
-			// moves
-				if(square-17>=0) 
-					board[square] = (long)1<<(square-17);
-				if(square-15>=0)
-					board[square] |= (long)1<<(square-15);		
-				if(square-10>=0)
-					board[square] |= (long)1<<(square-10);	
-				if(square-6>=0)
-					board[square] |= (long)1<<(square-6);		
-				if(square+6<=63)
-					board[square] |= (long)1<<(square+6);	
-				if(square+10<=63)
-					board[square] |= (long)1<<(square+10);	
-				if(square+15<=63)
-					board[square] |= (long)1<<(square+15);		
-				if(square+17<=63)
-					board[square] |= (long)1<<(square+17);	
-				
-			if(square%8<=1) {
-				if(square+6<=63)
-					board[square] ^= (long)1<<(square+6);	
-				if(square-10>=0)	
-					board[square] ^= (long)1<<(square-10);	
-			}
-			// This next section of code tests to see if the knight 
-			// is in one of the corners
-			if(square%8==0) {
-				if(square+15<=63)
-					board[square] ^= (long)1<<(square+15);		
-				if(square-17>=0)
-					board[square] ^= (long)1<<(square-17);		
-			}
-			if(square%8>=6) {
-				if(square-6>=0)
-					board[square] ^= (long)1<<(square-6);			
-				if(square+10<=63)
-					board[square] ^= (long)1<<(square+10);		
-			}
-			if(square%8==7) {
-				if(square+17<=63)
-					board[square] ^= (long)1<<(square+17);			
-				if(square-15>=0)
-					board[square] ^= (long)1<<(square-15);			
-			}	
-		}		
-	}		
-	
-	/***********************************************************************
-		Name:		initBlackPawnAttackBoard
-		Parameters:	BitSet[]
-		Returns:	None
-		Description:This method initializes the BitSet representing all of 
-					the possible attacks a Black pawn can dp
-	***********************************************************************/
-	private final  void initBlackPawnAttackBoard(long[] board){
-		int square;
-		for(square=63;square>7;square--){
-			if(square%8 == 0){
-				board[square] = (long)1<<(square-7);			
-			}
-			else if(square % 8 == 7){
-				board[square] = (long)1<<(square-9);			
-			}
-			else {
-				board[square] = (long)1<<(square-7);			
-				board[square] |= (long)1<<(square-9);			
-			} 
-		}
-	}
-	
-	/*
-     * Method initBlackPawnMoveBoard
-     *
-     * initializes all black pawn moves for each sqare
-     * 
-     */
-	private final  void initBlackPawnMoveBoard(long[] board){
-		int square;
-		for(square=55;square>7;square--){
-				if(square>=48)
-					board[square] |= (long)1<<(square-16);
-				board[square] |= (long)1<<(square-8);
-		}
-	}
-	
-	/***********************************************************************
-		Name:		initWhitePawnMoveBoard
-		Parameters:	BitSet[]
-		Returns:	None
-		Description:This method initializes the WhitePawnBoard. It accounts
-					for the first move principle for the pawns.
-	***********************************************************************/
-	private final void initWhitePawnMoveBoard(long[] board){
-		int square;
-		for(square=0;square<=55;square++){
-			if(square >= 8 && square <=15){
-				board[square] |=(long)1<<(square+16);
-			}
-			board[square] |= (long)1<<(square+8);
-		
-		}
-	}
-	
-	/***********************************************************************
-		Name:		initWhitePawnAttackBoard
-		Parameters:	BitSet[]
-		Returns:	None
-		Description:This method initilaizes the BitSet representing all of
-					the possible attacks a white pawn can do
-	***********************************************************************/
-	private final void initWhitePawnAttackBoard(long[] board){
-		int square;
-		for(square=0;square<56;square++){
-			if(square%8 == 0){
-				board[square] = (long)1<<(square+9);	//powOf2[squareTopRight(square)];
-			}
-			else if(square%8 == 7){
-				board[square] = (long)1<<(square+7);		//powOf2[squareTopLeft(square)];
-			}
-			else{
-				board[square] = (long)1<<(square+7);		//powOf2[squareTopLeft(square)];
-				board[square] |= (long)1<<(square+9);		//powOf2[squareTopRight(square)];
-			}
-		}
-	}
 	
 	/***********************************************************************
 		Name:		initKingBoard

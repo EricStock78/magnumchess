@@ -43,14 +43,17 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 public class TransTable {
 	
-    private int[] Table; 
-	private int hashCount;
-	private static final int int31 = 1<<31;
-	private static final int mask = 1<<25 | 1<<26 | 1<<27;
-	private static final int mask2 = ~mask;
+   private long[] Table;
+	private long[] Table2;
+   private long[] Table3;
+   private int hashCount;
+	//private static final int int31 = 1<<31;
+	//private static final int mask = 1<<25 | 1<<26 | 1<<27;
+	//private static final int mask2 = ~mask;
+   private static final long mask3 = ~((long)1 << 57 | (long)1 << 58 | (long)1 << 59);
 	
     /**flag indicating what type of table...0 regular, 1 pawn, 2 eval **/
-    private int type;						
+   private int type;						
 	private int size;
 	
 	 /*
@@ -64,11 +67,11 @@ public class TransTable {
 		type = t;
 		size = s;
 		if(type == 0)
-			Table = new int[size*8];
-		else if (type == 1)
-			Table = new int[size*6];
+         Table2 = new long[size*4];
+      else if (type == 1)
+			Table = new long[size*4];
 		else if (type == 2)
-			Table = new int[size*3];
+			Table3 = new long[size*2];
 		hashCount = 0;
 	}
     
@@ -85,14 +88,13 @@ public class TransTable {
      * @param long passedBits - information about all the passed pawns packed into 64 bits
      *
      */ 
-	public final void addPawnHash(int key, int lock, int value, int wFile, int bFile, long passedBits) {
-		int index = key * 6;
+	public final void addPawnHash(int key, long lock, int value, int wFile, int bFile, long passedBits) {
+		int index = key * 4;
 		Table[index] = lock;
-		Table[index+1] = value;
-		Table[index+2] = wFile;
-        Table[index+3] = bFile;
-        Table[index+4] = (int)passedBits;
-        Table[index+5] = (int)(passedBits>>>32);
+		Table[index+1] = (long)value;
+		Table[index+2] = (long)wFile<<32 | (long)bFile;
+      Table[index+3] = passedBits;
+     
 	}
 	
     /*
@@ -109,11 +111,10 @@ public class TransTable {
      * @param long passedBits - information about all the passed pawns packed into 64 bits
      *
      */ 
-    public final void addEvalHash(int key, int lock, int lock2, int value) {
-		int index = key*3;
-		Table[index] = lock;
-		Table[index+1] = lock2;
-        Table[index+2] = value;    
+    public final void addEvalHash(int key, long lock, int value) {
+		int index = key*2;
+		Table3[index] = lock;
+      Table3[index+1] = (long)value;
 	}
 	
     /*
@@ -132,50 +133,42 @@ public class TransTable {
      * @param int ancient - counter to represent "freshness" of entry
      *
      */ 
-    public final void addHash(int key,int lock, int lock2,int move,int value,int depth,int type,int nullFail,int ancient) {
-		int index = key*8;
-		move &= 8388607;
-		
-        /** if empty slot, add entry */
-        if(Table[index]==0)  {
-			hashCount++;
-		Table[index] = lock;				
-		Table[index+1] = lock2; 							
-		Table[index+2] = move & 8388607;
-		Table[index+3] = (value + 21000)
-			| (type << 16)
-			| (depth << 19)
-			| (nullFail << 24)
-			| (ancient << 25);
-			return;
-			
+    public final void addHash(int key,long lock,int move,long value,int depth,int type,int nullFail,int ancient) {
+
+      int index = key*4;
+      /** if empty slot, add entry */
+      if(Table2[index]==0)  {
+      hashCount++;
+      Table2[index] = lock;
+      Table2[index+1] = (long)move
+           | ((value + 21000) << 32)
+           | ((long)type << 48)
+           | ((long)depth << 51)
+           | ((long)nullFail << 56)
+           | ((long)ancient << 57);
+
 		}/** replace if depth greater */
-		else if(depth>=((Table[index+3]>>19)&31) || ((Table[index+3] >> 25)&7)!=ancient) { 
-			Table[index] = lock;				
-			Table[index+1] = lock2;							
-			Table[index+2] = move & 8388607;
-			Table[index+3] = (value + 21000)
-			| (type << 16)
-			| (depth << 19)
-			| (nullFail << 24)
-			| (ancient << 25);
-			return;
-		
+		else if(depth>=((Table2[index+1]>>51)&31) || ((Table2[index+1] >> 57)&7)!=ancient) {
+			Table2[index] = lock;
+         Table2[index+1] = (long)move
+           |(((value + 21000)) << 32)
+           | ((long)type << 48)
+           | ((long)depth << 51)
+           | ((long)nullFail << 56)
+           | ((long)ancient << 57);
+          
+			
 		}/** always replace/add into second level */
-        if(Table[index+4]==0) 
+      if(Table2[index+2]==0)
             hashCount++;
-        Table[index+4] = lock;			
-        Table[index+5] = lock2; 							
-        Table[index+6] = move & 8388607;
-        Table[index+7] = (value + 21000)
-        | (type << 16)
-        | (depth << 19)
-        | (nullFail << 24)
-        | (ancient << 25);
-        return;
-		
-	}
-	
+         Table2[index+2] = lock;
+         Table2[index+3] = (long)move
+           |(((value + 21000)) << 32)
+           | ((long)type << 48)
+           | ((long)depth << 51)
+           | ((long)nullFail << 56)
+           | ((long)ancient << 57);
+    }
     /*
      * Method getEvalValue
      * 
@@ -185,7 +178,7 @@ public class TransTable {
      *
      */ 
     public final int getEvalValue(int key) {
-		return Table[key*3+2];
+		return (int)Table3[key*2+1];
 	}
      
     /*
@@ -198,7 +191,7 @@ public class TransTable {
      * @return int - the evaluation stored
      */ 
 	public final int getPawnValue(int key) {
-		return Table[key*6+1];
+		return (int)Table[key*4+1];
 	}	
     
     /*
@@ -211,7 +204,7 @@ public class TransTable {
      * @return int - the file info
      */ 
     public final int getWPawnFile(int key) {
-        return Table[key*6+2];  
+        return(int)(Table[key*4+2] >> 32);
     }
     
     /*
@@ -224,7 +217,7 @@ public class TransTable {
      * @return int - the file info
      */ 
 	public final int getBPawnFile(int key) {
-            return Table[key*6+3];
+            return (int)Table[key*4+2];
     }
     
     /*
@@ -237,10 +230,12 @@ public class TransTable {
      * @return long - passed pawn information 
      */ 
     public final long getPawnPassed(int key) {
+        return Table[key*4+3];
+      /*
         int lowPass = Table[key*6+4];
         int highPass = Table[key*6+5];
 
-        /** a litle bit twidling here since java doesn't support unsigned ints */
+        
         if( (lowPass & int31) != 0) {           
             lowPass ^= int31;
             long passed = ((long)lowPass | ((long)highPass)<<32);
@@ -248,9 +243,9 @@ public class TransTable {
             return passed;
         } else {
             return ((long)lowPass | ((long)highPass)<<32);
-        }   
+        }   */
     }  
-        
+       
     /*
      * Method getValue
      * 
@@ -261,9 +256,9 @@ public class TransTable {
      *
      * @return int - the value
      */     
-    public final int getValue(int key,int probe) {
-		return (Table[key*8+3+probe]&65535)-21000;
-	}	
+    public final long getValue(int key,int probe) {
+		return ((Table2[key*4+1+probe] >>> 32)&65535L) - 21000;
+    }
 	
     /*
      * Method getDepth
@@ -276,8 +271,8 @@ public class TransTable {
      * @return int - the depth
      */ 
     public final int getDepth(int key,int probe ) {
-		int temp = Table[key*8+3+probe];
-		return ((temp>>19)&31);
+		long temp = Table2[key*4+1+probe];
+		return (int)((temp>>51)&31L);
 	}
 	
     /*
@@ -291,8 +286,8 @@ public class TransTable {
      * @return int - the type (0 upper, 1 exact, 2 lower, 4) 
      */ 
     public final int getType(int key,int probe) {
-		int temp = Table[key*8+3+probe];
-		return ((temp>>16)&7);
+		long temp =  Table2[key*4+1+probe];
+		return (int)((temp>>48)&7L);
 	}	
 	
     /*
@@ -306,7 +301,7 @@ public class TransTable {
      * @return int - 0 use null, 1 don't
      */ 
     public final int getNullFail(int key,int probe) {
-		return (Table[key*8+3+probe]>>24)&1;
+		return (int)(Table2[key*4+1+probe]>>56)&1;
 			
 	}	
 	
@@ -321,7 +316,7 @@ public class TransTable {
      * @return int - 0 use null, 1 don't
      */ 
     public final int getMove(int key,int probe) {
-		return Table[key*8+2+probe];
+       return (int)(Table2[key*4+1+probe]);
 	}
 
     /*
@@ -335,7 +330,7 @@ public class TransTable {
      * @return boolean - is there a pawn hash stored
      */ 
 	public final boolean hasPawnHash(int key, long lock) {
-		if(Table[key*6] != (int)lock)
+		if(Table[key*4] != lock)
 			return false;
 		return true;
 		
@@ -352,9 +347,9 @@ public class TransTable {
      *
      * @return boolean - is there an eval hash stored
      */ 
-    public final boolean hasEvalHash(int key, int lock, int lock2) {
-		int index = key*3;
-		if(Table[index] != lock || Table[index+1] != lock2)
+    public final boolean hasEvalHash(int key, long lock) {
+		int index = key*2;
+		if(Table3[index] != lock)
 			return false;
 		return true;
 		
@@ -371,12 +366,12 @@ public class TransTable {
      *
      * @return boolean - is there a hash stored (0 hash at slot 1, 4 hash at slot 2, 1 none)
      */ 
-	public final int hasHash(int key, int lock, int lock2) {
-		int index = key*8;
-		if( lock == Table[index] && lock2 == Table[index+1])
+	public final int hasHash(int key, long lock) {
+      int index = key*4;
+		if( lock == Table2[index])
 			return 0;
-		else if(lock == Table[index+4] && lock2 == Table[index+5])
-			return 4;	
+		else if(lock == Table2[index+2])
+			return 2;
 		return 1;
 	}
     /*
@@ -391,9 +386,9 @@ public class TransTable {
      *
      * @return boolean - is there a hash stored (4 hash at slot 2, 1 none)
      */ 
-	public final int hasSecondHash(int key, int lock, int lock2) {
-		if(lock == Table[key*8+4] && lock2 == Table[key*8+5])
-			return 4;
+	public final int hasSecondHash(int key, long lock) {
+      if(lock == Table2[key*4+2])
+			return 2;
 		return 1;
 	}
 	
@@ -403,10 +398,10 @@ public class TransTable {
      * clears the position in the hash table
      * 
      * @param int key - index of hash entry
-     */ 
+     
 	public final void clearPosition(int key) {
-		Table[key*8] = 0;
-		Table[key*8+4] = 0;
+		Table2[key*4] = 0L;
+		Table2[key*4+2] = 0L;
 	}
 	
     /*
@@ -419,9 +414,17 @@ public class TransTable {
      * @param int ancient - new "freshness" value
      */ 
 	public void setNew(int key,int probe,int ancient) {
-		Table[key*8+3+probe] &= mask2;
-		Table[key*8+3+probe] |= (ancient<<25);
-	}	
+		if(probe == 0)   {
+         Table2[key*4+1] &= mask3;
+         Table2[key*4+1] |= ((long)ancient << 57);
+      }
+      else if(probe == 2 && ((Table2[key*4 + 3] >> 57)&7)!=ancient)  {
+         Table2[key*4 + 3] &= mask3;
+         Table2[key*4 + 3] |= ((long)ancient << 57);
+         Table2[key*4] = Table2[key*4 + 2];
+         Table2[key*4 + 1] = Table2[key*4 + 3];
+      }
+   }
 	
     /*
      * Method clearEvalHash
@@ -430,8 +433,8 @@ public class TransTable {
      * 
      */ 
 	public final void clearEvalHash() {
-		for(int i=0;i<size*3;i+=3) {
-			Table[i] = 0;	
+		for(int i=0;i<size*2;i+=2) {
+			Table3[i] = 0L;
 		}	
 	}
 	
@@ -442,8 +445,8 @@ public class TransTable {
      * 
      */ 
 	public final void clearPawnHash() {
-		for(int i=0;i<size*6;i+=6) {
-			Table[i] = 0;	
+		for(int i=0;i<size*4;i+=4) {
+			Table[i] = 0L;
 			
 		}	
 	}
@@ -453,11 +456,11 @@ public class TransTable {
      * 
      * clears every entry in the hash table
      * 
-     */
+    
 	public final void clearHash() {
 		hashCount = 0;
-		for(int i=0;i<size*8;i+=4) {
-			Table[i] = 0;	
+		for(int i=0;i<size*4;i+=2) {
+			Table2[i] = 0L;
 		}	
 	}
     
