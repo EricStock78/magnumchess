@@ -61,27 +61,26 @@ public class MoveFunctions {
 	}
 	
     public static int moveType(int move) {
-		return (move>>20)&7;
+		return (move>>20)&15;
 	}
 	
     public static int getValue(int move) {
-		return (move>>>23);
+		return (move>>>24);
 	}
 	
-    public static int setValue(int move, int value) {
-		move &= 8388607;
-		return move |= (value<<23);
+    public static int setValue(int move, int value) {          //used to mark the move as a mate killer
+		return move |= (value<<24);
 	}
 	
-    public static int makeMove(int to,int from,int piece,int capture,int type,int value) {
-		int move = from | to<<6 | piece <<12 | (capture+1)<<16 | type<<20 | value<<23;
+    public static int makeMove(int to,int from,int piece,int capture,int type) {
+		int move = from | to<<6 | piece <<12 | (capture+1)<<16 | type<<20;
 		return move;
-		
 	}
+
 	
     public static int makeMove(int to,int from) {
-		int piece = chessBoard.piece_in_square[from];
-		int cP = chessBoard.piece_in_square[to];
+		int piece = Board.piece_in_square[from];
+		int cP = Board.piece_in_square[to];
 		int type = Global.ORDINARY_MOVE;
 		if(piece == 4)	{			//wKing
 			if(from == 4) {
@@ -99,17 +98,23 @@ public class MoveFunctions {
 			}
 		}
 		else if(piece == 5)	{			//wPawn
-			if(to/8 == 7)
+			if(to - from == 16)
+            type = Global.DOUBLE_PAWN_WHITE;
+
+         if(to/8 == 7)
 				type = Global.PROMO_Q;
 			else if(to == chessBoard.getPassantB())
 				type = Global.EN_PASSANT_CAP;	
 		}
 		else if(piece == 11) {			//bPawn
-			if(to/8 == 0)
+			if(from - to == 16)
+            type = Global.DOUBLE_PAWN_BLACK;
+
+         if(to/8 == 0)
 				type = Global.PROMO_Q;
 			else if(to == chessBoard.getPassantW())
 				type = Global.EN_PASSANT_CAP;	
 		}
-		return from | to<<6 | piece <<12 | (cP+1)<<16 | type<<20 | 0;
+		return from | to<<6 | piece <<12 | (cP+1)<<16 | type<<20;
 	}
 }

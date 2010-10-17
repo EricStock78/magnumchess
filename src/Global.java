@@ -42,55 +42,73 @@ abstract class Global {
 													"bRook","bKnight","bBishop","bQueen","bKing","bPawn"};
     /** material values for each piece */
     public static final int values[] = new int[] {500,325,350,900,2000,100,500,325,350,900,2000,100};
-    
+
+    public static final int[] materialOffset =/* new int[] {4, 324, 36, 1, 0, 2916,
+                                                      12, 972, 108, 2, 0, 26244};*/
+                                                 new int[] {1, 81, 9, 729, 0, 2916,
+                                                            3, 243, 27, 1458, 0, 26244};
+
+    public static final int materialDraw = 999999;
+
+    /** inverse material values used for MLV/LVA ordering */
+    public static final int invValues[] = new int[] {2,3,3,1,0,4,2,3,3,1,0,4};
+
     /** flags indicating if the piece slides */
     public static boolean[] slides = new boolean[] {true,false,true,true,false,false,true,false,true,true,false,false};
 
-    
-    /** castling status flags */
+     /** castling status flags */
     public static final int NO_CASTLE = 0;
+    public static final int CASTLED = 1;
+	 public static final int SHORT_CASTLE = 2;
+    public static final int LONG_CASTLE = 4;
+    public static final int BOTH_CASTLE = 6;
+  
+   
+  /*  public static final int NO_CASTLE = 0;
     public static final int CASTLED = 1;
 	public static final int BOTH_CASTLE = 7;
     public static final int SHORT_CASTLE = 2;   /** also doubles as a move type */
-	public static final int LONG_CASTLE = 3;    /** also doubles as a move type */
+	//public static final int LONG_CASTLE = 3;    /** also doubles as a move type */
     
     /** move types */
-    public static final int ORDINARY_MOVE = 0;
-	public static final int EN_PASSANT_CAP = 4;
-	public static final int PROMO_Q = 5;
+   public static final int ORDINARY_MOVE = 0;
+   public static final int DOUBLE_PAWN_WHITE = 8;
+   public static final int DOUBLE_PAWN_BLACK = 9;
+	public static final int EN_PASSANT_CAP = 1;
+	public static final int PROMO_Q = 3;
 	public static final int PROMO_R = 6;
 	public static final int PROMO_B = 7;
-	public static final int PROMO_N = 1;
+	public static final int PROMO_N = 5;
 	
 	/** repetition table size */
     public static int REPSIZE = 16384;
 	/** hash table size */
-    public static  int HASHSIZE = 262144;				//8 mb initial hashsize
+    public static int HASHSIZE = 262144;				//8 mb initial hashsize
 	/** pawn hash table size */
     public static int PawnHASHSIZE = 174762;            //4mb initial pawn hash table
 	/** eval hash table size */
     public static int EvalHASHSIZE = 349524;              //4mb initial eval hash table
 	
     /** various masks needed for evaluation and move generation */
-    public static long[] set_Mask;
-    public static long[] plus9; 
-	public static long[] plus7;
-	public static long[] plus8;
-	public static long[] plus1;
-	public static long[] minus9;
-	public static long[] minus7;
-	public static long[] minus8;
-	public static long[] minus1;
-    public static long[] diag1Masks = new long[15];
-	public static long[] diag2Masks = new long[15];
-	public static long[] fileMasks = new long[8];		//used to isolate all pieces on a rank
-	public static long[] rankMasks = new long[8];
-	public static long[] whitePassedPawnMasks;          //passed pawn masks for white
-    public static long[] blackPassedPawnMasks;          //passed pawn masks for black
-    public static long[] bKingMask;						//mask of squares around king
-	public static long[] wKingMask;
-	public static long[] wRookTrap = new long[] {0x303L, 0xC0C0L};
-	public static long[] bRookTrap = new long[] {wRookTrap[0]<<48, wRookTrap[1]<<48};
+    public static final long[] set_Mask = new long[64];
+    public static final long[] plus9 = new long[64];
+	 public static final long[] plus7 = new long[64];
+	 public static final long[] plus8 = new long[64];
+	 public static final long[] plus1 = new long[64];
+	 public static final long[] minus9 = new long[64];
+	 public static final long[] minus7 = new long[64];
+	 public static final long[] minus8 = new long[64];
+	 public static final long[] minus1 = new long[64];
+    public static final long[] diag1Masks = new long[15];;
+	 public static final long[] diag2Masks = new long[15];
+	 public static final long[] fileMasks = new long[8];		//used to isolate all pieces on a rank
+	 public static final long[] rankMasks = new long[8];
+	 public static final long[] whitePassedPawnMasks = new long[64];          //passed pawn masks for white
+    public static final long[] blackPassedPawnMasks = new long[64];          //passed pawn masks for black
+    public static final long[] bKingMask = new long[8];						//mask of squares around king
+	 public static final long[] wKingMask = new long[8];
+	 public static final long[] wRookTrap = new long[] {0x303L, 0xC0C0L};
+	 public static final long[] bRookTrap = new long[] {wRookTrap[0]<<48, wRookTrap[1]<<48};
     
     /** length of diagonals */
     public static final int Diag1Length[] = new int[]  {1,2,3,4,5,6,7,8,

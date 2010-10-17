@@ -110,7 +110,9 @@ public final class HistoryWriter {
                     to = i;
                 }	
                 int mv = MoveFunctions.makeMove(to,from);
-                Magnum.makeMove(mv,true,true);
+                Magnum.AddMove(mv);
+                Magnum.MakeMove(mv, false);
+                Magnum.AddRepetitionRoot();
                 if(moves.indexOf(" ")==-1) break;
                 moves = moves.substring(moves.indexOf(" "));
                 moves = removeFrontWhiteSpace(moves);
@@ -139,8 +141,10 @@ public final class HistoryWriter {
                     type = Global.PROMO_B;
                 else if(m3.equals("r"))
                     type = Global.PROMO_R;
-                int mv = MoveFunctions.makeMove(to,from,piece,cp,type,0);
-                Magnum.makeMove(mv,true,true);
+                int mv = MoveFunctions.makeMove(to,from,piece,cp,type);
+                Magnum.AddMove(mv);
+                Magnum.MakeMove(mv, true);
+                Magnum.AddRepetitionRoot();
                 if(moves.indexOf(" ")==-1) break;
                 moves = moves.substring(moves.indexOf(" "));
                 moves = removeFrontWhiteSpace(moves);
@@ -439,18 +443,22 @@ public final class HistoryWriter {
 			if(Magnum.getTurn()==1) {				//black moving
 				if(move1.lastIndexOf(79)>3)	{
 					int mv = MoveFunctions.makeMove(58,60);
-					Magnum.makeMove(mv,true,true);
+					Magnum.AddMove(mv);
+               Magnum.MakeMove(mv, true);
 				}else{
 					int mv = MoveFunctions.makeMove(62,60);
-					Magnum.makeMove(mv,true,true);
+					Magnum.AddMove(mv);
+               Magnum.MakeMove(mv, true);
 				}
 			}else {
 				if(move1.lastIndexOf(79)>3){
 					int mv = MoveFunctions.makeMove(2,4);
-					Magnum.makeMove(mv,true,true);
+					Magnum.AddMove(mv);
+               Magnum.MakeMove(mv, true);
 				}else{
 					int mv = MoveFunctions.makeMove(6,4);
-					Magnum.makeMove(mv,true,true);	
+					Magnum.AddMove(mv);
+               Magnum.MakeMove(mv, true);
 				}
 			}	
 		}	
@@ -481,7 +489,8 @@ public final class HistoryWriter {
 				}	
 				from = Magnum.getPos(bit);
 				int mv = MoveFunctions.makeMove(to,from);
-				Magnum.makeMove(mv,true,true);
+				Magnum.AddMove(mv);
+            Magnum.MakeMove(mv, true);
 
 			}else {
 				int count = 0;
@@ -517,7 +526,8 @@ public final class HistoryWriter {
 				attackers = attackers &-attackers;
 				from = Magnum.getPos(attackers);
 				int mv = MoveFunctions.makeMove(to,from);
-				Magnum.makeMove(mv,true,true);
+				Magnum.AddMove(mv);
+            Magnum.MakeMove(mv, true);
 			}
 		}
 	}	
