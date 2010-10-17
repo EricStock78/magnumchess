@@ -291,12 +291,12 @@ public class Main
                         }
 						if(Board.getTurn()==1)	{		//black moving
 							movetime = Math.max(0,(btime/togo + binc)-200);
-                     int  maxTimeLimit = (int)(((double)btime + (double)binc)*0.6);
+                     int  maxTimeLimit = (int)(((double)btime + (double)binc)*0.55);
                      maxMoveTime = Math.min(movetime * 4, maxTimeLimit);
                   }
                   else {
 							movetime = Math.max(0,(wtime/togo + winc)-200);
-                     int  maxTimeLimit = (int)(((double)wtime + (double)winc)*0.6);
+                     int  maxTimeLimit = (int)(((double)wtime + (double)winc)*0.55);
                      maxMoveTime = Math.min(movetime * 4, maxTimeLimit);
                   }
                }

@@ -167,9 +167,10 @@ public final class Engine {
       long temp = System.currentTimeMillis();
       if (!infiniteTimeControl) {
          if (endTime > temp) {
-            nextTimeCheck += ((endTime - temp) * 150);            //assumes a nodes per second of 150 000
+            nextTimeCheck += ((endTime - temp) * 30);            //assumes a nodes per second of 30 000
             return true;
          } else {
+            nextTimeCheck += 10000;
             if(lastRootIterationValue < levelOneValue + 30 && !failHighNewBestMoveFlag)
                return false;
             else {
@@ -253,11 +254,15 @@ public final class Engine {
       lastRootIterationValue = 0;
       failHighNewBestMoveFlag = false;
       lastIterationTime = 0L;
-      maximumRootGetAScoreTime = maxTime -  (int)((double)maxTime * 0.50);
+      maximumRootGetAScoreTime = maxTime -  (int)((double)maxTime * 0.55);
       maximumTime = maxTime;
       startTime = System.currentTimeMillis();
       endTime = startTime + time;
       stop = false;
+
+      System.out.println("info string time is "+time);
+      System.out.println("info string max root get a score time is "+maximumRootGetAScoreTime);
+      System.out.println("info string max time is "+maxTime);
 
       /** assumes program is searching 15000 moves per second, if not will take too long */
       nextTimeCheck = Math.min(1000, time * 15);
@@ -497,6 +502,7 @@ public final class Engine {
             depth--;
          }
          //print UCI move information
+      if(depth > 6 ) {
          if (bestValue > 10000L) {			//this is a winning mate score
             long mate = (20000L - bestValue) / 2;
             System.out.println("info depth " + depth + " score mate " + mate + " nodes " + nodes + " pv " + pv);
@@ -506,6 +512,7 @@ public final class Engine {
          } else {
             System.out.println("info depth " + depth + " score cp " + bestValue + " nodes " + nodes + " pv " + pv);
          }
+      }
          sortMoves(0, numberOfMoves, moveArr, compareArray);
 
       }
@@ -1518,7 +1525,7 @@ public final class Engine {
       thisDepth++;
 
 
-      nodes++;
+      //nodes++;
 
       /** time management code */
       if (++nodes >= nextTimeCheck) {
@@ -1972,9 +1979,9 @@ public final class Engine {
             }
 
             if (value > bMove) {
-               if(isRootFirstMove) {
-                  levelOneValue = -value;
-               }
+              // if(isRootFirstMove && moveCount > 4) {
+              //    levelOneValue = -value;
+              // }
 
                if (value > alpha) {
                   if (value >= beta) {
