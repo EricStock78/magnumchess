@@ -1,7 +1,7 @@
 /**
  * SEE.java
  *
- * Version 2.0   
+ * Version 3.0   
  * 
  * Copyright (c) 2010 Eric Stock
  
@@ -29,7 +29,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  * See.java
  * This class contains a method to statically evaluate the expected return before making a capture
  *
- * @version 	2.00 30 Jan 2010
+ * @version 	3.00 25 Oct 2010
  * @author 	Eric Stock
  */
 

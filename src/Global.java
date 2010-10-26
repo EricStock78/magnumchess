@@ -1,7 +1,7 @@
 /**
  * Global.java
  *
- * Version 2.0   
+ * Version 3.0   
  * 
  * Copyright (c) 2010 Eric Stock
  
@@ -32,7 +32,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  * These variables are global variables used throughout the program
  * 
  *
- * @version 	2.00 30 Jan 2010
+ * @version 	3.00 25 Oct 2010
  * @author 	Eric Stock
  */
 
@@ -41,7 +41,7 @@ abstract class Global {
     public static final String pieces[]= new String[] {"wRook","wKnight","wBishop","wQueen","wKing","wPawn",
 													"bRook","bKnight","bBishop","bQueen","bKing","bPawn"};
     /** material values for each piece */
-    public static final int values[] = new int[] {500,325,350,900,2000,100,500,325,350,900,2000,100};
+    public static final int values[] = new int[] {500,325,325,900,2000,100,500,325,325,900,2000,100};
 
     public static final int[] materialOffset =/* new int[] {4, 324, 36, 1, 0, 2916,
                                                       12, 972, 108, 2, 0, 26244};*/

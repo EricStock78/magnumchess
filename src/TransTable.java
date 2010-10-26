@@ -1,7 +1,7 @@
 /**
  * Transtable.java
  *
- * Version 2.0   
+ * Version 3.0   
  * 
  * Copyright (c) 2010 Eric Stock
  
@@ -30,14 +30,11 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  * This class can be instantiated as a 2 layer depth first and replace always
  * transposition table (64 bit hash key)
  * 
- * Can also become a pawn hash table (32 bit hash key)
+ * Can also become a pawn hash table (64 bit hash key)
  * Can also be a evaluation hash table (64 bit hash key)
  *
- * This trans table is optimized for 32 bit computers
- * 
- * To-do - investigate if optimizing for 64 bit is worthwhile
  *
- * @version 	2.00 30 Jan 2010
+ * @version 	3.00 25 Oct 2010
  * @author 	Eric Stock
  */
 
@@ -47,9 +44,7 @@ public class TransTable {
 	private long[] Table2;
    private long[] Table3;
    private int hashCount;
-	//private static final int int31 = 1<<31;
-	//private static final int mask = 1<<25 | 1<<26 | 1<<27;
-	//private static final int mask2 = ~mask;
+
    private static final long mask3 = ~((long)1 << 57 | (long)1 << 58 | (long)1 << 59);
 	
     /**flag indicating what type of table...0 regular, 1 pawn, 2 eval **/

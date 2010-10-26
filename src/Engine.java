@@ -2,7 +2,7 @@
 /**
  * Engine.java
  *
- * Version 2.0   
+ * Version 3.0
  * 
  * Copyright (c) 2010 Eric Stock
 
@@ -24,10 +24,7 @@ NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
 LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
- */
-//import java.util.Arrays;
-//import java.io.*;
-/*
+
  * Engine.java
  * This class contains all the search functionality
  * -alpha beta - pvs search
@@ -35,18 +32,20 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  * -move generation functions - which uses chessBoard.java's individual piece move functions
  * -divide and perft functions for move generation testing and verification
  *
- * @version 	2.00 30 Jan 2010
+ * @version 	3.00 25 Oct 2010
  * @author 	Eric Stock
  */
 public final class Engine {
 
-   /** used similar to a C #define to instruct the move generation to properly generate all moves required for perft scoring */
+   /** used similar to a C preprocessor define to instruct the move generation to properly generate all moves required for perft scoring */
    private static final boolean PERFT_ENABLED = false;
    /** chessBoard object from singleton class Board represents chess board and associated datastructures */
    private Board chessBoard;
    /** counter for positions evaluated */
    private static long nodes;			//counter for evaluated positions
    private static long hashnodes;		//counter for evaluated positions plus hash table exact hits
+   private static long nps;         //nodes per second
+
    /** 2D 64X64 arrays for history heuristic move ordering enhancement */
    private static final int[][] Hist = new int[64][64];
    private static final int[][] Hist2 = new int[64][64];
@@ -56,36 +55,39 @@ public final class Engine {
    private static final int[] moveOrder = new int[128];
    /** 2D array to store killer moves - 2 slots for each ply in the search */
    private static final int[][] killerMoves = new int[100][2];
-   /** variables used to store time information - time in milliseconds*/
+   
+   /** global boolean flag to trigger then end of the search when out of time */
+   private static boolean stop;
+   
+   /** stores node count at which a time check should occur */
+   private static long nextTimeCheck;
+   
+   /** used to track the end time and start time of a search */
    private static long startTime, endTime;
+
+   /** the amount of time currently allowed in the search
+    * - modified by the time state machine contained within this class
+    */
+   private static long searchTime;
+
    /** the maximum time we are allowed to extend the search when the 1st move drops at the root
     * ...also the max time we can extend by when we find a new best move, but make sure we verify this move
     * and collect its score
     */
    private static long maximumTime;
+   
    /** the maximum time we are allowed to extend the search when we have started a depth iteration
     * and we do not have a score yet
     */
+   
    private static long maximumRootGetAScoreTime;
-   /** time used to complete the most recent iteration in the iteratively deepened search */
-   private static long lastIterationTime;
-   /** value which tracks the first root move's value at level 1 - used to determine if the search can stop when running low on time
-    * If this variable indicates the root score has dropped, then the time will be extended
-    */
-   private static long levelOneValue;
-   /** flag indicating a root move we scouted, has now failed high and must be researched...
-    * we use this flag to prevent the time from running out until we can verify the move and
-    * set it as the new best move if necessary
-    */
-   private static boolean failHighNewBestMoveFlag;
-   /** this value represents the last score returned from the last ply of the iteratively deepened search
-    * This will be used in time controls code to compare with the levelOneValue variable to see if we can stop the search
-    */
-   private static long lastRootIterationValue;
-   /** global boolean flag to trigger then end of the search when out of time */
-   private static boolean stop;
-   /** stores node count at which a time check should occur */
-   private static int nextTimeCheck;
+   /** time used to complete the most recent itTIME_STATE_HAVE_1ST_eration in the iteratively deepened search */
+   
+   private static final int TIME_STATE_HAVE_1ST_MOVE = 0;
+   private static final int TIME_STATE_FAIL_LOW = 1;
+   private static final int TIME_STATE_FAIL_HIGH = 2;
+   private static final int TIME_STATE_ITERATION_START = 3;
+   
    /** constants used to represent different steps of search */
    private static final int SEARCH_HASH = 1;
    private static final int KILLER_MOVES = 4;
@@ -134,18 +136,50 @@ public final class Engine {
       chessBoard = Board.getInstance();
    }
 
+    /**
+    * Method GotoTimeState
+    *
+    * handles state transitions related to changing the amount of time we use during the search
+    *
+    * @param timeState - the time control state we are switching to
+    */
+   private void GotoTimeState(int timeState) {
 
-   public void AdjustTime() {
-      long currentTime = System.currentTimeMillis();
-      long timeUsed = currentTime - startTime;
-      lastIterationTime = timeUsed - lastIterationTime;
-      long timeLeft = endTime - currentTime;
-      if( timeLeft < lastIterationTime * 2 ) {
-         endTime = Math.min( currentTime + (lastIterationTime * 2), startTime + maximumTime);
-         System.out.println("info string time adjust");
+      switch(timeState) {
+         case(TIME_STATE_HAVE_1ST_MOVE):
+            endTime = startTime + searchTime;
+            break;
+
+         case(TIME_STATE_FAIL_LOW):
+            //need to increase the searchTime and maximumRootGetAScoreTime
+            //must make sure we don't exceed the maximumTime for the search
+            //only do this if the current iteration is likely to be the last without a time extension
+            long currentTime = System.currentTimeMillis();
+            long last60Percent = (long)(((double)maximumRootGetAScoreTime)*0.60f);
+
+            //if the move fails low in the last 70 percent or greater of the time allocated, we must extend to try to find a better move
+            if(currentTime + last60Percent > endTime) {
+               searchTime = maximumRootGetAScoreTime + last60Percent * 2;
+               searchTime =  Math.min(searchTime, maximumTime);
+               endTime = startTime + searchTime;
+
+               //extend the time to find a root score also
+               maximumRootGetAScoreTime += last60Percent * 4;
+               maximumRootGetAScoreTime = Math.min(maximumRootGetAScoreTime, maximumTime);
+            }
+            break;
+
+         case(TIME_STATE_FAIL_HIGH):
+            //we use the maximumRootGetAScoreTime to try to make sure we give this move a chance to prove itself as good, or fail low after all
+            endTime = startTime + maximumRootGetAScoreTime;
+            break;
+
+         case(TIME_STATE_ITERATION_START):
+            endTime = startTime + maximumRootGetAScoreTime;
+            break;
       }
+      nextTimeCheck = nodes + Math.max(nps / 100L , ((endTime - System.currentTimeMillis())/2 * (nps / 1000L)));
    }
-
 
    /**
     * Method timeLeft
@@ -167,19 +201,11 @@ public final class Engine {
       long temp = System.currentTimeMillis();
       if (!infiniteTimeControl) {
          if (endTime > temp) {
-            nextTimeCheck += ((endTime - temp) * 30);            //assumes a nodes per second of 30 000
+            nextTimeCheck = nodes + Math.max(nps / 100L , ((endTime - temp)/2 * (nps / 1000L)));
             return true;
          } else {
-            nextTimeCheck += 10000;
-            if(lastRootIterationValue < levelOneValue + 30 && !failHighNewBestMoveFlag)
-               return false;
-            else {
-               if(((startTime + maximumRootGetAScoreTime) > temp) || (failHighNewBestMoveFlag && ((startTime + maximumTime) > temp)))
-                   return true;
-              else
-                  return false;
-            }
-         }
+             return false;
+         } 
       } else {
          nextTimeCheck += 1000;
          return true;
@@ -249,25 +275,29 @@ public final class Engine {
       //the score of the best move searched
       long bestValue = 0;
 
-      //time control initialization code
-      levelOneValue = 0;
-      lastRootIterationValue = 0;
-      failHighNewBestMoveFlag = false;
-      lastIterationTime = 0L;
-      maximumRootGetAScoreTime = maxTime -  (int)((double)maxTime * 0.55);
+      if(maxTime != time) {
+         maximumRootGetAScoreTime = maxTime -  (int)((double)maxTime * 0.55);
+      } else {
+         maximumRootGetAScoreTime = maxTime;
+      }
+      maximumRootGetAScoreTime = Math.max(time, maximumRootGetAScoreTime);
+      
       maximumTime = maxTime;
       startTime = System.currentTimeMillis();
       endTime = startTime + time;
+      searchTime = time;
+
       stop = false;
+      nps = 15;        //start the nps very low, so we can search a few moves, calculate the nps and then set our time checks accordingly
+      
+      nextTimeCheck = Math.min(1000, time * nps);
 
-      System.out.println("info string time is "+time);
-      System.out.println("info string max root get a score time is "+maximumRootGetAScoreTime);
-      System.out.println("info string max time is "+maxTime);
+      //System.out.println("info string time is "+time);
+      //System.out.println("info string max root get a score time is "+maximumRootGetAScoreTime);
+      //System.out.println("info string max time is "+maxTime);
 
-      /** assumes program is searching 15000 moves per second, if not will take too long */
-      nextTimeCheck = Math.min(1000, time * 15);
 
-      // ancient node value betweeen 0 and 7;
+      // ancient node value betweeen 0 and 7
       ancient = (chessBoard.getCount() / 2) % 8;
 
       infiniteTimeControl = inf;
@@ -331,12 +361,12 @@ public final class Engine {
          }
 
          if (reps == 3) {
-            System.out.println("Draw move is " + HistoryWriter.getUCIMove((tempMove >> 6) & 63, tempMove & 63, (tempMove >> 12) & 15));
+            //System.out.println("Draw move is " + HistoryWriter.getUCIMove((tempMove >> 6) & 63, tempMove & 63, (tempMove >> 12) & 15));
             compareArray[i] = 1;
          } else if (chessBoard.getDraw() == 100) {
             compareArray[i] = 1;
          } else if (isStaleMate(-theSide)) {
-            System.out.println("stalemate move is " + HistoryWriter.getUCIMove((tempMove >> 6) & 63, tempMove & 63, (tempMove >> 12) & 15));
+            //System.out.println("stalemate move is " + HistoryWriter.getUCIMove((tempMove >> 6) & 63, tempMove & 63, (tempMove >> 12) & 15));
             compareArray[i] = 1;
          } else {
             compareArray[i] = (int) -Quies(-theSide, 1, -BETA_START, -ALPHA_START);
@@ -349,6 +379,8 @@ public final class Engine {
 
       //iteratively deepened search starting at depth 2
       for (int depth = 2; depth <= searchDepth; depth++) {
+         GotoTimeState(TIME_STATE_ITERATION_START);
+
          if (!timeLeft()) {
             stop = true;
          }
@@ -404,33 +436,31 @@ public final class Engine {
          value = VALUE_START;
          alpha = ALPHA_START;
          beta = BETA_START;
-         levelOneValue = -beta;
-         lastRootIterationValue = bestValue;
+        
          long tempBestMove = Integer.MIN_VALUE;
          isExact = false;
          thisDepth = 0;
 
-         long currentTime = System.currentTimeMillis();
-         long timeUsed = currentTime - startTime;
-         lastIterationTime = timeUsed - lastIterationTime;
+         
 
          for (int i = numberOfMoves - 1; i >= 0; i--) {
             int tempMove = moveArr[i];
             if ((compareArray[i] & 1) != 0) {
-               System.out.println("Draw move 2 is " + HistoryWriter.getUCIMove((tempMove >> 6) & 63, tempMove & 63, (tempMove >> 12) & 15));
+               //System.out.println("Draw move 2 is " + HistoryWriter.getUCIMove((tempMove >> 6) & 63, tempMove & 63, (tempMove >> 12) & 15));
                value = 0;
-               levelOneValue = 0;
+
+               if(!isExact && value < bestValue - 30 && !stop) {
+                  GotoTimeState(TIME_STATE_FAIL_LOW);
+               }
+               
             } else if (!isExact) {
                chessBoard.MakeMove(tempMove, true);
                value = -Max(-theSide, depth - 1, -beta, -alpha, false, inCheck(-theSide), false, false);
                chessBoard.UnMake(tempMove, true);
                thisDepth--;
-               levelOneValue = value;
                //check for a first move which goes LOW
-               if(value < bestValue - 30 && !stop) {
-                  lastRootIterationValue = value;
-                  AdjustTime();
-                
+               if(value < bestValue - 30 && value < 10000L && !stop) {
+                  GotoTimeState(TIME_STATE_FAIL_LOW);
                }
             } else {
                chessBoard.MakeMove(tempMove, true);
@@ -439,15 +469,17 @@ public final class Engine {
 
                if (value > alpha && !stop) {
                   //check for a move which goes HIGH
-                  failHighNewBestMoveFlag = true;
+                  GotoTimeState(TIME_STATE_FAIL_HIGH);
+
                   value = -Max(-theSide, depth - 1, -beta, -alpha, false, inCheck(-theSide), false, false);
+                  
                   thisDepth--;
                }
                chessBoard.UnMake(tempMove, true);
             }
 
             if ((((value > tempBestMove) && !stop) || !hasValue)) {      //have a new best move..update alpha..etc
-               failHighNewBestMoveFlag = false;
+               GotoTimeState(TIME_STATE_HAVE_1ST_MOVE);
                alpha = value;
                isExact = true;
                hasValue = true;
@@ -463,7 +495,7 @@ public final class Engine {
                   compareArray[i] = 10000 - i << 1;
                }
             } else {                                                 //move is no good
-               failHighNewBestMoveFlag = false;
+               GotoTimeState(TIME_STATE_HAVE_1ST_MOVE);
                if (value == 0 && (compareArray[i] & 1) != 0)
                   compareArray[i] = 2000 + i << 1 | 1;
                else
@@ -501,18 +533,26 @@ public final class Engine {
          if (stop && !isExact) {       //if search was stopped, the last completed ply was not actually complete
             depth--;
          }
+         long elapsedTime = (System.currentTimeMillis() - startTime);
+
+         if(elapsedTime == 0) {
+            nps = 100000;
+         } else  {
+            nps = (int)(((double)nodes) / (((double)(elapsedTime))/(1000.0f)));
+         }
          //print UCI move information
-      if(depth > 6 ) {
+      //if(depth > 6 ) {
+         
          if (bestValue > 10000L) {			//this is a winning mate score
             long mate = (20000L - bestValue) / 2;
-            System.out.println("info depth " + depth + " score mate " + mate + " nodes " + nodes + " pv " + pv);
+            System.out.println("info depth " + depth + " score mate " + mate + " nodes " + nodes + " nps " + nps + " pv " + pv);
          } else if (bestValue < -10000) {  //losing mate score
             long mate = (-20000L - bestValue) / 2;
-            System.out.println("info depth " + depth + " score mate " + mate + " nodes " + nodes + " pv " + pv);
+            System.out.println("info depth " + depth + " score mate " + mate + " nodes " + nodes + " nps " + nps + " pv " + pv);
          } else {
-            System.out.println("info depth " + depth + " score cp " + bestValue + " nodes " + nodes + " pv " + pv);
+            System.out.println("info depth " + depth + " score cp " + bestValue + " nodes " + nodes + " nps " + nps + " pv " + pv);
          }
-      }
+      //}
          sortMoves(0, numberOfMoves, moveArr, compareArray);
 
       }
@@ -608,7 +648,7 @@ public final class Engine {
          }
 
          from = Long.numberOfTrailingZeros(chessBoard.whiteking);
-         toSquares = Helper.getKingPosition(from);  //chessBoard.getAttackBoard(from);
+         toSquares = Helper.getKingPosition(from); 
          if (chessBoard.wCastle > Global.CASTLED) {
             long castle = chessBoard.getWKingCastle(from);
             if (chessBoard.wCastle == Global.LONG_CASTLE) {
@@ -688,7 +728,7 @@ public final class Engine {
          }
 
          from = Long.numberOfTrailingZeros(chessBoard.blackking);
-         toSquares = Helper.getKingPosition(from);//chessBoard.getAttackBoard(from);
+         toSquares = Helper.getKingPosition(from);
 
          if (chessBoard.bCastle > Global.CASTLED) {
             long castle = chessBoard.getBKingCastle(from);
@@ -1458,8 +1498,6 @@ public final class Engine {
          return false;
       }
 
-      int to = MoveFunctions.getTo(move);
-      int from = MoveFunctions.getFrom(move);
       int piece = MoveFunctions.getPiece(move);
 
       if (side == -1 && piece > 5) //white moving
@@ -1469,6 +1507,9 @@ public final class Engine {
          return false;
       }
 
+      
+      int from = MoveFunctions.getFrom(move);
+
       if (Board.piece_in_square[from] != piece) {
          return false;
       }
@@ -1476,12 +1517,14 @@ public final class Engine {
       long temp;
       if (piece == 5) //wPawn
       { 
-         temp = chessBoard.getWPawnMoves(from);//, chessBoard.getPassantB());
-      } else if (piece == 11) {
+         temp = chessBoard.getWPawnMoves(from);
+      } else if (piece == 11) {  //bpawn
          temp = chessBoard.getBPawnMoves(from);
       } else {
          temp = chessBoard.getAttackBoard(from);
       }
+
+      int to = MoveFunctions.getTo(move);
       temp &= ~chessBoard.bitboard;
       if ((temp & Global.set_Mask[to]) != 0) {
          return true;
@@ -1523,9 +1566,6 @@ public final class Engine {
    private long Max(int side, int depth, long alpha, long beta, boolean nMove, boolean isInCheck, boolean wasExtended, boolean iid) {
 
       thisDepth++;
-
-
-      //nodes++;
 
       /** time management code */
       if (++nodes >= nextTimeCheck) {
@@ -1636,7 +1676,7 @@ public final class Engine {
        * -when the hash table tells us not to (nullFail)
        * -when we are in the endgame as zugzwangs are more likely
        */
-       if (!razored && !bFutilityPrune && !isInCheck && !nMove && nullFail != 1 && (chessBoard.pawnsKings != chessBoard.bitboard) && chessBoard.totalValue > 1200 && chessBoard.getMinNumberOfPieces() > 1) {
+       if (!razored && !bFutilityPrune && !isInCheck && !nMove && nullFail != 1 && (chessBoard.pawnsKings != chessBoard.bitboard) && chessBoard.getMinNumberOfPieces() > 1) {
 
           chessBoard.switchTurn();
          int reduce = 2;
@@ -1660,10 +1700,10 @@ public final class Engine {
             nullFail = 1;
          }
       }
-      boolean isRootFirstMove = false;
-      if(alpha == -BETA_START) {
-         isRootFirstMove = true;
-      }
+      //boolean isRootFirstMove = false;
+      //if(alpha == -BETA_START) {
+      //   isRootFirstMove = true;
+     // }
 
 
       /** the number of positions skipped due to futility pruning */
@@ -1940,7 +1980,6 @@ public final class Engine {
                   if (nextDepth > 0) {
                      value = -Max(-side, depth - 1 + extendAmount, -beta, -alpha, nMove, checkingMove, isInCheck | pawnExtension, false);
                   } else {
-                     //nodes++;
                      value = -Quies(-side, 0, -beta, -alpha);
                   }
                   thisDepth--;
@@ -1948,7 +1987,6 @@ public final class Engine {
                   if (nextDepth > 0) {
                      value = -Max(-side, depth - 1 + extendAmount, -alpha - 1, -alpha, nMove, checkingMove, isInCheck | pawnExtension, false);
                   } else {
-                     //nodes++;
                      value = -Quies(-side, 0, -alpha - 1, -alpha);
                   }
                   thisDepth--;
@@ -1959,7 +1997,6 @@ public final class Engine {
                      if (depth - 1 > 0) {
                         value = -Max(-side, depth - 1 + extendAmount, -beta, -alpha, nMove, checkingMove, isInCheck | pawnExtension, false);
                      } else {
-                        //nodes++;
                         value = -Quies(-side, 0, -beta, -alpha);
                      }
                      thisDepth--;
@@ -2020,9 +2057,9 @@ public final class Engine {
                bMove = value;
             }
             moveCount++;
-         }                                                        //end for
+         }  //end for
          state++;
-      }                                                           // end while
+      }  // end while
       
       if (!isInCheck && !oneLegal) {				//stalemate detection
          bMove = 0;
@@ -2051,7 +2088,6 @@ public final class Engine {
             bMove = alpha;
          }
       }
-
       HashTable.addHash(key, chessBoard.hashValue, bestFullMove, bMove, depth, hType, nullFail, ancient);
 
       if (oneLegal && hType == HASH_EXACT) {             //update history tables

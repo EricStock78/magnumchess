@@ -1,7 +1,7 @@
 /**
  * Board.java
  *
- * Version 2.0   
+ * Version 3.0   
  * 
  * Copyright (c) 2010 Eric Stock
  
@@ -37,7 +37,7 @@ import java.util.Random;
  * loading a fen position
  * starting a new game
  *
- * @version 	2.00 30 Jan 2010
+ * @version 	3.00 25 Oct 2010
  * @author 	Eric Stock
  */
 
@@ -635,8 +635,12 @@ public final class Board {//extends java.util.Observable{
                                        else if(bPawn - wPawn >= 1 && (bRook - wRook) == 1 && (noWhiteMinors - noBlackMinors) == 2  )
                                           materialImbalence -= 25;
 
+                                      //adjustment for queen vs rook, minor and pawn
+                                      if(((wQueen - bQueen) == 1) && ((bRook - wRook) == 1) && ((noBlackMinors - noWhiteMinors) == 1) && ((bPawn - wPawn) == 1))
+                                         materialImbalence -= 75;
+                                      else if(((bQueen - wQueen) == 1) && ((wRook - bRook) == 1) && ((noWhiteMinors - noBlackMinors) == 1) && ((wPawn - bPawn) == 1))
+                                         materialImbalence += 75;
                                      }
-
 
                                        materialValues[index] = materialImbalence;
 

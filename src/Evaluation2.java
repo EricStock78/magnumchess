@@ -1,7 +1,7 @@
 /**
  * Evaluation2.java
  *
- * Version 2.0
+ * Version 3.0
  *
  * Copyright (c) 2010 Eric Stock
 
@@ -50,23 +50,26 @@ public class Evaluation2 {
     private static TransTable EvalTable = new TransTable(Global.EvalHASHSIZE,2);
 
     /** white passed pawn bonus based on rank */
-    private static final int[] wPassedPawnBonus = {0,7,13,17,25,50,100,0};
+    private static final int[] wPassedPawnBonus = {0,7,13,17,25,38,80,0};
+
+    /** white passed pawn bonus based on rank for endgame*/
+    private static final int[] wPassedPawnBonusEndGame = {0,15,23,35,47,90,200,0};
 
     /** black passed pawn bonus based on rank */
-    private static final int[] bPassedPawnBonus = {0,100,50,25,17,13,7,0};
+    private static final int[] bPassedPawnBonus = {0,80,38,25,17,13,7,0};
+
+    /** black passed pawn bonus based on rank for endgame*/
+    private static final int[] bPassedPawnBonusEndGame = {0,200,90,47,35,23,15,0};
 
     /** specific passed pawn bonuses */
-    private static final int CONNECTED_PASSED_BONUS = 30;
-    private static final int PROTECTED_PASSED_BONUS = 15;
-    private static final int PASSED_PAWN_ROOK_BONUS = 40;
+    private static final int CONNECTED_PASSED_BONUS = 20;
+    private static final int PROTECTED_PASSED_BONUS = 8;
 
     /** pawn penalties for weakness */
     private static final int ISOLATED_PAWN = 10;
     private static final int WEAK_PAWN = 10;
     private static final int WEAK_OPEN_PAWN = 4;
     private static final int DOUBLED_PAWN = 20;
-    private static final int DOUBLED_ISOLATED_PAWN = 15;
-    private static final int TRIPLE_ISOLATED_PAWN = 20;
     private static final int TRIPLE_PAWN = 50;
 
     /** mobility bonus multipliers */
@@ -96,7 +99,6 @@ public class Evaluation2 {
     private static final int ROOK_7TH_RANK = 35;
     private static final int QUEEN_ROOK_7TH_RANK = 100;
     private static final int HUNG_PENALTY = 30;
-    //private static final int TWO_BISHOP_BONUS = 35;
 
     /** king safety stuff here
      *  ideas from Ed Schroeder
@@ -323,13 +325,6 @@ public class Evaluation2 {
     /** position of white king */
     private static int wKingPos;
 
-    /** position of black queen */
-    private static int bQueenPos;
-
-    /** position of white queen */
-    private static int wQueenPos;
-
-
     /** counter for white pawns */
     private static int noWhitePawns;
 
@@ -420,24 +415,10 @@ public class Evaluation2 {
         if( material > 100000)
            return 0;
 
-        /*
-
-        if(chessBoard.wPieceNo == 1) {
-            if(chessBoard.bPieceNo <= 2 && chessBoard.blackpieces == (chessBoard.blackking | chessBoard.blackbishops | chessBoard.blackknights))
-                return 0;
-            if(chessBoard.bPieceNo == 3 && chessBoard.blackpieces == (chessBoard.blackking | chessBoard.blackknights))
-                return 0;
-
-        } else if(chessBoard.bPieceNo == 1) {
-            if(chessBoard.wPieceNo <= 2 && chessBoard.whitepieces == (chessBoard.whiteking | chessBoard.whitebishops | chessBoard.whiteknights))
-                return 0;
-            if(chessBoard.wPieceNo == 3 && chessBoard.whitepieces == (chessBoard.whiteking | chessBoard.whiteknights))
-                return 0;
-        }
-        */
         /** initialize evaluation terms */
 
-        endGameCoefficient =  Math.min(1.0,(8100.0 - (double)chessBoard.totalValue)/ 5600.0);
+        endGameCoefficient =  Math.min(1.0,(8000.0 - (double)chessBoard.totalValue)/ 6600.0);
+        //endGameCoefficient *= endGameCoefficient;
         tempo = 0;
         noWhitePawns = 0;
         noBlackPawns = 0;
@@ -508,8 +489,8 @@ public class Evaluation2 {
         rookEval += getBRookEval();
 
         /** calculate passed pawn bonuses */
-        passScore = getWPassedScore3(passBits);
-        passScore += getBPassedScore3(passBits);
+        passScore = GetWhitePassedPawnScore(passBits);
+        passScore += GetBlackPassedPawnScore(passBits);
 
         /** tempo and hung scores */
         if(side == 1) {
@@ -1252,8 +1233,9 @@ public class Evaluation2 {
         return passers;
     }
 
+   
     /**
-     * Method getWPassedScore3
+     * Method GetWhitePassedPawnScore
      *
      * calculates the passed pawn bonus for white passed pawns
      * this is based on many dynamic features
@@ -1263,7 +1245,7 @@ public class Evaluation2 {
      * @return int - the passed pawn bonus score
      *
      */
-    private static final int getWPassedScore3(long passers) {
+    private static final int GetWhitePassedPawnScore(long passers) {
         long piece;
         int position;
         int rank;
@@ -1279,56 +1261,66 @@ public class Evaluation2 {
             long rookAttacks = chessBoard.getMagicRookMoves(position);
             rank = position / 8;                //get rank of pawn we are testing
             file = position % 8;
-            currentScore = -wPassedPawnBonus[rank];
-            currentScore -= (int)((double)(10 + rank * 6) * endGameCoefficient);    //interpolated endgame bonus
-            if(( file-1 >= 0) && ((whitePassers & Global.fileMasks[file-1]) != 0)) {  //if passed pawn beside current pawn
-                currentScore -= 10 + CONNECTED_PASSED_BONUS * endGameCoefficient;
+
+            // interpolate bonus between middle and endgame
+            currentScore = (int)(-wPassedPawnBonus[rank] * (1.0 - endGameCoefficient));
+            currentScore -=  (int)(wPassedPawnBonusEndGame[rank] * (endGameCoefficient));
+
+            if(( file > 0) && ((whitePassers & Global.fileMasks[file-1]) != 0)) {  //if passed pawn beside current pawn
+                currentScore -= (10 + CONNECTED_PASSED_BONUS * endGameCoefficient);
             } else {
-                if((file-1 >= 0) && (Board.piece_in_square[position-9] == 5 || Board.piece_in_square[position-1] == 5))
-                    currentScore -= 5 + PROTECTED_PASSED_BONUS * endGameCoefficient;
+                if((file > 0) && (Board.piece_in_square[position-9] == 5 || Board.piece_in_square[position-1] == 5)) //pawn beside current pawn
+                    currentScore -= (5 + PROTECTED_PASSED_BONUS * endGameCoefficient);
             }
-            if(( file+1 <= 7) && ((whitePassers & Global.fileMasks[file+1]) != 0)) {
-                currentScore -= 10 + CONNECTED_PASSED_BONUS * endGameCoefficient;
+            if(( file < 7) && ((whitePassers & Global.fileMasks[file+1]) != 0)) {   //if passed pawn beside current pawn
+                currentScore -= ( 10 + CONNECTED_PASSED_BONUS * endGameCoefficient);
             } else {
-                if(( file+1 <= 7) && (Board.piece_in_square[position-7] == 5 || Board.piece_in_square[position+1] == 5))
-                   currentScore -= 5 + PROTECTED_PASSED_BONUS * endGameCoefficient;
+                if(( file < 7) && (Board.piece_in_square[position-7] == 5 || Board.piece_in_square[position+1] == 5))   //pawn beside current pawn
+                   currentScore -= ( 5 + PROTECTED_PASSED_BONUS * endGameCoefficient);
             }
 
-            if((rookAttacks & Global.minus8[position] & chessBoard.whiterooks) != 0)
-                currentScore +=  currentScore* 0.2 * endGameCoefficient;
+            if((rookAttacks & Global.minus8[position] & chessBoard.whiterooks) != 0)   //bonus for rook behind the pawn
+                currentScore -=  (5 + currentScore * 0.2 * endGameCoefficient);
+
             if(Board.piece_in_square[position+8] >= 0) {        //if the pawn is blocked
                 if(Board.piece_in_square[position+8] > 5)               //blocked by an enemy piece
                     currentScore *= 0.6;
-                else
+                else                                                    //blocked by a friend
                     currentScore *= 0.8;
             }
-            if(BB[position+8] != 0)
+
+            if(BB[position+8] != 0)                   //position in front of pawn attacked by enemy
                 currentScore *= 0.85;
-            if(WB[position+8] >= MINOR_BIT)
+            if(WB[position+8] >= MINOR_BIT)           //position in front of pawn defended by a bishop, knight, rook or queen
                 currentScore *= 1.15;
-            if(endGameCoefficient >= 0.99) {             //if this is the endgame
+
+            if(endGameCoefficient >= 0.99) {             //if this is the endgame and we have the king's support
                 if((WB[position] & KING_BIT) != 0)
-                    currentScore -= wPassedPawnBonus[rank]/2;
+                    currentScore *= 1.15;
                 else if((WB[position+8] & KING_BIT) != 0)
-                    currentScore -= wPassedPawnBonus[rank]/2;
+                    currentScore *= 1.15;
             }
-            if(chessBoard.totalValue < 1500) {           //late end game
+
+            if(chessBoard.totalValue < 1200) {           //late end game..bonus for keeping enemy king away from passed pawn
                 int x = Math.abs(bKingPos%8 - file);
                 int y = Math.abs(bKingPos/8 - rank);
                 if(y > x)
                     x = y;
                 currentScore -= x * wPawnEnemyKingTropism[position];
             }
-            if((Global.plus8[position] & chessBoard.whitepawns) != 0)            //doubled pawn - divide bonus in half
+
+            if((Global.plus8[position] & chessBoard.whitepawns) != 0)            //doubled pawn - reduce bonus
                 currentScore /= 3;
+
             totalPass += currentScore;
         }
         return totalPass;
     }
+
     /**
-     * Method getBPassedScore3
+     * Method GetBlackPassedPawnScore
      *
-     * calculates the passed pawn bonus for black passed pawns
+     * calculates the passed pawn bonus for white passed pawns
      * this is based on many dynamic features
      *
      * @param long passers - the 64 bits packed with passed pawns
@@ -1336,56 +1328,63 @@ public class Evaluation2 {
      * @return int - the passed pawn bonus score
      *
      */
-    private static final int getBPassedScore3(long passers) {
+    private static final int GetBlackPassedPawnScore(long passers) {
         long piece;
         int position;
         int rank;
         int file;
         int currentScore = 0;
         int totalPass = 0;
-        passers &= chessBoard.blackpawns;            //get only the black passed pawns
-        long blackPassers = passers;            //blackPassers keeps original black passed pawns
+        passers &= chessBoard.blackpawns;            //get only the white pawns
+        long blackPassers = passers;            //whitePassers keeps original white passed pawns
         while(passers != 0) {
             piece = passers & -passers;
             passers ^= piece;
             position = Long.numberOfTrailingZeros(piece);
             long rookAttacks = chessBoard.getMagicRookMoves(position);
             rank = position / 8;                //get rank of pawn we are testing
-            file = position % 8;                //file of pawn testing
-            currentScore = bPassedPawnBonus[rank];
-            currentScore += (int)((double)(10 + (7-rank) * 6) * endGameCoefficient);    // interpolated endgame bonus
-            if(( file-1 >= 0) && ((blackPassers & Global.fileMasks[file-1]) != 0)) {
+            file = position % 8;
+
+            // interpolate bonus between middle and endgame
+            currentScore = (int)(bPassedPawnBonus[rank] * (1.0 - endGameCoefficient));
+            currentScore +=  (int)(bPassedPawnBonusEndGame[rank] * (endGameCoefficient));
+
+            if(( file > 0) && ((blackPassers & Global.fileMasks[file-1]) != 0)) {  //if passed pawn beside current pawn
                 currentScore += 10 + CONNECTED_PASSED_BONUS * endGameCoefficient;
             } else {
-                if((file-1 >= 0) && (Board.piece_in_square[position+7] == 11 || Board.piece_in_square[position-1] == 11))
+                if((file > 0) && (Board.piece_in_square[position-9] == 11 || Board.piece_in_square[position-1] == 11)) //pawn beside current pawn
                     currentScore += 5 + PROTECTED_PASSED_BONUS * endGameCoefficient;
             }
-            if(( file+1 <= 7) && ((blackPassers & Global.fileMasks[file+1]) != 0)) {
-                 currentScore += 10 + CONNECTED_PASSED_BONUS * endGameCoefficient;
+            if(( file < 7) && ((blackPassers & Global.fileMasks[file+1]) != 0)) {   //if passed pawn beside current pawn
+                currentScore += 10 + CONNECTED_PASSED_BONUS * endGameCoefficient;
             } else {
-               if(( file+1 <= 7) && (Board.piece_in_square[position+9] == 11 || Board.piece_in_square[position+1] == 11))
-                    currentScore += 5 + PROTECTED_PASSED_BONUS * endGameCoefficient;
+                if(( file < 7) && (Board.piece_in_square[position-7] == 11 || Board.piece_in_square[position+1] == 11))   //pawn beside current pawn
+                   currentScore += 5 + PROTECTED_PASSED_BONUS * endGameCoefficient;
             }
-            if((rookAttacks & Global.plus8[position] & chessBoard.blackrooks) != 0)  //if a rook supports the pawn along the file, bonus
-                currentScore += currentScore * 0.2 * endGameCoefficient;
+
+            if((rookAttacks & Global.plus8[position] & chessBoard.blackrooks) != 0)   //bonus for rook behind the pawn
+                currentScore +=  (5 + currentScore * 0.2 * endGameCoefficient);
+
             if(Board.piece_in_square[position-8] >= 0) {        //if the pawn is blocked
-                if(Board.piece_in_square[position-8] < 6)               //blocked by an enemy piece
+                if(Board.piece_in_square[position+8] < 6)               //blocked by an enemy piece
                     currentScore *= 0.6;
-                else
+                else                                                    //blocked by a friend
                     currentScore *= 0.8;
             }
-            if(WB[position-8] != 0)
-               currentScore *= 0.85;
-            if(BB[position-8] >= MINOR_BIT)
-               currentScore *= 1.15;
-            if(endGameCoefficient >= 0.99) {             //if this is the endgame
-                if((BB[position] & KING_BIT) != 0)
-                    currentScore += bPassedPawnBonus[rank]/2;
-                else if((BB[position-8] & KING_BIT) != 0)
-                    currentScore += bPassedPawnBonus[rank]/2;
 
+            if(WB[position+8] != 0)                   //position in front of pawn attacked by enemy
+                currentScore *= 0.85;
+            if(BB[position+8] >= MINOR_BIT)           //position in front of pawn defended by a bishop, knight, rook or queen
+                currentScore *= 1.15;
+
+            if(endGameCoefficient >= 0.99) {             //if this is the endgame and we have the king's support
+                if((BB[position] & KING_BIT) != 0)
+                    currentScore *= 1.15;
+                else if((BB[position+8] & KING_BIT) != 0)
+                    currentScore *= 1.15;
             }
-            if(chessBoard.totalValue < 1500) {           //late end game
+
+            if(chessBoard.totalValue < 1200) {           //late end game..bonus for keeping enemy king away from passed pawn
                 int x = Math.abs(wKingPos%8 - file);
                 int y = Math.abs(wKingPos/8 - rank);
                 if(y > x)
@@ -1393,13 +1392,16 @@ public class Evaluation2 {
                 currentScore += x * bPawnEnemyKingTropism[position];
 
             }
-            if((Global.minus8[position] & chessBoard.blackpawns) != 0)            //doubled pawn - divide bonus in half
+
+            if((Global.minus8[position] & chessBoard.blackpawns) != 0)            //doubled pawn - reduce bonus
                 currentScore /= 3;
+
             totalPass += currentScore;
         }
         return totalPass;
+    }
 
-     }
+
     /**
      * To-do test to see if this code improves play (currently not used)
      *
@@ -1686,7 +1688,7 @@ public class Evaluation2 {
             }
             score -= pawnShieldScore;
 
-            if(chessBoard.blackqueen != 0 && endGameCoefficient <=  0.6) {
+            if(chessBoard.blackqueen != 0 && endGameCoefficient <=  0.7) {
                int counter = 0;
                int mask = 0;
 
@@ -1885,7 +1887,7 @@ public class Evaluation2 {
             }
             score += pawnShieldScore;
 
-         if(chessBoard.whitequeen != 0 && endGameCoefficient <=  0.6) {
+         if(chessBoard.whitequeen != 0 && endGameCoefficient <=  0.7) {
              byte mask = 0;
              int counter = 0;
              //collect the scores of the squares two places in front of the black king

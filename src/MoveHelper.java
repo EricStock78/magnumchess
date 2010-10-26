@@ -1,7 +1,7 @@
 /**
  * MoveHelper.java
  *
- * Version 2.0   
+ * Version 3.0   
  * 
  * Copyright (c) 2010 Eric Stock
  
@@ -30,13 +30,18 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  *
  * follows singleton design pattern
  * this class initializes and stores in memory arrays of attacks for non sliding pieces
- * the pieces are king, pawns, and knight
- * There are also functions to assist in rook, bishop and queen moves  - These perhaps
- * don't belong here
+ * the pieces are king
+ * There are also functions to assist in rook, bishop and queen moves  
  * 
- * To-do - some of the functions here should be placed in the Board.java class
+ * To-do - The king move and castle move board should be placed into the Board.java class
+ *       - All functions which rotate the bitboards, and collect the moves for sliding pieces to be placed in Magic move arrays
+ *       should be placed in this class
  *
- * @version 	2.00 30 Jan 2010
+ *       So basically, the Board class needs to have only the data structures containing the pre-computed moves and functions
+ *          to retrieve the moves
+ *       This class should only have data and functions to fill the Board class's data structures
+ *
+ * @version 	3.00 25 Oct 2010
  * @author 	Eric Stock
  */
 
