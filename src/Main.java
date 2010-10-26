@@ -1,7 +1,7 @@
 /**
  * Main.java
  *
- * Version 2.0   
+ * Version 3.0   
  * 
  * Copyright (c) 2010 Eric Stock
  
@@ -31,12 +31,11 @@ import java.io.*;
  * Main.java
  * Execution begins in this class as this class contains the main method
  * After initializing the engine, the engine waits for the user to input the "uci" command
- * Once this command is given, MagnumChess will go into uci mode where it only responds to uci commands 
+ * Once this command is given, MagnumChess will go into uci mode where it responds to uci commands 
  *
- *The debug GUI can also be started by typing launch
  * 
  *
- * @version 	2.00 30 Jan 2010
+ * @version 	3.00 25 Oct 2010
  * @author 	Eric Stock
  */
 public class Main
@@ -75,7 +74,6 @@ public class Main
             Board.newGame();
             reader = new BufferedReader(new InputStreamReader(System.in));
             theSearch = new Engine();
-            //HistoryWriter.setAlgebraicNotes();
             printGreeting();
             getCmd();
         } catch(Exception ex) {
@@ -92,7 +90,7 @@ public class Main
      */ 
     public static void printGreeting() {
         System.out.println("*****************MAGNUM CHESS***************");
-        System.out.println("*****************version 2.00***************");
+        System.out.println("*****************Version 3.00***************");
         System.out.println("to play in UCI mode type \"uci\"");
         //System.out.println("to launch GUI type \"launch\"");
 		
@@ -291,20 +289,29 @@ public class Main
                         }
 						if(Board.getTurn()==1)	{		//black moving
 							movetime = Math.max(0,(btime/togo + binc)-200);
-                     int  maxTimeLimit = (int)(((double)btime + (double)binc)*0.55);
+                     //reduce the move time a little, as most of the time we will be extending this time to find the first move of the last iteration
+                     movetime = (int)(((double)movetime)* 0.85);
+                     int  maxTimeLimit = (int)(((double)btime + (double)binc)*0.60);
                      maxMoveTime = Math.min(movetime * 4, maxTimeLimit);
                   }
                   else {
 							movetime = Math.max(0,(wtime/togo + winc)-200);
-                     int  maxTimeLimit = (int)(((double)wtime + (double)winc)*0.55);
+                     //reduce the move time a little, as most of the time we will be extending this time to find the first move of the last iteration
+                     movetime = (int)(((double)movetime)* 0.85);
+                     int  maxTimeLimit = (int)(((double)wtime + (double)winc)*0.60);
                      maxMoveTime = Math.min(movetime * 4, maxTimeLimit);
+                  }
+                  // on the last move before the time is increased, the move time will be higher than the maxMoveTime,
+                  // so we adjust the maxMoveTime to be equal to the movetime
+                  if(movetime > maxMoveTime)  {
+                     maxMoveTime = movetime;
                   }
                }
 					catch(NumberFormatException ex) {
-                        ex.printStackTrace(System.err);
-                    }
+                   ex.printStackTrace(System.err);
+               }
 				}
-				String move = theSearch.search(movetime, maxMoveTime, searchDepth,infinite);
+            String move = theSearch.search(movetime, maxMoveTime, searchDepth,infinite);
 				System.out.println("bestmove "+move);
 			}	
          else if(cmd.equals("ucinewgame")) {

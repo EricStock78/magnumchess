@@ -1,7 +1,7 @@
 /**
  * HistoryWriter.java
  *
- * Version 2.0   
+ * Version 3.0   
  * 
  * Copyright (c) 2010 Eric Stock
  
@@ -32,9 +32,8 @@ import java.util.ArrayList;
  * HistoryWriter.java
  * 
  * To-do 
- * It is doubtful whether all this functionality is needed as Magnum can be run with
- * a UCI gui like Area
- * Either eliminate most of this class and clean up the rest, or improve the GUI and this class up
+ * The code in this class is pretty messy.  There also may be extra functionality in this class related to the old Gui, which can now be removed
+ * as the gui is no longer supported
  *
  *
  * This class handles the follwoing:
