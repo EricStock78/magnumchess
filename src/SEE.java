@@ -89,7 +89,7 @@ public class SEE {
       //enemies &= Board.slidePieces;
     	
     	int difference = kingPos - from;
-    	int rankDifference = kingPos/8 - from/8;
+    	int rankDifference = (kingPos >> 3) - (from >> 3);
     	if(difference < 0)
     		rankDifference *= -1;
     	if(rankDifference != 0) {
@@ -141,36 +141,36 @@ public class SEE {
     			if((Board.getAttack2(from) & enemies & Global.diag1Masks[Global.Diag1Groups[from]]) == 0) return false;
     			return true;	
     		case(-8):
-    			if(from%8 == to%8) return false;
+    			if((from & 7) == (to & 7)) return false;
     			temp = Board.bitboard & Global.plus8[kingPos];
     			temp &= -temp;
     			nextPos = Long.numberOfTrailingZeros(temp);
     			if(nextPos < from) return false;
-    			if((Board.getAttack2(from) & enemies & Global.fileMasks[from%8]) == 0) return false;
+    			if((Board.getAttack2(from) & enemies & Global.fileMasks[from&7]) == 0) return false;
     			return true;			
     		case(8):
-    			if(from%8 == to%8) return false;
+    			if((from & 7) == (to & 7)) return false;
     			temp = Board.bitboard & Global.plus8[from];
     			temp &= -temp;
     			nextPos = Long.numberOfTrailingZeros(temp);
     			if(nextPos < kingPos) return false;
-    			if((Board.getAttack2(from) & enemies & Global.fileMasks[from%8]) == 0) return false;
+    			if((Board.getAttack2(from) & enemies & Global.fileMasks[from&7]) == 0) return false;
     			return true;
     		case(-99):
-    			if(from/8 == to/8) return false;
+    			if((from >> 3) == (to >> 3)) return false;
     			temp = Board.bitboard & Global.plus1[kingPos];
     			temp &= -temp;
     			nextPos = Long.numberOfTrailingZeros(temp);
     			if(nextPos < from) return false;
-    			if((Board.getAttack2(from) & enemies & Global.rankMasks[from/8]) == 0) return false;
+    			if((Board.getAttack2(from) & enemies & Global.rankMasks[from>>3]) == 0) return false;
     			return true;	
  			case(99):
- 				if(from/8 == to/8) return false;
+ 				if((from >> 3) == (to >> 3)) return false;
     			temp = Board.bitboard & Global.plus1[from];
     			temp &= -temp;
     			nextPos = Long.numberOfTrailingZeros(temp);
     			if(nextPos < kingPos) return false;
-    			if((Board.getAttack2(from) & enemies & Global.rankMasks[from/8]) == 0) return false;
+    			if((Board.getAttack2(from) & enemies & Global.rankMasks[from>>3]) == 0) return false;
     			return true;
  				
     	}
@@ -219,173 +219,191 @@ public class SEE {
      * @param passant - the passant square
      * 
      */
-	public static int getSEE(int side, int to, int from, int passant) {
+	public static int getSEE(int side, int to, int from, int passant, int moveType) {
 		
-        long friends;
+		long friends;
 		long enemies;
-		
+
 		if (side == 1) {
 			friends = Board.blackpieces;
 			enemies = Board.whitepieces;
 		} else {
 			friends = Board.whitepieces;
 			enemies = Board.blackpieces;
-		}	
-		
+		}
+
 		int[] ePieces = new int[10];
 		int[] fPieces = new int[10];
-		
+
 		int eCount = 0;
 		int fCount = 0;
-		
-      if(to == passant)
-			ePieces[0] = Global.values[5] << 6;
-		else {
-            int cp = Board.piece_in_square[to];
-            if(cp != -1) {
-                ePieces[0] = (Global.values[Board.piece_in_square[to]]<<6);    
-            } else                                  //this is a pawn push promo move
-                ePieces[0] = 0;
-        } 
-		eCount = 1; 	
-		
-        
-      fPieces[0] = (Global.values[Board.piece_in_square[from]] << 6 | from);
+
+		long removedBits = 0;
+
+		switch(moveType)
+		{	
+			case(Global.EN_PASSANT_CAP):
+				ePieces[0] = Global.values[5] << 6;
+				removedBits |= side == -1 ? Global.set_Mask[to-8] : Global.set_Mask[to+8];
+				Board.bitboard ^= removedBits;
+				fPieces[0] = (Global.values[Board.piece_in_square[from]] << 6 | from);
+			break;
+			
+			case(Global.PROMO_Q):
+				if(Board.piece_in_square[to] != -1)
+					ePieces[0] = (Global.values[Board.piece_in_square[to]]<<6 + Global.values[Global.PIECE_QUEEN] - Global.values[Global.PIECE_PAWN]);
+				else
+					ePieces[0] = Global.values[Global.PIECE_QUEEN] - Global.values[Global.PIECE_PAWN];
+				fPieces[0] = (Global.values[Global.PIECE_QUEEN] << 6 | from);
+			break;
+			
+			case(Global.PROMO_N):
+				if(Board.piece_in_square[to] != -1)
+					ePieces[0] = (Global.values[Board.piece_in_square[to]]<<6 + Global.values[Global.PIECE_KNIGHT] - Global.values[Global.PIECE_PAWN]);
+				else
+					ePieces[0] = Global.values[Global.PIECE_KNIGHT] - Global.values[Global.PIECE_PAWN];
+				fPieces[0] = (Global.values[Global.PIECE_KNIGHT] << 6 | from);
+			break;
+			
+			case(Global.PROMO_R):
+				if(Board.piece_in_square[to] != -1)
+					ePieces[0] = (Global.values[Board.piece_in_square[to]]<<6 + Global.values[Global.PIECE_ROOK] - Global.values[Global.PIECE_PAWN]);
+				else
+					ePieces[0] = Global.values[Global.PIECE_ROOK] - Global.values[Global.PIECE_PAWN];
+				fPieces[0] = (Global.values[Global.PIECE_ROOK] << 6 | from);
+			break;
+			
+			case(Global.PROMO_B):
+				if(Board.piece_in_square[to] != -1)
+					ePieces[0] = (Global.values[Board.piece_in_square[to]]<<6 + Global.values[Global.PIECE_BISHOP] - Global.values[Global.PIECE_PAWN]);
+				else
+					ePieces[0] = Global.values[Global.PIECE_BISHOP] - Global.values[Global.PIECE_PAWN];
+				fPieces[0] = (Global.values[Global.PIECE_BISHOP] << 6 | from);
+			break;
+
+			default:
+				ePieces[0] = (Global.values[Board.piece_in_square[to]]<<6);
+				fPieces[0] = (Global.values[Board.piece_in_square[from]] << 6 | from);
+			break;
+		}
+
+		eCount = 1;
 		fCount = 1;
-		
+
 		long attack = Board.getAttack2(to);
-        
-        //add enemy defenders of piece being captured
-        long enemyDefenders = attack & enemies;
-        
-        //if(enemyDefenders == 0) 
-        //    return ePieces[0];
-        
-        while(enemyDefenders != 0) {       
-         long temp2 = enemyDefenders & -enemyDefenders;
+
+		//add enemy defenders of piece being captured
+		long enemyDefenders = attack & enemies;
+
+		while(enemyDefenders != 0) {
+			long temp2 = enemyDefenders & -enemyDefenders;
 			enemyDefenders ^= temp2;
 			int pos = Long.numberOfTrailingZeros(temp2);
 			ePieces[eCount++] = Global.values[Board.piece_in_square[pos]] << 6 | pos;
-        } 
-        
-        //sort enemy defenders if more than 3 total enemies
-        if(eCount > 2) 
-            SortCaptures(1,eCount,ePieces);
-            //Arrays.sort(ePieces,1,eCount);      //leave index 0 alone as this is the pre determined piece to be captured
-    
-        
-        //add additional friend attackers attacking piece being captured
-        long friendAttackers = (attack & friends) & ~Global.set_Mask[from];
-        
-        //if(friendAttackers == 0)
-        //    return ePieces[0] - fPieces[0];
-        
-        while(friendAttackers != 0) {       
-            long temp2 = friendAttackers & -friendAttackers;
+		}
+
+		//sort enemy defenders if more than 3 total enemies
+		if(eCount > 2)
+			SortCaptures(1,eCount,ePieces);	//leave index 0 alone as this is the pre determined piece to be captured
+
+		//add additional friend attackers attacking piece being captured
+		long friendAttackers = (attack & friends) & ~Global.set_Mask[from];
+
+		while(friendAttackers != 0) {
+			long temp2 = friendAttackers & -friendAttackers;
 			friendAttackers ^= temp2;
 			int pos = Long.numberOfTrailingZeros(temp2);
 			fPieces[fCount++] = Global.values[Board.piece_in_square[pos]] << 6 | pos;
-        } 
-        //sort friend attackers if more than 3 total attackers
-        if(fCount > 2)
-            SortCaptures(1,fCount,fPieces);
-            //Arrays.sort(fPieces,1,fCount);      //leave index 0 alone as this is the pre determined attacker
-         
-       
+		}
+		//sort friend attackers if more than 3 total attackers
+		if(fCount > 2)
+			SortCaptures(1,fCount,fPieces);	//leave index 0 alone as this is the pre determined attacker
+
 		int tempVal = 0;
 		int alpha = -20000;
 		int beta = 20000;
 		int moveNumber = 0;
-		long removedBits = 0;
 		
-        
-        while (true) {
-            if(fCount > moveNumber) {
-                tempVal += ePieces[moveNumber] >> 6;
-                beta = Math.min(beta,tempVal); 
-            } else {
-                Board.bitboard ^= removedBits;
-                return alpha;
-            }if(alpha >=beta) {
-                Board.bitboard ^= removedBits;
-                return alpha;
-            }
-                
-            //add any hidden pieces after this capture
-            
-            int removedPosition = fPieces[moveNumber] & 63;
-            Board.bitboard ^= Global.set_Mask[removedPosition];
-            removedBits |= Global.set_Mask[removedPosition];
-            long newAttack = Board.getAttack2(to);
-            newAttack ^= attack;
-            attack |= newAttack;
-            
-            if(newAttack != 0) {
-                //attack ^= newAttack;
-                if((newAttack & friends) != 0) {
-                    long temp2 = newAttack & -newAttack;
-                    newAttack ^= temp2;
-                    int pos = Long.numberOfTrailingZeros(temp2);
-                    fPieces[fCount++] = Global.values[Board.piece_in_square[pos]] << 6 | pos;
-                    if(fCount - moveNumber > 2)
-                        SortCaptures(moveNumber + 1,fCount,fPieces);
-                } else if((newAttack & enemies) != 0) {
-                    long temp2 = newAttack & -newAttack;
-                    newAttack ^= temp2;
-                    int pos = Long.numberOfTrailingZeros(temp2);
-                    ePieces[eCount++] = Global.values[Board.piece_in_square[pos]] << 6 | pos;
-                    if(eCount - moveNumber >= 2)
-                        SortCaptures(moveNumber + 1,eCount,ePieces);
-                } 
-            }
-            
-            
-            
-            if(eCount > moveNumber+1) {
-                tempVal -= fPieces[moveNumber] >> 6; 
-                alpha = Math.max(alpha, tempVal);
-            } else {
-                //if enemy has no pieces left to defend, alpha can be updated
-                alpha = Math.max(alpha, tempVal);
-                if(alpha >= beta) {
-                    Board.bitboard ^= removedBits;
-                    return beta;
-                }
-                return alpha;
-            }
-            if(alpha >= beta) {
-                Board.bitboard ^= removedBits;
-                return beta;
-            }
-            
-            //add any hidden pieces after this capture
-            
-            removedPosition = ePieces[moveNumber+1] & 63;
-            Board.bitboard ^= Global.set_Mask[removedPosition];
-            removedBits |= Global.set_Mask[removedPosition];
-            newAttack = Board.getAttack2(to);
-            newAttack ^= attack;
-            attack |= newAttack;
-            
-            if(newAttack != 0) {
-                if((newAttack & friends) != 0) {
-                    long temp2 = newAttack & -newAttack;
-                    newAttack ^= temp2;
-                    int pos = Long.numberOfTrailingZeros(temp2);
-                    fPieces[fCount++] = Global.values[Board.piece_in_square[pos]] << 6 | pos;
-                    if(fCount - moveNumber > 2)
-                        SortCaptures(moveNumber + 1,fCount,fPieces);
-                } else if((newAttack & enemies) != 0) {
-                    long temp2 = newAttack & -newAttack;
-                    newAttack ^= temp2;
-                    int pos = Long.numberOfTrailingZeros(temp2);
-                    ePieces[eCount++] = Global.values[Board.piece_in_square[pos]] << 6 | pos;
-                    if(eCount - moveNumber >= 3)
-                        SortCaptures(moveNumber + 2,eCount,ePieces);
-                }
-            }
-            moveNumber++;
-        }     
-    }       
-    
+		while (true) {
+			if(fCount > moveNumber) {
+				tempVal += ePieces[moveNumber] >> 6;
+				beta = Math.min(beta,tempVal);
+			} else {
+				Board.bitboard ^= removedBits;
+				return alpha;
+			} if(alpha >=beta) {
+				Board.bitboard ^= removedBits;
+				return alpha;
+			}
+
+			//add any hidden pieces after this capture
+			int removedPosition = fPieces[moveNumber] & 63;
+			Board.bitboard ^= Global.set_Mask[removedPosition];
+			removedBits |= Global.set_Mask[removedPosition];
+			long newAttack = Board.getAttack2(to);
+			newAttack ^= attack;
+			attack |= newAttack;
+
+			if(newAttack != 0) {
+				if((newAttack & friends) != 0) {
+					long temp2 = newAttack & -newAttack;
+					newAttack ^= temp2;
+					int pos = Long.numberOfTrailingZeros(temp2);
+					fPieces[fCount++] = Global.values[Board.piece_in_square[pos]] << 6 | pos;
+					if(fCount - moveNumber > 2)
+						SortCaptures(moveNumber + 1,fCount,fPieces);
+				} else if((newAttack & enemies) != 0) {
+					long temp2 = newAttack & -newAttack;
+					newAttack ^= temp2;
+					int pos = Long.numberOfTrailingZeros(temp2);
+					ePieces[eCount++] = Global.values[Board.piece_in_square[pos]] << 6 | pos;
+					if(eCount - moveNumber >= 2)
+						SortCaptures(moveNumber + 1,eCount,ePieces);
+				}
+			}
+
+			if(eCount > moveNumber+1) {
+				tempVal -= fPieces[moveNumber] >> 6;
+				alpha = Math.max(alpha, tempVal);
+			} else {
+				//if enemy has no pieces left to defend, alpha can be updated
+				alpha = Math.max(alpha, tempVal);
+				if(alpha >= beta) {
+					Board.bitboard ^= removedBits;
+					return beta;
+				}
+				return alpha;
+				}
+				if(alpha >= beta) {
+					Board.bitboard ^= removedBits;
+					return beta;
+				}
+				//add any hidden pieces after this capture
+				removedPosition = ePieces[moveNumber+1] & 63;
+				Board.bitboard ^= Global.set_Mask[removedPosition];
+				removedBits |= Global.set_Mask[removedPosition];
+				newAttack = Board.getAttack2(to);
+				newAttack ^= attack;
+				attack |= newAttack;
+
+				if(newAttack != 0) {
+					if((newAttack & friends) != 0) {
+						long temp2 = newAttack & -newAttack;
+						newAttack ^= temp2;
+						int pos = Long.numberOfTrailingZeros(temp2);
+						fPieces[fCount++] = Global.values[Board.piece_in_square[pos]] << 6 | pos;
+						if(fCount - moveNumber > 2)
+						SortCaptures(moveNumber + 1,fCount,fPieces);
+					} else if((newAttack & enemies) != 0) {
+						long temp2 = newAttack & -newAttack;
+						newAttack ^= temp2;
+						int pos = Long.numberOfTrailingZeros(temp2);
+						ePieces[eCount++] = Global.values[Board.piece_in_square[pos]] << 6 | pos;
+						if(eCount - moveNumber >= 3)
+						SortCaptures(moveNumber + 2,eCount,ePieces);
+					}
+			}
+			moveNumber++;
+		}
+	}
 }

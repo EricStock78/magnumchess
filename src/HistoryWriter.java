@@ -51,10 +51,14 @@ public final class HistoryWriter {
 	private static String[] pieceSt;			
 	
     /** instance of singleton Board class */
-    private static Board Magnum;
+    private static Board chessBoard;
+
+	 private static Engine search;
     
     /** use an array list to store all made moves */
 	private static ArrayList<String> history;
+
+
 	
 	/*
      * Constructor HistoryWriter
@@ -62,12 +66,13 @@ public final class HistoryWriter {
      * Initializes some arrays and calls setAlgebraicNotes method
      * 
      */
-	public HistoryWriter() {			//constructor
-		Magnum = Board.getInstance();
+	public HistoryWriter(Engine pSearch) {			//constructor
+		chessBoard = Board.getInstance();
 		boardString = new String[64];
 		pieceSt = new String[12];
 		setAlgebraicNotes();		
 		history = new ArrayList<String>(100);
+		search = pSearch;
 	}
 	
     
@@ -84,72 +89,226 @@ public final class HistoryWriter {
 		String move;
 		int from=0;
 		int to=0;
-		int[] piece_in_square = Magnum.getPiecesInSquare();
 		moves = removeFrontWhiteSpace(moves);
 		int type = 0;
 		
-		while(moves.length()>=4)	{
-			if(moves.indexOf(" ") == -1)	//last move to process
-				move = moves;
-			else
-				move = moves.substring(0,moves.indexOf(" "));
-			
-			if(move.length() == 4) {
-			
-                move = moves.substring(0,4);
-                String m1 = move.substring(0,2);
-                String m2 = move.substring(2,4);
-                for(int i=0;i<64;i++) {
-                    if(boardString[i].equals(m1)) {
-                        from = i;
-                    }
-                }	
-                for(int i=0;i<64;i++) {
-                    if(boardString[i].equals(m2))
-                    to = i;
-                }	
-                int mv = MoveFunctions.makeMove(to,from);
-                Magnum.AddMove(mv);
-                Magnum.MakeMove(mv, false);
-                Magnum.AddRepetitionRoot();
-                if(moves.indexOf(" ")==-1) break;
-                moves = moves.substring(moves.indexOf(" "));
-                moves = removeFrontWhiteSpace(moves);
+		//calculate total number of moves
+		String tempMoves = moves;
+		int movesProcessed = 0;
 		
-            } else if(move.length() == 5) {				//promo move
-                move = moves.substring(0,5);
-                String m1 = move.substring(0,2);
-                String m2 = move.substring(2,4);
-                String m3 = move.substring(4,5);
-                for(int i=0;i<64;i++) {
-                    if(boardString[i].equals(m1)) {
-                        from = i;
-                    }
-                }	
-                for(int i=0;i<64;i++) {
-                    if(boardString[i].equals(m2))
-                    to = i;
-                }	
-                int piece = piece_in_square[from];
-                int cp = piece_in_square[to];
-                if(m3.equals("q")) 
-                    type = Global.PROMO_Q;
-                else if(m3.equals("n"))
-                    type = Global.PROMO_N;
-                else if(m3.equals("b"))
-                    type = Global.PROMO_B;
-                else if(m3.equals("r"))
-                    type = Global.PROMO_R;
-                int mv = MoveFunctions.makeMove(to,from,piece,cp,type);
-                Magnum.AddMove(mv);
-                Magnum.MakeMove(mv, true);
-                Magnum.AddRepetitionRoot();
-                if(moves.indexOf(" ")==-1) break;
-                moves = moves.substring(moves.indexOf(" "));
-                moves = removeFrontWhiteSpace(moves);
-            }	
-        }	
+		//prune all moves which we already have from the moves list
+		int numberBoardMoves = Board.getInstance().getCount();
+		
+		while(tempMoves.length() >= 4)	{
+			
+			if(tempMoves.indexOf(" ") == -1)	//last move to process
+				move = tempMoves;
+			else
+				move = tempMoves.substring(0, tempMoves.indexOf(" "));
+			
+			if(move.length() == 4) 
+			{
+				String m1 = move.substring(0,2);
+				String m2 = move.substring(2,4);
+				for(int i=0;i<64;i++) {
+					if(boardString[i].equals(m1)) {
+						from = i;
+					}
+				}	
+				for(int i=0;i<64;i++) {
+					if(boardString[i].equals(m2))
+						to = i;
+				}
+				
+				if(movesProcessed < numberBoardMoves)
+				{
+					int boardMove = Board.getInstance().GetBoardMove(movesProcessed);
+					if(to != MoveFunctions.getTo(boardMove) || from != MoveFunctions.getFrom(boardMove))
+					{
+						if(tempMoves.indexOf(" ")== -1 )
+						{
+							tempMoves = "";
+							break;
+						}
+						else
+						{
+							tempMoves = tempMoves.substring(tempMoves.indexOf(" "));
+							tempMoves = removeFrontWhiteSpace(tempMoves);
+						}
+						break;
+					}
+				}
+				else
+				{
+					break;
+				}
+				movesProcessed++;
+			}
+			else if(move.length() == 5)
+			{
+				//move = moves.substring(0,5);
+				String m1 = move.substring(0,2);
+				String m2 = move.substring(2,4);
+				String m3 = move.substring(4,5);
+				for(int i=0;i<64;i++) {
+					if(boardString[i].equals(m1)) {
+						from = i;
+					}
+				}	
+				for(int i=0;i<64;i++) {
+					if(boardString[i].equals(m2))
+						to = i;
+				}
+				
+				if(m3.equals("q")) 
+				  type = Global.PROMO_Q;
+				else if(m3.equals("n"))
+				  type = Global.PROMO_N;
+				else if(m3.equals("b"))
+				  type = Global.PROMO_B;
+				else if(m3.equals("r"))
+				  type = Global.PROMO_R;
+
+				if(movesProcessed < numberBoardMoves)
+				{
+					int boardMove = Board.getInstance().GetBoardMove(movesProcessed);
+					if(to != MoveFunctions.getTo(boardMove) || from != MoveFunctions.getFrom(boardMove) || type != MoveFunctions.moveType(boardMove))
+					{
+						if(tempMoves.indexOf(" ")== -1 )
+						{
+							tempMoves = "";
+							break;
+						}
+						else
+						{
+							tempMoves = tempMoves.substring(tempMoves.indexOf(" "));
+							tempMoves = removeFrontWhiteSpace(tempMoves);
+						}
+					}
+				}
+				else
+				{
+					break;
+				}
+				movesProcessed++;
+			}
+
+			
+			if(tempMoves.indexOf(" ")== -1 )
+			{
+				tempMoves = "";
+				break;
+			}
+			else
+			{
+				tempMoves = tempMoves.substring(tempMoves.indexOf(" "));
+				tempMoves = removeFrontWhiteSpace(tempMoves);
+			}
+		}
+
+		if(movesProcessed < numberBoardMoves)
+		{
+			int numberMovesToUndo = numberBoardMoves - movesProcessed;
+
+			for(int i=0; i<numberMovesToUndo; i++)
+			{
+				chessBoard.UnMake(chessBoard.GetBoardMove(numberBoardMoves-1-i), true);
+				history.remove(history.size()-1);
+			}
+		}
+		chessBoard.ResetMovesDepth();
+
+		while(tempMoves.length() >= 4)	
+		{	
+			if(tempMoves.indexOf(" ") == -1)	//last move to process
+				move = tempMoves;
+			else
+				move = tempMoves.substring(0, tempMoves.indexOf(" "));
+
+			int moveArr[] = new int[128];
+
+			int numberOfMoves = search.GetAllMoves(chessBoard.getTurn(), moveArr);
+
+			if(move.length() == 4)
+			{
+				String m1 = move.substring(0,2);
+				String m2 = move.substring(2,4);
+				for(int i=0;i<64;i++) {
+					if(boardString[i].equals(m1)) {
+						from = i;
+					}
+				}
+				for(int i=0;i<64;i++) {
+					if(boardString[i].equals(m2))
+						to = i;
+				}
+
+				for(int i=0; i < numberOfMoves; i++)
+				{
+					int generatedTo = MoveFunctions.getTo( moveArr[i] );
+					int generatedFrom = MoveFunctions.getFrom( moveArr[i] );
+
+					if( generatedTo == to && generatedFrom == from)
+					{
+						chessBoard.AddMove( moveArr[i] );
+						chessBoard.MakeMove( moveArr[i], false);
+						chessBoard.AddRepetitionRoot();
+						break;
+					}
+				}
+			}
+			else if(move.length() == 5)
+			{
+				String m1 = move.substring(0,2);
+				String m2 = move.substring(2,4);
+				String m3 = move.substring(4,5);
+				for(int i=0;i<64;i++) {
+					if(boardString[i].equals(m1)) {
+						from = i;
+					}
+				}
+				for(int i=0;i<64;i++) {
+					if(boardString[i].equals(m2))
+						to = i;
+				}
+				if(m3.equals("q"))
+				  type = Global.PROMO_Q;
+				else if(m3.equals("n"))
+				  type = Global.PROMO_N;
+				else if(m3.equals("b"))
+				  type = Global.PROMO_B;
+				else if(m3.equals("r"))
+				  type = Global.PROMO_R;
+
+				for(int i=0; i < numberOfMoves; i++)
+				{
+					int generatedTo = MoveFunctions.getTo( moveArr[i] );
+					int generatedFrom = MoveFunctions.getFrom( moveArr[i] );
+					int generatedType = MoveFunctions.moveType( moveArr[i] );
+
+					if( generatedTo == to && generatedFrom == from && generatedType == type)
+					{
+						chessBoard.AddMove( moveArr[i] );
+						chessBoard.MakeMove( moveArr[i], false);
+						chessBoard.AddRepetitionRoot();
+						break;
+					}
+				}
+
+			}
+
+
+			//numberOfMoves = GetAllMoves(chessBoard.getTurn(), moveArr);
+
+			/*chessBoard.AddMove(mv);
+			chessBoard.MakeMove(mv, false);
+			chessBoard.AddRepetitionRoot();
+			*/
+			if(tempMoves.indexOf(" ")==-1) break;
+			tempMoves = tempMoves.substring(tempMoves.indexOf(" "));
+			tempMoves = removeFrontWhiteSpace(tempMoves);
     }
+}
     
     /*
      * method getUCIMove
@@ -288,7 +447,7 @@ public final class HistoryWriter {
 		catch(Exception ex) {   
             ex.printStackTrace(System.out);
             System.out.println("File Initialization Failed");
-            Magnum.newGame();
+            chessBoard.newGame();
         }
 	}	
 	
@@ -439,30 +598,30 @@ public final class HistoryWriter {
 		move1 = removeChar(move1,'+');
 		move1 = removeChar(move1,'=');
 		if((int)move1.charAt(0)==79) {
-			if(Magnum.getTurn()==1) {				//black moving
+			if(chessBoard.getTurn()==1) {				//black moving
 				if(move1.lastIndexOf(79)>3)	{
 					int mv = MoveFunctions.makeMove(58,60);
-					Magnum.AddMove(mv);
-               Magnum.MakeMove(mv, true);
+					chessBoard.AddMove(mv);
+               chessBoard.MakeMove(mv, true);
 				}else{
 					int mv = MoveFunctions.makeMove(62,60);
-					Magnum.AddMove(mv);
-               Magnum.MakeMove(mv, true);
+					chessBoard.AddMove(mv);
+               chessBoard.MakeMove(mv, true);
 				}
 			}else {
 				if(move1.lastIndexOf(79)>3){
 					int mv = MoveFunctions.makeMove(2,4);
-					Magnum.AddMove(mv);
-               Magnum.MakeMove(mv, true);
+					chessBoard.AddMove(mv);
+               chessBoard.MakeMove(mv, true);
 				}else{
 					int mv = MoveFunctions.makeMove(6,4);
-					Magnum.AddMove(mv);
-               Magnum.MakeMove(mv, true);
+					chessBoard.AddMove(mv);
+               chessBoard.MakeMove(mv, true);
 				}
 			}	
 		}	
 		else {
-			if(Magnum.getTurn()==-1)
+			if(chessBoard.getTurn()==-1)
 				pieces = getPieces(move1,false);
 			else
 				pieces = getPieces(move1,true);
@@ -473,11 +632,11 @@ public final class HistoryWriter {
 				if(boardString[i].equals(toSt))
 					to = i;
 			}
-			piece_in_square = Magnum.getPiecesInSquare();
+			piece_in_square = chessBoard.getPiecesInSquare();
 			if((int)move1.charAt(0)>96&&piece_in_square[to]==-1)		{	//pawn move
 				file = to%8;
 				pieces&=Global.fileMasks[file];
-				if(Magnum.getTurn()==1)	{		//black moving
+				if(chessBoard.getTurn()==1)	{		//black moving
 					bit = pieces&-pieces;
 				}
 				else {
@@ -486,10 +645,10 @@ public final class HistoryWriter {
 						pieces^=bit;
 					}
 				}	
-				from = Magnum.getPos(bit);
+				from = chessBoard.getPos(bit);
 				int mv = MoveFunctions.makeMove(to,from);
-				Magnum.AddMove(mv);
-            Magnum.MakeMove(mv, true);
+				chessBoard.AddMove(mv);
+            chessBoard.MakeMove(mv, true);
 
 			}else {
 				int count = 0;
@@ -520,13 +679,13 @@ public final class HistoryWriter {
 					}
 					pieces&=Global.fileMasks[pos-97];
 				}
-				attackers = Magnum.getAttack2(to);
+				attackers = chessBoard.getAttack2(to);
 				attackers&=pieces;
 				attackers = attackers &-attackers;
-				from = Magnum.getPos(attackers);
+				from = chessBoard.getPos(attackers);
 				int mv = MoveFunctions.makeMove(to,from);
-				Magnum.AddMove(mv);
-            Magnum.MakeMove(mv, true);
+				chessBoard.AddMove(mv);
+            chessBoard.MakeMove(mv, true);
 			}
 		}
 	}	
@@ -548,39 +707,39 @@ public final class HistoryWriter {
 		switch(p) {
 			case(66):			//bishop 
 				if(side)
-					temp = Magnum.blackbishops;
+					temp = chessBoard.blackbishops;
 				else
-					temp = Magnum.whitebishops;
+					temp = chessBoard.whitebishops;
 					break;
 			case(75):			//king
 				if(side)
-					temp = Magnum.blackking;
+					temp = chessBoard.blackking;
 				else
-					temp = Magnum.whiteking;
+					temp = chessBoard.whiteking;
 					break;
 			case(78):			//knight
 				if(side)
-					temp = Magnum.blackknights;
+					temp = chessBoard.blackknights;
 				else
-					temp = Magnum.whiteknights;
+					temp = chessBoard.whiteknights;
 					break;
 			case(82):			//rook
 				if(side)
-					temp = Magnum.blackrooks;
+					temp = chessBoard.blackrooks;
 				else
-					temp = Magnum.whiterooks;
+					temp = chessBoard.whiterooks;
 					break;
 			case(81):			//queen
 				if(side)
-					temp = Magnum.blackqueen;
+					temp = chessBoard.blackqueen;
 				else
-					temp = Magnum.whitequeen;
+					temp = chessBoard.whitequeen;
 					break;
 			default:				//pawn move
 				if(side)
-					temp = Magnum.blackpawns;
+					temp = chessBoard.blackpawns;
 				else
-					temp = Magnum.whitepawns;
+					temp = chessBoard.whitepawns;
 					break;
         }
         return temp;	
@@ -609,26 +768,26 @@ public final class HistoryWriter {
 		
 		count = c;
 		moveSt = "";
-		if(Magnum.piece_in_square[from]==4 && Math.abs(to-from)==2) {		//white castle move
+		if(chessBoard.piece_in_square[from]==4 && Math.abs(to-from)==2) {		//white castle move
 			if(to>from)				// kingside caslte
 				moveSt = moveSt.concat("O-O");
 			else					//queen side
 				moveSt = moveSt.concat("O-O-O");
 		}	
-		else if(Magnum.piece_in_square[from]==10 && Math.abs(to-from)==2) {		//black castle move
+		else if(chessBoard.piece_in_square[from]==10 && Math.abs(to-from)==2) {		//black castle move
 			if(to>from)				// kingside caslte
 				moveSt = moveSt.concat("O-O");
 			else					//queen side
 				moveSt = moveSt.concat("O-O-O");	
 		}
 		else {	
-			moveSt = moveSt.concat(pieceSt[Magnum.piece_in_square[from]]);
-			int pType = Magnum.piece_in_square[from]%6;
+			moveSt = moveSt.concat(pieceSt[chessBoard.piece_in_square[from]]);
+			int pType = chessBoard.piece_in_square[from]%6;
 				if(pType==3||pType==1||pType==0) {			//if queen,knight or rook, could have ambiguity
 					rank = from/8;
 					file = from%8;
-					samePieces = getSame(Magnum.piece_in_square[from]);
-					attackers = Magnum.getAttack2(to);
+					samePieces = getSame(chessBoard.piece_in_square[from]);
+					attackers = chessBoard.getAttack2(to);
 					samePieces &= attackers;
 					samePieces ^= (long)1<<from;
 					sameFile = false;
@@ -636,7 +795,7 @@ public final class HistoryWriter {
 					if(samePieces != 0) {		//we have ambiguity
 						while(samePieces!=0) {	
 							long temp = samePieces&-samePieces;		//get right most bit (an attacker of same piece type)
-							int pos = Magnum.getPos(temp);
+							int pos = chessBoard.getPos(temp);
 							if(pos%8==file)
 							sameFile=true;
 							if(pos/8==rank)
@@ -651,13 +810,23 @@ public final class HistoryWriter {
 							moveSt = moveSt.concat(boardString[from].substring(0,1));
 					}
 				}	
-			if(Magnum.piece_in_square[to]!=-1)      {				//capture move
-				if(Magnum.piece_in_square[from]%6==5)				//pawn is moving
+			if(chessBoard.piece_in_square[to]!=-1)      {				//capture move
+				if(chessBoard.piece_in_square[from]%6==5)				//pawn is moving
 					moveSt = moveSt.concat(boardString[from].substring(0,1));
 				moveSt = moveSt.concat("x");
 			}
+			else if(chessBoard.piece_in_square[from] == 5 && Board.getInstance().getPassantB() == to)
+			{
+				moveSt = moveSt.concat(boardString[from].substring(0,1));
+				moveSt = moveSt.concat("x");
+			}
+			else if(chessBoard.piece_in_square[from] == 11 && Board.getInstance().getPassantW() == to)
+			{
+				moveSt = moveSt.concat(boardString[from].substring(0,1));
+				moveSt = moveSt.concat("x");
+			}
 			moveSt = moveSt.concat(boardString[to]);
-			if(Magnum.piece_in_square[from]%6==5) {			//pawn moving
+			if(chessBoard.piece_in_square[from]%6==5) {			//pawn moving
 				if(to/8==0||to/8==7)					//promotion
 					moveSt = moveSt.concat("Q");
 			}
@@ -682,22 +851,22 @@ public final class HistoryWriter {
 		long pieces;
 		switch(pType) {
 			case 0:				//white rook
-				pieces = Magnum.whiterooks;
+				pieces = chessBoard.whiterooks;
 				break;
 			case 1:				//white knight
-				pieces = Magnum.whiteknights;
+				pieces = chessBoard.whiteknights;
 				break;
 			case 3:
-				pieces = Magnum.whitequeen;
+				pieces = chessBoard.whitequeen;
 				break;
 			case 6:				//white rook
-				pieces = Magnum.blackrooks;
+				pieces = chessBoard.blackrooks;
 				break;
 			case 7:				//white knight
-				pieces = Magnum.blackknights;
+				pieces = chessBoard.blackknights;
 				break;
 			case 9:
-				pieces = Magnum.blackqueen;
+				pieces = chessBoard.blackqueen;
 				break;
 			default:
 				//this shouldn't happen

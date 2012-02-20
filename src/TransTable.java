@@ -41,13 +41,16 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 public class TransTable {
 	
    private long[] Table;
-	private long[] Table2;
+   private long[] Table2;
    private long[] Table3;
    private int hashCount;
-
+   private Board chessBoard;
    private static final long mask3 = ~((long)1 << 57 | (long)1 << 58 | (long)1 << 59);
 	
-    /**flag indicating what type of table...0 regular, 1 pawn, 2 eval **/
+   private static final int PAWN_TABLE_SIZE = 6;
+
+
+	/**flag indicating what type of table...0 regular, 1 pawn, 2 eval **/
    private int type;						
 	private int size;
 	
@@ -62,12 +65,13 @@ public class TransTable {
 		type = t;
 		size = s;
 		if(type == 0)
-         Table2 = new long[size*4];
-      else if (type == 1)
-			Table = new long[size*4];
+			Table2 = new long[size*4];
+		else if (type == 1)
+			Table = new long[size*PAWN_TABLE_SIZE];
 		else if (type == 2)
 			Table3 = new long[size*2];
 		hashCount = 0;
+		chessBoard = Board.getInstance();
 	}
     
     /*
@@ -83,13 +87,15 @@ public class TransTable {
      * @param long passedBits - information about all the passed pawns packed into 64 bits
      *
      */ 
-	public final void addPawnHash(int key, long lock, int value, int wFile, int bFile, long passedBits) {
-		int index = key * 4;
+	public final void addPawnHash(int key, long lock, int value_mg, int value_eg, int center, long passedBits, long whiteAttacks, long blackAttacks) {
+		int index = key * PAWN_TABLE_SIZE;
 		Table[index] = lock;
-		Table[index+1] = (long)value;
-		Table[index+2] = (long)wFile<<32 | (long)bFile;
-      Table[index+3] = passedBits;
-     
+		Table[index+1] = (long)(value_mg + 4000)
+		| (long)(value_eg + 4000) << 13
+		| (long)(center + 50) << 26;
+		Table[index+2] = passedBits;
+		Table[index+3] = whiteAttacks;
+		Table[index+4] = blackAttacks;
 	}
 	
     /*
@@ -98,11 +104,8 @@ public class TransTable {
      * Stores an entry in the evaluation hash table - always replace scheme
      * 
      * @param int key - index of hash entry
-     * @param int lock - 1st half of 64 bit hash
-     * @param int lock2 - 2nd half of 64 bit hash
+     * @param long lock - 64 bit hash
      * @param int value - the score for this pawn position
-     * @param int wFile - information about the white pawns on each of the 8 files packed into 32 bits
-     * @param int bFile - information about the black pawns on each fo the 8 files packed into 32 bits
      * @param long passedBits - information about all the passed pawns packed into 64 bits
      *
      */ 
@@ -128,42 +131,43 @@ public class TransTable {
      * @param int ancient - counter to represent "freshness" of entry
      *
      */ 
-    public final void addHash(int key,long lock,int move,long value,int depth,int type,int nullFail,int ancient) {
+    public final void addHash(int key,int move,long value,int depth,int type,int nullFail,int ancient) {
 
-      int index = key*4;
-      /** if empty slot, add entry */
-      if(Table2[index]==0)  {
-      hashCount++;
-      Table2[index] = lock;
-      Table2[index+1] = (long)move
-           | ((value + 21000) << 32)
-           | ((long)type << 48)
-           | ((long)depth << 51)
-           | ((long)nullFail << 56)
-           | ((long)ancient << 57);
+		/*if( chessBoard.hashValue == 5393893112606296676L)
+		{
+			for(int j=0; j<64; j++)
+			{
+				System.out.print(Board.piece_in_square[j]+" ");
+				if((j & 7) == 7)
+					System.out.println();
+			}
+			System.out.println("here");
+		}*/
 
+		int index = key*4;
+		/** if empty slot, add entry */
+		long word = (long)move
+			| ((value + 21000) << 32)
+			| ((long)type << 48)
+			| ((long)depth << 51)
+			| ((long)nullFail << 56)
+			| ((long)ancient << 57);
+
+		if(Table2[index]==0)  {
+			hashCount++;
+			Table2[index] = chessBoard.hashValue;
+			Table2[index+1] = word;
 		}/** replace if depth greater */
-		else if(depth>=((Table2[index+1]>>51)&31) || ((Table2[index+1] >> 57)&7)!=ancient) {
-			Table2[index] = lock;
-         Table2[index+1] = (long)move
-           |(((value + 21000)) << 32)
-           | ((long)type << 48)
-           | ((long)depth << 51)
-           | ((long)nullFail << 56)
-           | ((long)ancient << 57);
-          
-			
-		}/** always replace/add into second level */
-      if(Table2[index+2]==0)
-            hashCount++;
-         Table2[index+2] = lock;
-         Table2[index+3] = (long)move
-           |(((value + 21000)) << 32)
-           | ((long)type << 48)
-           | ((long)depth << 51)
-           | ((long)nullFail << 56)
-           | ((long)ancient << 57);
-    }
+		else if(depth >= (int)((Table2[index+1]>>51)&31L) || (int)((Table2[index+1] >> 57) & 7L) != ancient) {
+			Table2[index] = chessBoard.hashValue;
+			Table2[index+1] = word;
+		}
+		if(Table2[index+2]==0)
+			hashCount++;
+		Table2[index+2] = chessBoard.hashValue;
+		Table2[index+3] = word;
+		}
+
     /*
      * Method getEvalValue
      * 
@@ -185,37 +189,19 @@ public class TransTable {
      *
      * @return int - the evaluation stored
      */ 
-	public final int getPawnValue(int key) {
-		return (int)Table[key*4+1];
-	}	
-    
-    /*
-     * Method getWPawnFile
-     * 
-     * returns information of white pawn placement on each file
-     * 
-     * @param int key - index of hash entry
-     *
-     * @return int - the file info
-     */ 
-    public final int getWPawnFile(int key) {
-        return(int)(Table[key*4+2] >> 32);
-    }
-    
-    /*
-     * Method getBPawnFile
-     * 
-     * returns the value for the pawn position stored in the evaluation hash
-     * 
-     * @param int key - index of hash entry
-     *
-     * @return int - the file info
-     */ 
-	public final int getBPawnFile(int key) {
-            return (int)Table[key*4+2];
-    }
-    
-    /*
+	public final int getPawnValueMiddle(int key) {
+		return (int)(Table[key*PAWN_TABLE_SIZE + 1] & ((1 << 13)-1) ) - 4000;
+	}
+
+	public final int getPawnValueEnd(int key) {
+		return (int)(Table[key*PAWN_TABLE_SIZE + 1] >> 13 & ((1 << 13)-1) ) - 4000;
+	}
+
+   public final int getPawnCenterScore(int key) {
+		return (int)((Table[key*PAWN_TABLE_SIZE + 1] >> 26) - 50);
+	}
+
+	/*
      * Method getPawnPassed
      * 
      * returns the value for the pawn position stored in the evaluation hash
@@ -225,7 +211,7 @@ public class TransTable {
      * @return long - passed pawn information 
      */ 
     public final long getPawnPassed(int key) {
-        return Table[key*4+3];
+        return Table[key*PAWN_TABLE_SIZE + 2];
       /*
         int lowPass = Table[key*6+4];
         int highPass = Table[key*6+5];
@@ -239,7 +225,17 @@ public class TransTable {
         } else {
             return ((long)lowPass | ((long)highPass)<<32);
         }   */
-    }  
+    }
+
+	 public final long getWhitePawnAttack(int key) {
+		 return Table[key*PAWN_TABLE_SIZE + 3];
+	 }
+
+	 public final long getBlackPawnAttack(int key) {
+		 return Table[key*PAWN_TABLE_SIZE + 4];
+	 }
+
+
        
     /*
      * Method getValue
@@ -325,7 +321,7 @@ public class TransTable {
      * @return boolean - is there a pawn hash stored
      */ 
 	public final boolean hasPawnHash(int key, long lock) {
-		if(Table[key*4] != lock)
+		if(Table[key*PAWN_TABLE_SIZE] != lock)
 			return false;
 		return true;
 		
@@ -361,11 +357,11 @@ public class TransTable {
      *
      * @return boolean - is there a hash stored (0 hash at slot 1, 4 hash at slot 2, 1 none)
      */ 
-	public final int hasHash(int key, long lock) {
-      int index = key*4;
-		if( lock == Table2[index])
+	public final int hasHash(int key) {
+		int index = key*4;
+		if( chessBoard.hashValue == Table2[index])
 			return 0;
-		else if(lock == Table2[index+2])
+		else if(chessBoard.hashValue == Table2[index+2])
 			return 2;
 		return 1;
 	}
@@ -381,8 +377,8 @@ public class TransTable {
      *
      * @return boolean - is there a hash stored (4 hash at slot 2, 1 none)
      */ 
-	public final int hasSecondHash(int key, long lock) {
-      if(lock == Table2[key*4+2])
+	public final int hasSecondHash(int key) {
+		if(chessBoard.hashValue == Table2[key*4+2])
 			return 2;
 		return 1;
 	}
@@ -440,7 +436,7 @@ public class TransTable {
      * 
      */ 
 	public final void clearPawnHash() {
-		for(int i=0;i<size*4;i+=4) {
+		for(int i=0;i<size*PAWN_TABLE_SIZE;i+=4) {
 			Table[i] = 0L;
 			
 		}	
