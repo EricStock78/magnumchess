@@ -81,40 +81,63 @@ public class MoveFunctions {
     public static int makeMove(int to,int from) {
 		int piece = Board.piece_in_square[from];
 		int cP = Board.piece_in_square[to];
-		int type = Global.ORDINARY_MOVE;
-		if(piece == 4)	{			//wKing
-			if(from == 4) {
-				if(to == 2)
-					type = Global.LONG_CASTLE;
-				else if(to == 6)
-					type = Global.SHORT_CASTLE;
+		int type;
+		if(cP != -1 )
+		{
+			type = Global.ORDINARY_CAPTURE;
+			
+			if(piece % 6 == 4)
+				type = Global.MOVE_KING_LOSE_CASTLE;
+			else if(piece % 6 == 0)
+				type = Global.MOVE_ROOK_LOSE_CASTLE;
+			else if(cP % 6 == 0)
+				type = Global.CAPTURE_ROOK_LOSE_CASTLE;
+		}
+		else
+		{
+			type = Global.ORDINARY_MOVE;
+			if(piece == 4)	{			//wKing
+				if(from == 4) {
+					if(to == 2)
+						type = Global.LONG_CASTLE;
+					else if(to == 6)
+						type = Global.SHORT_CASTLE;
+					else
+						type = Global.MOVE_KING_LOSE_CASTLE;
+				}
+			} else if(piece == 10) {	//bKing
+				if(from == 60) {
+					if(to == 58)
+						type = Global.LONG_CASTLE;
+					else if(to == 62)
+						type = Global.SHORT_CASTLE;
+					else
+						type = Global.MOVE_KING_LOSE_CASTLE;
+				}
 			}
-		} else if(piece == 10) {	//bKing
-			if(from == 60) {
-				if(to == 58)
-					type = Global.LONG_CASTLE;
-				else if(to == 62)
-					type = Global.SHORT_CASTLE;
+			else if(piece == 5)	{			//wPawn
+				if(to - from == 16)
+					type = Global.DOUBLE_PAWN;
+
+				if(to/8 == 7)
+					type = Global.PROMO_Q;
+				else if(to == chessBoard.getPassantB())
+					type = Global.EN_PASSANT_CAP;
+			}
+			else if(piece == 11) {			//bPawn
+				if(from - to == 16)
+					type = Global.DOUBLE_PAWN;
+
+				if(to/8 == 0)
+					type = Global.PROMO_Q;
+				else if(to == chessBoard.getPassantW())
+					type = Global.EN_PASSANT_CAP;
+			}
+			else if(piece % 6 == 0) {
+					type = Global.MOVE_ROOK_LOSE_CASTLE;
 			}
 		}
-		else if(piece == 5)	{			//wPawn
-			if(to - from == 16)
-            type = Global.DOUBLE_PAWN_WHITE;
 
-         if(to/8 == 7)
-				type = Global.PROMO_Q;
-			else if(to == chessBoard.getPassantB())
-				type = Global.EN_PASSANT_CAP;	
-		}
-		else if(piece == 11) {			//bPawn
-			if(from - to == 16)
-            type = Global.DOUBLE_PAWN_BLACK;
-
-         if(to/8 == 0)
-				type = Global.PROMO_Q;
-			else if(to == chessBoard.getPassantW())
-				type = Global.EN_PASSANT_CAP;	
-		}
 		return from | to<<6 | piece <<12 | (cP+1)<<16 | type<<20;
 	}
 }
