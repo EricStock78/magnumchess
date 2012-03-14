@@ -169,6 +169,11 @@ public class Main
 		  Evaluation2.getEval(1, -2000, 2000);
             Evaluation2.printEvalTerms();
 		}
+		else if(cmd.equals("see_test"))
+		{
+			theSearch.getCaptures(-1, new int[50]);
+			theSearch.getCaptures(1, new int[50]);
+		}
 		else if ("isready".equals( cmd ))
 				System.out.println("readyok");
 

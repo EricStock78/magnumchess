@@ -1,3 +1,5 @@
+package magnumdatawriter;
+
 /**
  * MoveHelper.java
  *
@@ -173,7 +175,7 @@ public final class MoveHelper{
 		
 		int DistToLeft = 0;						//used to find spot in index2
 		int temp = index1;	
-		index2 &= ((1<<Global.Diag1Length[index1])-1);
+		//index2 &= ((1<<Global.Diag1Length[index1])-1);
 		long diag = 0;
 		while(temp%8!=0 && temp<56) {			//while not at most left square
 			temp+=7;
@@ -216,7 +218,7 @@ public final class MoveHelper{
 		
 		int DistToLeft = 0;						//used to find spot in index2
 		int temp = index1;	
-		index2 &= ((1<<Global.Diag2Length[index1])-1);
+		//index2 &= ((1<<Global.Diag2Length[index1])-1);
 		long diag = 0;
 		
 		while(temp%8!=0 && temp>7) {			//while not at most left square

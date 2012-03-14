@@ -179,33 +179,6 @@ public class SEE {
     }
     
     /** 
-     * Method sortCaptures
-     * 
-     *
-     * bubble order of the  capturing pieces from least to greatest
-     *
-     * @param int start - position to start at in the array
-     * @param int noMoves - number of positions to sort
-     * @param int[] Moves - array to sort
-     * 
-     */
-    private static final void SortCaptures(int start, int noMoves, int[] Pieces) {
-		boolean done = false;
-		for(int i=start ; i<noMoves; i++) {
-			if(done)break;
-			done = true;
-			for(int j = noMoves-1 ; j>i; j--) {
-				if(Pieces[j] < Pieces[j-1]) {		
-					int temp = Pieces[j];
-					Pieces[j] = Pieces[j-1];
-					Pieces[j-1] = temp;
-					done = false;
-				}
-			}
-		}
-	}
-    
-    /** 
      * Method getSEE
      * 
      *
@@ -216,193 +189,166 @@ public class SEE {
      * @param param side - the side on move
      * @param to - the square to move to
      * @param from - the square moved from
-     * @param passant - the passant square
      * 
      */
-	public static int getSEE(int side, int to, int from, int passant, int moveType) {
-		
-		long friends;
-		long enemies;
 
-		if (side == 1) {
-			friends = Board.blackpieces;
-			enemies = Board.whitepieces;
-		} else {
-			friends = Board.whitepieces;
-			enemies = Board.blackpieces;
-		}
+	 public static int GetSEE2(int side, int to, int from, int moveType, int test)
+	 {
+		//System.out.println("to is "+to);
+ 		//System.out.println("from is "+from);
 
-		int[] ePieces = new int[10];
-		int[] fPieces = new int[10];
-
-		int eCount = 0;
-		int fCount = 0;
-
-		long removedBits = 0;
+		int friendSide = Board.piece_in_square[from] /6;
+		int enemySide = (friendSide + 1) & 1;
+		int[][] arrPieces = new int[2][10];
+ 		int arrPieceCount[] = new int[2];
+		int tempVal;
+		long removedBits = (long)1 << from;
 
 		switch(moveType)
-		{	
+		{
 			case(Global.EN_PASSANT_CAP):
-				ePieces[0] = Global.values[5] << 6;
+				tempVal = Global.values[Global.PIECE_PAWN];
 				removedBits |= side == -1 ? Global.set_Mask[to-8] : Global.set_Mask[to+8];
-				Board.bitboard ^= removedBits;
-				fPieces[0] = (Global.values[Board.piece_in_square[from]] << 6 | from);
+				arrPieces[friendSide][arrPieceCount[friendSide]++] = (Global.values[Global.PIECE_PAWN] << 6 | from );
 			break;
-			
+
 			case(Global.PROMO_Q):
 				if(Board.piece_in_square[to] != -1)
-					ePieces[0] = (Global.values[Board.piece_in_square[to]]<<6 + Global.values[Global.PIECE_QUEEN] - Global.values[Global.PIECE_PAWN]);
+					tempVal = (Global.values[Board.piece_in_square[to]] + Global.values[Global.PIECE_QUEEN] - Global.values[Global.PIECE_PAWN]);
 				else
-					ePieces[0] = Global.values[Global.PIECE_QUEEN] - Global.values[Global.PIECE_PAWN];
-				fPieces[0] = (Global.values[Global.PIECE_QUEEN] << 6 | from);
-			break;
-			
-			case(Global.PROMO_N):
-				if(Board.piece_in_square[to] != -1)
-					ePieces[0] = (Global.values[Board.piece_in_square[to]]<<6 + Global.values[Global.PIECE_KNIGHT] - Global.values[Global.PIECE_PAWN]);
-				else
-					ePieces[0] = Global.values[Global.PIECE_KNIGHT] - Global.values[Global.PIECE_PAWN];
-				fPieces[0] = (Global.values[Global.PIECE_KNIGHT] << 6 | from);
-			break;
-			
-			case(Global.PROMO_R):
-				if(Board.piece_in_square[to] != -1)
-					ePieces[0] = (Global.values[Board.piece_in_square[to]]<<6 + Global.values[Global.PIECE_ROOK] - Global.values[Global.PIECE_PAWN]);
-				else
-					ePieces[0] = Global.values[Global.PIECE_ROOK] - Global.values[Global.PIECE_PAWN];
-				fPieces[0] = (Global.values[Global.PIECE_ROOK] << 6 | from);
-			break;
-			
-			case(Global.PROMO_B):
-				if(Board.piece_in_square[to] != -1)
-					ePieces[0] = (Global.values[Board.piece_in_square[to]]<<6 + Global.values[Global.PIECE_BISHOP] - Global.values[Global.PIECE_PAWN]);
-				else
-					ePieces[0] = Global.values[Global.PIECE_BISHOP] - Global.values[Global.PIECE_PAWN];
-				fPieces[0] = (Global.values[Global.PIECE_BISHOP] << 6 | from);
+					tempVal = Global.values[Global.PIECE_QUEEN] - Global.values[Global.PIECE_PAWN];
+				arrPieces[friendSide][arrPieceCount[friendSide]++] = (Global.values[Global.PIECE_QUEEN] << 6 | from );
 			break;
 
 			default:
-				ePieces[0] = (Global.values[Board.piece_in_square[to]]<<6);
-				fPieces[0] = (Global.values[Board.piece_in_square[from]] << 6 | from);
+				arrPieces[friendSide][arrPieceCount[friendSide]++] = (Global.values[Board.piece_in_square[from]] << 6 | from );
+				tempVal = Global.values[Board.piece_in_square[to]];
 			break;
 		}
 
-		eCount = 1;
-		fCount = 1;
-
-		long attack = Board.getAttack2(to);
-
-		//add enemy defenders of piece being captured
-		long enemyDefenders = attack & enemies;
-
-		while(enemyDefenders != 0) {
-			long temp2 = enemyDefenders & -enemyDefenders;
-			enemyDefenders ^= temp2;
-			int pos = Long.numberOfTrailingZeros(temp2);
-			ePieces[eCount++] = Global.values[Board.piece_in_square[pos]] << 6 | pos;
+		if(tempVal < test)
+		{
+			return tempVal;
 		}
 
-		//sort enemy defenders if more than 3 total enemies
-		if(eCount > 2)
-			SortCaptures(1,eCount,ePieces);	//leave index 0 alone as this is the pre determined piece to be captured
-
-		//add additional friend attackers attacking piece being captured
-		long friendAttackers = (attack & friends) & ~Global.set_Mask[from];
-
-		while(friendAttackers != 0) {
-			long temp2 = friendAttackers & -friendAttackers;
-			friendAttackers ^= temp2;
-			int pos = Long.numberOfTrailingZeros(temp2);
-			fPieces[fCount++] = Global.values[Board.piece_in_square[pos]] << 6 | pos;
-		}
-		//sort friend attackers if more than 3 total attackers
-		if(fCount > 2)
-			SortCaptures(1,fCount,fPieces);	//leave index 0 alone as this is the pre determined attacker
-
-		int tempVal = 0;
-		int alpha = -20000;
-		int beta = 20000;
-		int moveNumber = 0;
+		Board.bitboard ^= removedBits;
+		long attack = Board.getAttack2(to) & Board.bitboard;
 		
+		long originalAttack = attack;
+		while(attack != 0)
+		{
+			 long bit = attack & -attack;
+			 attack ^= bit;
+			 int position = Long.numberOfTrailingZeros( bit );
+			 int piece = Board.piece_in_square[position];
+			 arrPieces[piece/6][arrPieceCount[piece/6]++] = (Global.values[piece] << 6 | position);
+		}
+
+		int moveNumber = 0;
+
 		while (true) {
-			if(fCount > moveNumber) {
-				tempVal += ePieces[moveNumber] >> 6;
-				beta = Math.min(beta,tempVal);
+			
+			if(arrPieceCount[enemySide] > moveNumber ) {
+				tempVal -= arrPieces[friendSide][moveNumber] >> 6;
+				if(tempVal >= test) {
+					//System.out.println("value is "+tempVal);
+					Board.bitboard ^= removedBits;
+					return tempVal;
+				}
 			} else {
+				/*for(int i=0; i<arrPieceCount[friendSide]; i++)
+				{
+					System.out.print(" friend is "+(arrPieces[friendSide][i] & 63) );
+				}
+				System.out.println();
+				for(int i=0; i<arrPieceCount[enemySide]; i++)
+				{
+					System.out.print(" enemy is "+(arrPieces[enemySide][i] & 63) );
+				}
+				System.out.println();
+				System.out.println("value is "+tempVal);
+				*/
 				Board.bitboard ^= removedBits;
-				return alpha;
-			} if(alpha >=beta) {
-				Board.bitboard ^= removedBits;
-				return alpha;
+				return tempVal;
 			}
 
-			//add any hidden pieces after this capture
-			int removedPosition = fPieces[moveNumber] & 63;
+			//place lowest piece at correct pos in array
+			int lowestValue = arrPieces[enemySide][moveNumber];
+			for(int i = moveNumber+1; i < arrPieceCount[enemySide]; i++)
+			{
+				if( arrPieces[enemySide][i] < lowestValue)
+				{
+					lowestValue = arrPieces[enemySide][i];
+					arrPieces[enemySide][i] = arrPieces[enemySide][moveNumber];
+					arrPieces[enemySide][moveNumber] = lowestValue;
+				}
+			}
+
+			int removedPosition = arrPieces[enemySide][moveNumber] & 63;
 			Board.bitboard ^= Global.set_Mask[removedPosition];
 			removedBits |= Global.set_Mask[removedPosition];
-			long newAttack = Board.getAttack2(to);
-			newAttack ^= attack;
-			attack |= newAttack;
+			long newAttack = Board.GetSlideAttacks2SEE(to) & Board.bitboard;
+			newAttack &= ~originalAttack;
+			
+			if(newAttack != 0)
+			{
+				originalAttack |= newAttack;
+				int position = Long.numberOfTrailingZeros( newAttack );
+				int piece = Board.piece_in_square[position];
+				arrPieces[piece/6][arrPieceCount[piece/6]++] = (Global.values[piece] << 6 | position);
+			}
 
-			if(newAttack != 0) {
-				if((newAttack & friends) != 0) {
-					long temp2 = newAttack & -newAttack;
-					newAttack ^= temp2;
-					int pos = Long.numberOfTrailingZeros(temp2);
-					fPieces[fCount++] = Global.values[Board.piece_in_square[pos]] << 6 | pos;
-					if(fCount - moveNumber > 2)
-						SortCaptures(moveNumber + 1,fCount,fPieces);
-				} else if((newAttack & enemies) != 0) {
-					long temp2 = newAttack & -newAttack;
-					newAttack ^= temp2;
-					int pos = Long.numberOfTrailingZeros(temp2);
-					ePieces[eCount++] = Global.values[Board.piece_in_square[pos]] << 6 | pos;
-					if(eCount - moveNumber >= 2)
-						SortCaptures(moveNumber + 1,eCount,ePieces);
+			if(arrPieceCount[friendSide] > moveNumber + 1) {
+				tempVal += arrPieces[enemySide][moveNumber] >> 6;
+				if(tempVal < test) {
+					//System.out.println("value is "+tempVal);
+					Board.bitboard ^= removedBits;
+				   return tempVal;
+				}
+			} 
+			else
+			{
+				/*for(int i=0; i<arrPieceCount[friendSide]; i++)
+				{
+					System.out.print(" friend is "+(arrPieces[friendSide][i] & 63) );
+				}
+				System.out.println();
+				for(int i=0; i<arrPieceCount[enemySide]; i++)
+				{
+					System.out.print(" enemy is "+(arrPieces[enemySide][i] & 63) );
+				}
+				System.out.println();
+				System.out.println("value is "+tempVal);
+				*/
+				Board.bitboard ^= removedBits;
+				return tempVal;
+			}
+
+			//place lowest piece at correct pos in array
+			lowestValue = arrPieces[friendSide][moveNumber+1];
+			for(int i = moveNumber+2; i < arrPieceCount[friendSide]; i++)
+			{
+				if( arrPieces[friendSide][i] < lowestValue)
+				{
+					lowestValue = arrPieces[friendSide][i];
+					arrPieces[friendSide][i] = arrPieces[friendSide][moveNumber+1];
+					arrPieces[friendSide][moveNumber+1] = lowestValue;
 				}
 			}
 
-			if(eCount > moveNumber+1) {
-				tempVal -= fPieces[moveNumber] >> 6;
-				alpha = Math.max(alpha, tempVal);
-			} else {
-				//if enemy has no pieces left to defend, alpha can be updated
-				alpha = Math.max(alpha, tempVal);
-				if(alpha >= beta) {
-					Board.bitboard ^= removedBits;
-					return beta;
-				}
-				return alpha;
-				}
-				if(alpha >= beta) {
-					Board.bitboard ^= removedBits;
-					return beta;
-				}
-				//add any hidden pieces after this capture
-				removedPosition = ePieces[moveNumber+1] & 63;
-				Board.bitboard ^= Global.set_Mask[removedPosition];
-				removedBits |= Global.set_Mask[removedPosition];
-				newAttack = Board.getAttack2(to);
-				newAttack ^= attack;
-				attack |= newAttack;
-
-				if(newAttack != 0) {
-					if((newAttack & friends) != 0) {
-						long temp2 = newAttack & -newAttack;
-						newAttack ^= temp2;
-						int pos = Long.numberOfTrailingZeros(temp2);
-						fPieces[fCount++] = Global.values[Board.piece_in_square[pos]] << 6 | pos;
-						if(fCount - moveNumber > 2)
-						SortCaptures(moveNumber + 1,fCount,fPieces);
-					} else if((newAttack & enemies) != 0) {
-						long temp2 = newAttack & -newAttack;
-						newAttack ^= temp2;
-						int pos = Long.numberOfTrailingZeros(temp2);
-						ePieces[eCount++] = Global.values[Board.piece_in_square[pos]] << 6 | pos;
-						if(eCount - moveNumber >= 3)
-						SortCaptures(moveNumber + 2,eCount,ePieces);
-					}
+			removedPosition = arrPieces[friendSide][moveNumber+1] & 63;
+			Board.bitboard ^= Global.set_Mask[removedPosition];
+			removedBits |= Global.set_Mask[removedPosition];
+			newAttack = Board.GetSlideAttacks2SEE(to) & Board.bitboard;
+			newAttack &= ~originalAttack;
+			if(newAttack != 0)
+			{
+				 originalAttack |= newAttack;
+				 int position = Long.numberOfTrailingZeros( newAttack );
+				 int piece = Board.piece_in_square[position];
+				 arrPieces[piece/6][arrPieceCount[piece/6]++] = (Global.values[piece] << 6 | position);
 			}
+
 			moveNumber++;
 		}
 	}
