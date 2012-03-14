@@ -79,8 +79,8 @@ public class MoveFunctions {
 
 	
     public static int makeMove(int to,int from) {
-		int piece = Board.piece_in_square[from];
-		int cP = Board.piece_in_square[to];
+		int piece = Board.getInstance().piece_in_square[from];
+		int cP = Board.getInstance().piece_in_square[to];
 		int type;
 		if(cP != -1 )
 		{

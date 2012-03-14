@@ -124,8 +124,6 @@ public final class Engine {
    private int ancient;
    /** count of moves generated when debugging move gen using perft command */
    private long perft = 0;
-   /** instance of singleton MoveHelper Object used to store move info in a compact form */
-   private MoveHelper Helper = MoveHelper.getInstance();
    /** "triangular array to store the PV **/
    private static final int[][] PV = new int[64][64];
   /** array to store the length of the PV **/
@@ -702,9 +700,9 @@ public final class Engine {
             Moves[index++] = MoveFunctions.makeMove(to, from, 5, -1, Global.DOUBLE_PAWN);
          }
 
-         from = Board.pieceList[4][0];
+         from = chessBoard.pieceList[4][0];
          if (chessBoard.wCastle > Global.CASTLED) {
-				long Temp = Helper.getKingCastle((int)chessBoard.bitboard&255);
+				long Temp = chessBoard.getKingCastle((int)chessBoard.bitboard&255);
 				if(chessBoard.wCastle != Global.SHORT_CASTLE && ((Temp & Global.set_Mask[2])!=0) ) {
 					if( !chessBoard.isWhiteAttacked(2) && !chessBoard.isWhiteAttacked(3) ) {
 						moveOrder[index] = Hist2[from][2];
@@ -719,7 +717,7 @@ public final class Engine {
 				}
          }
 			int kingType = chessBoard.wCastle > Global.CASTLED ? Global.MOVE_KING_LOSE_CASTLE : Global.ORDINARY_MOVE;
-			toSquares = Helper.getKingPosition(from);
+			toSquares = chessBoard.getKingMoves(from);
          toSquares &= ~chessBoard.bitboard;
          while (toSquares != 0) {
             toBit = toSquares & -toSquares;
@@ -729,9 +727,9 @@ public final class Engine {
             Moves[index++] = MoveFunctions.makeMove(to, from, 4, -1, kingType);
          }
 
-			for(int j=0; j<Board.pieceTotals[0]; j++)
+			for(int j=0; j < chessBoard.pieceTotals[0]; j++)
 			{
-				from = Board.pieceList[0][j];
+				from = chessBoard.pieceList[0][j];
 				toSquares = chessBoard.getAttackBoard(from);
 				toSquares &= ~chessBoard.bitboard;
 				while (toSquares != 0) {
@@ -750,9 +748,9 @@ public final class Engine {
 
 			for(int i=1; i<4; i++)
 			{
-				for(int j=0; j<Board.pieceTotals[i]; j++)
+				for(int j=0; j < chessBoard.pieceTotals[i]; j++)
 				{
-					from = Board.pieceList[i][j];
+					from = chessBoard.pieceList[i][j];
 					toSquares = chessBoard.getAttackBoard(from);
 					toSquares &= ~chessBoard.bitboard;
 					while (toSquares != 0) {
@@ -787,9 +785,9 @@ public final class Engine {
             Moves[index++] = MoveFunctions.makeMove(to, from, 11, -1, Global.DOUBLE_PAWN);
          }
 
-			for(int j=0; j<Board.pieceTotals[6]; j++)
+			for(int j=0; j < chessBoard.pieceTotals[6]; j++)
 			{
-				from = Board.pieceList[6][j];
+				from = chessBoard.pieceList[6][j];
 				pieces ^= Global.set_Mask[from];
 				toSquares = chessBoard.getAttackBoard(from);
 				toSquares &= ~chessBoard.bitboard;
@@ -799,19 +797,19 @@ public final class Engine {
 					to = Long.numberOfTrailingZeros(toBit);
 					moveOrder[index] = Hist[from][to];
 					if(from == 56 && (chessBoard.bCastle & Global.LONG_CASTLE) != 0)
-						Moves[index++] = MoveFunctions.makeMove(to, from, Board.piece_in_square[from], -1, Global.MOVE_ROOK_LOSE_CASTLE);
+						Moves[index++] = MoveFunctions.makeMove(to, from, chessBoard.piece_in_square[from], -1, Global.MOVE_ROOK_LOSE_CASTLE);
 					else if(from == 63 && (chessBoard.bCastle & Global.SHORT_CASTLE) != 0)
-						Moves[index++] = MoveFunctions.makeMove(to, from, Board.piece_in_square[from], -1, Global.MOVE_ROOK_LOSE_CASTLE);
+						Moves[index++] = MoveFunctions.makeMove(to, from, chessBoard.piece_in_square[from], -1, Global.MOVE_ROOK_LOSE_CASTLE);
 					else
-						Moves[index++] = MoveFunctions.makeMove(to, from, Board.piece_in_square[from], -1, Global.ORDINARY_MOVE);
+						Moves[index++] = MoveFunctions.makeMove(to, from, chessBoard.piece_in_square[from], -1, Global.ORDINARY_MOVE);
 				}
 			}
 			
 			for(int i=7; i<10; i++)
 			{
-				for(int j=0; j<Board.pieceTotals[i]; j++)
+				for(int j=0; j < chessBoard.pieceTotals[i]; j++)
 				{
-					from = Board.pieceList[i][j];
+					from = chessBoard.pieceList[i][j];
 					pieces ^= Global.set_Mask[from];
 					toSquares = chessBoard.getAttackBoard(from);
 					toSquares &= ~chessBoard.bitboard;
@@ -820,14 +818,14 @@ public final class Engine {
 						toSquares ^= toBit;
 						to = Long.numberOfTrailingZeros(toBit);
 						moveOrder[index] = Hist[from][to];
-						Moves[index++] = MoveFunctions.makeMove(to, from, Board.piece_in_square[from], -1, Global.ORDINARY_MOVE);
+						Moves[index++] = MoveFunctions.makeMove(to, from, chessBoard.piece_in_square[from], -1, Global.ORDINARY_MOVE);
 					}
 				}
          }
 
-         from = Board.pieceList[10][0];
+         from = chessBoard.pieceList[10][0];
 			if (chessBoard.bCastle > Global.CASTLED) {
-				long Temp = Helper.getKingCastle((int)(chessBoard.bitboard>>>56));
+				long Temp = chessBoard.getKingCastle((int)(chessBoard.bitboard>>>56));
 				if(chessBoard.bCastle != Global.SHORT_CASTLE && ((Temp & Global.set_Mask[2])!=0) ) {
 					if( !chessBoard.isBlackAttacked(58) && !chessBoard.isBlackAttacked(59) ) {
 						moveOrder[index] = Hist2[from][58];
@@ -842,7 +840,7 @@ public final class Engine {
 				}
          }
 
-			toSquares = Helper.getKingPosition(from);
+			toSquares = chessBoard.getKingMoves(from);
          toSquares &= ~chessBoard.bitboard;
          int kingType = chessBoard.bCastle > Global.CASTLED ? Global.MOVE_KING_LOSE_CASTLE : Global.ORDINARY_MOVE;
 			while (toSquares != 0) {
@@ -983,42 +981,44 @@ public final class Engine {
 				else
 					 type = Global.ORDINARY_CAPTURE;
 
-				for(int j=0; j<Board.pieceTotals[i]; j++)
+				for(int j=0; j < chessBoard.pieceTotals[i]; j++)
 				{
-					int from = Board.pieceList[i][j];
+					int from = chessBoard.pieceList[i][j];
 					long toSquares = chessBoard.getAttackBoard(from);
 					toSquares &= enemies;
 					while (toSquares != 0) {
 						long toBit = toSquares & -toSquares;
 						toSquares ^= toBit;
 						int to = Long.numberOfTrailingZeros(toBit);
-						if(attackCastle && (to == 56 || to == 63) && Board.piece_in_square[to] == 6)
+						if(attackCastle && (to == 56 || to == 63) && chessBoard.piece_in_square[to] == 6)
 							type = Global.CAPTURE_ROOK_LOSE_CASTLE;
-						moveOrder[index] = Global.values[Board.piece_in_square[to]] + Global.invValues[i];
-						Captures[index++] = MoveFunctions.makeMove(to, from, Board.piece_in_square[from], Board.piece_in_square[to], type);
+						//SEE.GetSEE2(side, to, from, type, 0);
+						moveOrder[index] = Global.values[chessBoard.piece_in_square[to]] + Global.invValues[i];
+						Captures[index++] = MoveFunctions.makeMove(to, from, chessBoard.piece_in_square[from], chessBoard.piece_in_square[to], type);
 					}
 				}
 			}
 
 
 			boolean ourCastle = chessBoard.wCastle > Global.CASTLED ? true : false;
-			for(int j=0; j<Board.pieceTotals[0]; j++)
+			for(int j=0; j < chessBoard.pieceTotals[0]; j++)
 			{
-				int from = Board.pieceList[0][j];
+				int from = chessBoard.pieceList[0][j];
 				long toSquares = chessBoard.getAttackBoard(from);
 				toSquares &= enemies;
 				while (toSquares != 0) {
 					long toBit = toSquares & -toSquares;
 					toSquares ^= toBit;
 					int to = Long.numberOfTrailingZeros(toBit);
-					if(attackCastle && (to == 56 || to == 63) && Board.piece_in_square[to] == 6)
+					if(attackCastle && (to == 56 || to == 63) && chessBoard.piece_in_square[to] == 6)
 						type = Global.CAPTURE_ROOK_LOSE_CASTLE;
 					else if(ourCastle)
 						type = Global.MOVE_ROOK_LOSE_CASTLE;
 					else
 						type = Global.ORDINARY_CAPTURE;
-					moveOrder[index] = Global.values[Board.piece_in_square[to]] + Global.invValues[0];
-					Captures[index++] = MoveFunctions.makeMove(to, from, Board.piece_in_square[from], Board.piece_in_square[to], type);
+					//SEE.GetSEE2(side, to, from, type, 0);
+					moveOrder[index] = Global.values[chessBoard.piece_in_square[to]] + Global.invValues[0];
+					Captures[index++] = MoveFunctions.makeMove(to, from, chessBoard.piece_in_square[from], chessBoard.piece_in_square[to], type);
 				}
 			}
 
@@ -1045,18 +1045,19 @@ public final class Engine {
 				} else if ((to >> 3) == 7) {
 					if (PERFT_ENABLED) {
 						moveOrder[index] = 0;
-						Captures[index++] = MoveFunctions.makeMove(to, from, 5, Board.piece_in_square[to], Global.PROMO_B);
+						Captures[index++] = MoveFunctions.makeMove(to, from, 5, chessBoard.piece_in_square[to], Global.PROMO_B);
 						moveOrder[index] = 0;
-						Captures[index++] = MoveFunctions.makeMove(to, from, 5, Board.piece_in_square[to], Global.PROMO_N);
+						Captures[index++] = MoveFunctions.makeMove(to, from, 5, chessBoard.piece_in_square[to], Global.PROMO_N);
 						moveOrder[index] = 0;
-						Captures[index++] = MoveFunctions.makeMove(to, from, 5, Board.piece_in_square[to], Global.PROMO_R);
+						Captures[index++] = MoveFunctions.makeMove(to, from, 5, chessBoard.piece_in_square[to], Global.PROMO_R);
 					}
-					moveOrder[index] = Global.values[Board.piece_in_square[to]] + 700;
+					moveOrder[index] = Global.values[chessBoard.piece_in_square[to]] + 700;
 					type = Global.PROMO_Q;
 				} else {
-					moveOrder[index] = Global.values[Board.piece_in_square[to]] + 4;
+					moveOrder[index] = Global.values[chessBoard.piece_in_square[to]] + 4;
 				}
-				Captures[index++] = MoveFunctions.makeMove(to, from, 5, Board.piece_in_square[to], type);
+				//SEE.GetSEE2(side, to, from, type, 0);
+				Captures[index++] = MoveFunctions.makeMove(to, from, 5, chessBoard.piece_in_square[to], type);
 			}
 
 			while (rAttack != 0) {
@@ -1071,18 +1072,19 @@ public final class Engine {
 				} else if ((to >> 3) == 7) {
 					if (PERFT_ENABLED) {
 						moveOrder[index] = 0;
-						Captures[index++] = MoveFunctions.makeMove(to, from, 5, Board.piece_in_square[to], Global.PROMO_B);
+						Captures[index++] = MoveFunctions.makeMove(to, from, 5, chessBoard.piece_in_square[to], Global.PROMO_B);
 						moveOrder[index] = 0;
-						Captures[index++] = MoveFunctions.makeMove(to, from, 5, Board.piece_in_square[to], Global.PROMO_N);
+						Captures[index++] = MoveFunctions.makeMove(to, from, 5, chessBoard.piece_in_square[to], Global.PROMO_N);
 						moveOrder[index] = 0;
-						Captures[index++] = MoveFunctions.makeMove(to, from, 5, Board.piece_in_square[to], Global.PROMO_R);
+						Captures[index++] = MoveFunctions.makeMove(to, from, 5, chessBoard.piece_in_square[to], Global.PROMO_R);
 					}
-					moveOrder[index] = Global.values[Board.piece_in_square[to]] + 700;
+					moveOrder[index] = Global.values[chessBoard.piece_in_square[to]] + 700;
 					type = Global.PROMO_Q;
 				} else {
-					moveOrder[index] = Global.values[Board.piece_in_square[to]] + 4;
+					moveOrder[index] = Global.values[chessBoard.piece_in_square[to]] + 4;
 				}
-				Captures[index++] = MoveFunctions.makeMove(to, from, 5, Board.piece_in_square[to], type);
+				//SEE.GetSEE2(side, to, from, type, 0);
+				Captures[index++] = MoveFunctions.makeMove(to, from, 5, chessBoard.piece_in_square[to], type);
 			}
 
 			while (promo != 0) {
@@ -1097,6 +1099,7 @@ public final class Engine {
 					Captures[index++] = MoveFunctions.makeMove(to, to-8, 5, -1, Global.PROMO_R);
 				}
 				moveOrder[index] = 700;
+				//SEE.GetSEE2(side, to, to-8, Global.PROMO_Q, 0);
 				Captures[index++] = MoveFunctions.makeMove(to, to-8, 5, -1, Global.PROMO_Q);
 			}
 		} else {					//black moving
@@ -1110,42 +1113,44 @@ public final class Engine {
 				else
 					 type = Global.ORDINARY_CAPTURE;
 
-				for(int j=0; j<Board.pieceTotals[i]; j++)
+				for(int j=0; j < chessBoard.pieceTotals[i]; j++)
 				{
-					int from = Board.pieceList[i][j];
+					int from = chessBoard.pieceList[i][j];
 					long toSquares = chessBoard.getAttackBoard(from);
 					toSquares &= enemies;
 					while (toSquares != 0) {
 						long toBit = toSquares & -toSquares;
 						toSquares ^= toBit;
 						int to = Long.numberOfTrailingZeros(toBit);
-						if(attackCastle && (to == 0 || to == 7) && Board.piece_in_square[to] == 0)
+						if(attackCastle && (to == 0 || to == 7) && chessBoard.piece_in_square[to] == 0)
 							type = Global.CAPTURE_ROOK_LOSE_CASTLE;
-						moveOrder[index] = Global.values[Board.piece_in_square[to]] + Global.invValues[i];
-						Captures[index++] = MoveFunctions.makeMove(to, from, i, Board.piece_in_square[to], type);
+						//SEE.GetSEE2(side, to, from, type, 0);
+						moveOrder[index] = Global.values[chessBoard.piece_in_square[to]] + Global.invValues[i];
+						Captures[index++] = MoveFunctions.makeMove(to, from, i, chessBoard.piece_in_square[to], type);
 					}
 				}
 			}
 
 
 			boolean ourCastle = chessBoard.bCastle > Global.CASTLED ? true : false;
-			for(int j=0; j<Board.pieceTotals[6]; j++)
+			for(int j=0; j < chessBoard.pieceTotals[6]; j++)
 			{
-				int from = Board.pieceList[6][j];
+				int from = chessBoard.pieceList[6][j];
 				long toSquares = chessBoard.getAttackBoard(from);
 				toSquares &= enemies;
 				while (toSquares != 0) {
 					long toBit = toSquares & -toSquares;
 					toSquares ^= toBit;
 					int to = Long.numberOfTrailingZeros(toBit);
-					if(attackCastle && (to == 0 || to == 7) && Board.piece_in_square[to] == 0)
+					if(attackCastle && (to == 0 || to == 7) && chessBoard.piece_in_square[to] == 0)
 						type = Global.CAPTURE_ROOK_LOSE_CASTLE;
 					else if(ourCastle)
 						type = Global.MOVE_ROOK_LOSE_CASTLE;
 					else
 						type =  Global.ORDINARY_CAPTURE;
-					moveOrder[index] = Global.values[Board.piece_in_square[to]] + Global.invValues[6];
-					Captures[index++] = MoveFunctions.makeMove(to, from, 6, Board.piece_in_square[to], type);
+					//SEE.GetSEE2(side, to, from, type, 0);
+					moveOrder[index] = Global.values[chessBoard.piece_in_square[to]] + Global.invValues[6];
+					Captures[index++] = MoveFunctions.makeMove(to, from, 6, chessBoard.piece_in_square[to], type);
 				}
 			}
 
@@ -1171,18 +1176,19 @@ public final class Engine {
 				} else if ((to >> 3) == 0) {
 					if (PERFT_ENABLED) {
 						moveOrder[index] = 0;
-						Captures[index++] = MoveFunctions.makeMove(to, from, 11, Board.piece_in_square[to], Global.PROMO_B);
+						Captures[index++] = MoveFunctions.makeMove(to, from, 11, chessBoard.piece_in_square[to], Global.PROMO_B);
 						moveOrder[index] = 0;
-						Captures[index++] = MoveFunctions.makeMove(to, from, 11, Board.piece_in_square[to], Global.PROMO_N);
+						Captures[index++] = MoveFunctions.makeMove(to, from, 11, chessBoard.piece_in_square[to], Global.PROMO_N);
 						moveOrder[index] = 0;
-						Captures[index++] = MoveFunctions.makeMove(to, from, 11, Board.piece_in_square[to], Global.PROMO_R);
+						Captures[index++] = MoveFunctions.makeMove(to, from, 11, chessBoard.piece_in_square[to], Global.PROMO_R);
 					}
-					moveOrder[index] = Global.values[Board.piece_in_square[to]] + 700;
+					moveOrder[index] = Global.values[chessBoard.piece_in_square[to]] + 700;
 					type = Global.PROMO_Q;
 				} else {
-					moveOrder[index] = Global.values[Board.piece_in_square[to]] + 4;
+					moveOrder[index] = Global.values[chessBoard.piece_in_square[to]] + 4;
 				}
-				Captures[index++] = MoveFunctions.makeMove(to, from, 11, Board.piece_in_square[to], type);
+				//SEE.GetSEE2(side, to, from, type, 0);
+				Captures[index++] = MoveFunctions.makeMove(to, from, 11, chessBoard.piece_in_square[to], type);
 			}
 
 			while (rAttack != 0) {
@@ -1190,7 +1196,7 @@ public final class Engine {
 				rAttack ^= toBit;
 				int to = Long.numberOfTrailingZeros(toBit);
 				int from = to + 7;
-				Board.piece_in_square[to] = Board.piece_in_square[to];
+				chessBoard.piece_in_square[to] = chessBoard.piece_in_square[to];
 				type = Global.ORDINARY_CAPTURE;
 				if (to == chessBoard.getPassantW()) {
 					type = Global.EN_PASSANT_CAP;
@@ -1198,18 +1204,19 @@ public final class Engine {
 				} else if ((to >> 3) == 0) {
 					if (PERFT_ENABLED) {
 					moveOrder[index] = 0;
-					Captures[index++] = MoveFunctions.makeMove(to, from, 11, Board.piece_in_square[to], Global.PROMO_B);
+					Captures[index++] = MoveFunctions.makeMove(to, from, 11, chessBoard.piece_in_square[to], Global.PROMO_B);
 					moveOrder[index] = 0;
-					Captures[index++] = MoveFunctions.makeMove(to, from, 11, Board.piece_in_square[to], Global.PROMO_N);
+					Captures[index++] = MoveFunctions.makeMove(to, from, 11, chessBoard.piece_in_square[to], Global.PROMO_N);
 					moveOrder[index] = 0;
-					Captures[index++] = MoveFunctions.makeMove(to, from, 11, Board.piece_in_square[to], Global.PROMO_R);
+					Captures[index++] = MoveFunctions.makeMove(to, from, 11, chessBoard.piece_in_square[to], Global.PROMO_R);
 				}
-					moveOrder[index] = Global.values[Board.piece_in_square[to]] + 700;
+					moveOrder[index] = Global.values[chessBoard.piece_in_square[to]] + 700;
 					type = Global.PROMO_Q;
 				} else {
-					moveOrder[index] = Global.values[Board.piece_in_square[to]] + 4;
+					moveOrder[index] = Global.values[chessBoard.piece_in_square[to]] + 4;
 				}
-				Captures[index++] = MoveFunctions.makeMove(to, from, 11, Board.piece_in_square[to], type);
+				//SEE.GetSEE2(side, to, from, type, 0);
+				Captures[index++] = MoveFunctions.makeMove(to, from, 11, chessBoard.piece_in_square[to], type);
 			}
 
 			while (promo != 0) {
@@ -1225,6 +1232,7 @@ public final class Engine {
 					moveOrder[index] = 0;
 					Captures[index++] = MoveFunctions.makeMove(to, from, 11, -1, Global.PROMO_R);
 				}
+				//SEE.GetSEE2(side, to, from, Global.PROMO_Q, 0);
 				moveOrder[index] = 700;
 				Captures[index++] = MoveFunctions.makeMove(to, from, 11, -1, Global.PROMO_Q);
 			}
@@ -1233,233 +1241,6 @@ public final class Engine {
 		sortCaps(0, index, Captures);
 		return index;
 	}
-
-
-
-	/**
-    * Method getCaptures
-    *
-    * collects all capture moves and pawn promotion moves
-    *
-    * @param int side - the side to move
-    * @param int[] Captures - the array to fill with moves
-    *
-    *
-    * @return int - the number of moves added
-    *
-    */
-   public int getCaptures2(int side, int[] Captures) {
-		int index = 0;
-      if (side == -1) {			//white moving
-         long enemies = chessBoard.blackpieces;
-			long pieces = chessBoard.whitepieces & ~chessBoard.whitepawns;
-         boolean attackCastle = chessBoard.bCastle > Global.CASTLED ? true : false;
-			boolean ourCastle = chessBoard.wCastle > Global.CASTLED ? true : false;
-			while (pieces != 0) {
-            int from = Long.numberOfTrailingZeros(pieces);
-            pieces ^= Global.set_Mask[from];
-            int fromVal = Global.invValues[Board.piece_in_square[from]];
-            long toSquares = chessBoard.getAttackBoard(from);
-            toSquares &= enemies;
-            int type = Global.ORDINARY_CAPTURE;
-				if(from == 4 && chessBoard.wCastle > Global.NO_CASTLE)
-					type = Global.MOVE_KING_LOSE_CASTLE;
-				while (toSquares != 0) {
-               int to = Long.numberOfTrailingZeros(toSquares);
-					if(attackCastle && (to == 56 || to == 63) && Board.piece_in_square[to] == 6)
-						type = Global.CAPTURE_ROOK_LOSE_CASTLE;
-					else if(ourCastle && Board.piece_in_square[from] == 0)
-						type = Global.MOVE_ROOK_LOSE_CASTLE;
-					toSquares ^= Global.set_Mask[to];
-               moveOrder[index] = Global.values[Board.piece_in_square[to]] + fromVal;
-               Captures[index++] = MoveFunctions.makeMove(to, from, Board.piece_in_square[from], Board.piece_in_square[to], type);
-            }
-         }
-
-			pieces = chessBoard.whitepawns;
-			enemies ^=  Global.set_Mask[chessBoard.getPassantB()];
-			long lAttack = (pieces << 7) & enemies & ~Global.fileMasks[7];
-			long rAttack = (pieces << 9) & enemies & ~Global.fileMasks[0];
-			enemies ^=  Global.set_Mask[chessBoard.getPassantB()];
-			long promo = pieces & Global.rankMasks[6];
-			if (promo != 0) {
-			 promo <<= 8;
-			 promo &= ~chessBoard.bitboard;
-			}
-
-		 while (lAttack != 0) {
-			long toBit = lAttack & -lAttack;
-			lAttack ^= toBit;
-			int to = Long.numberOfTrailingZeros(toBit);
-			int from = to - 7;
-			int type = Global.ORDINARY_CAPTURE;
-			if (to == chessBoard.getPassantB()) {
-				moveOrder[index] = Global.values[5] + 4;
-				type = Global.EN_PASSANT_CAP;
-			} else if ((to >> 3) == 7) {
-				if (PERFT_ENABLED) {
-					moveOrder[index] = 0;
-					Captures[index++] = MoveFunctions.makeMove(to, from, 5, Board.piece_in_square[to], Global.PROMO_B);
-					moveOrder[index] = 0;
-					Captures[index++] = MoveFunctions.makeMove(to, from, 5, Board.piece_in_square[to], Global.PROMO_N);
-					moveOrder[index] = 0;
-					Captures[index++] = MoveFunctions.makeMove(to, from, 5, Board.piece_in_square[to], Global.PROMO_R);
-				}
-				moveOrder[index] = Global.values[Board.piece_in_square[to]] + 700;
-				type = Global.PROMO_Q;
-
-			} else {
-				moveOrder[index] = Global.values[Board.piece_in_square[to]] + 4;
-			}
-			Captures[index++] = MoveFunctions.makeMove(to, from, 5, Board.piece_in_square[to], type);
-		}
-
-         while (rAttack != 0) {
-            long toBit = rAttack & -rAttack;
-            rAttack ^= toBit;
-            int to = Long.numberOfTrailingZeros(toBit);
-            int from = to - 9;
-            int type = Global.ORDINARY_CAPTURE;
-            if (to == chessBoard.getPassantB()) {
-               moveOrder[index] = Global.values[5] + 4;
-               type = Global.EN_PASSANT_CAP;
-            } else if ((to >> 3) == 7) {
-               if (PERFT_ENABLED) {
-                  moveOrder[index] = 0;
-                  Captures[index++] = MoveFunctions.makeMove(to, from, 5, Board.piece_in_square[to], Global.PROMO_B);
-                  moveOrder[index] = 0;
-                  Captures[index++] = MoveFunctions.makeMove(to, from, 5, Board.piece_in_square[to], Global.PROMO_N);
-                  moveOrder[index] = 0;
-                  Captures[index++] = MoveFunctions.makeMove(to, from, 5, Board.piece_in_square[to], Global.PROMO_R);
-               }
-               moveOrder[index] = Global.values[Board.piece_in_square[to]] + 700;
-               type = Global.PROMO_Q;
-            } else {
-               moveOrder[index] = Global.values[Board.piece_in_square[to]] + 4;
-            }
-            Captures[index++] = MoveFunctions.makeMove(to, from, 5, Board.piece_in_square[to], type);
-         }
-         while (promo != 0) {
-            int to = Long.numberOfTrailingZeros(promo);
-		  promo ^= Global.set_Mask[to];
-            if (PERFT_ENABLED) {
-               moveOrder[index] = 0;
-               Captures[index++] = MoveFunctions.makeMove(to, to-8, 5, -1, Global.PROMO_B);
-               moveOrder[index] = 0;
-               Captures[index++] = MoveFunctions.makeMove(to, to-8, 5, -1, Global.PROMO_N);
-               moveOrder[index] = 0;
-               Captures[index++] = MoveFunctions.makeMove(to, to-8, 5, -1, Global.PROMO_R);
-            }
-            moveOrder[index] = 700;
-            Captures[index++] = MoveFunctions.makeMove(to, to-8, 5, -1, Global.PROMO_Q);
-         }
-      } else {					//black moving
-         long enemies = chessBoard.whitepieces;
-
-			long pieces = chessBoard.blackpieces & ~chessBoard.blackpawns;
-			boolean attackCastle = chessBoard.wCastle > Global.CASTLED ? true : false;
-			boolean ourCastle = chessBoard.bCastle > Global.CASTLED ? true : false;
-			while (pieces != 0) {
-				int from = Long.numberOfTrailingZeros(pieces);
-				pieces ^= Global.set_Mask[from];
-				int fromVal = Global.invValues[Board.piece_in_square[from]];
-				long toSquares = chessBoard.getAttackBoard(from);
-				toSquares &= enemies;
-				int type = Global.ORDINARY_CAPTURE;
-				if(from == 60 && chessBoard.bCastle > Global.NO_CASTLE)
-					type = Global.MOVE_KING_LOSE_CASTLE;
-				while (toSquares != 0) {
-					int to = Long.numberOfTrailingZeros(toSquares);
-					if(attackCastle && ( to == 0 || to == 7) && Board.piece_in_square[to] == 0)
-						type = Global.CAPTURE_ROOK_LOSE_CASTLE;
-					else if(ourCastle && Board.piece_in_square[from] == 6)
-						type = Global.MOVE_ROOK_LOSE_CASTLE;
-					toSquares ^= Global.set_Mask[to];
-					moveOrder[index] = Global.values[Board.piece_in_square[to]] + fromVal;
-					Captures[index++] = MoveFunctions.makeMove(to, from, Board.piece_in_square[from], Board.piece_in_square[to], type);
-				}
-			}
-	    pieces = chessBoard.blackpawns;
-         enemies ^= Global.set_Mask[chessBoard.getPassantW()];
-	    long lAttack = pieces >> 9 & enemies & ~Global.fileMasks[7];
-         long rAttack = pieces >> 7 & enemies & ~Global.fileMasks[0];
-	    enemies ^= Global.set_Mask[chessBoard.getPassantW()];
-         long promo = pieces & Global.rankMasks[1];
-         if (promo != 0) {
-            promo >>= 8;
-            promo &= ~chessBoard.bitboard;
-         }
-         while (lAttack != 0) {
-            long toBit = lAttack & -lAttack;
-            lAttack ^= toBit;
-            int to = Long.numberOfTrailingZeros(toBit);
-            int from = to + 9;
-            int type = Global.ORDINARY_CAPTURE;
-            if (to == chessBoard.getPassantW()) {
-               moveOrder[index] = Global.values[5] + 4;
-               type = Global.EN_PASSANT_CAP;
-            } else if ((to >> 3) == 0) {
-               if (PERFT_ENABLED) {
-                  moveOrder[index] = 0;
-                  Captures[index++] = MoveFunctions.makeMove(to, from, 11, Board.piece_in_square[to], Global.PROMO_B);
-                  moveOrder[index] = 0;
-                  Captures[index++] = MoveFunctions.makeMove(to, from, 11, Board.piece_in_square[to], Global.PROMO_N);
-                  moveOrder[index] = 0;
-                  Captures[index++] = MoveFunctions.makeMove(to, from, 11, Board.piece_in_square[to], Global.PROMO_R);
-               }
-               moveOrder[index] = Global.values[Board.piece_in_square[to]] + 700;
-               type = Global.PROMO_Q;
-            } else {  
-               moveOrder[index] = Global.values[Board.piece_in_square[to]] + 4;
-            }
-            Captures[index++] = MoveFunctions.makeMove(to, from, 11, Board.piece_in_square[to], type);
-         }
-         while (rAttack != 0) {
-            long toBit = rAttack & -rAttack;
-            rAttack ^= toBit;
-            int to = Long.numberOfTrailingZeros(toBit);
-            int from = to + 7;
-            Board.piece_in_square[to] = Board.piece_in_square[to];
-            int type = Global.ORDINARY_CAPTURE;
-            if (to == chessBoard.getPassantW()) {
-               type = Global.EN_PASSANT_CAP;
-               moveOrder[index] = Global.values[5] + 4;
-            } else if ((to >> 3) == 0) {
-               if (PERFT_ENABLED) {
-                  moveOrder[index] = 0;
-                  Captures[index++] = MoveFunctions.makeMove(to, from, 11, Board.piece_in_square[to], Global.PROMO_B);
-                  moveOrder[index] = 0;
-                  Captures[index++] = MoveFunctions.makeMove(to, from, 11, Board.piece_in_square[to], Global.PROMO_N);
-                  moveOrder[index] = 0;
-                  Captures[index++] = MoveFunctions.makeMove(to, from, 11, Board.piece_in_square[to], Global.PROMO_R);
-               }
-               moveOrder[index] = Global.values[Board.piece_in_square[to]] + 700;
-               type = Global.PROMO_Q;
-            } else {
-               moveOrder[index] = Global.values[Board.piece_in_square[to]] + 4;
-            }
-            Captures[index++] = MoveFunctions.makeMove(to, from, 11, Board.piece_in_square[to], type);
-         }
-         while (promo != 0) {
-            long toBit = promo & -promo;
-            promo ^= toBit;
-            int to = Long.numberOfTrailingZeros(toBit);
-            int from = to + 8;
-            if (PERFT_ENABLED) {
-               moveOrder[index] = 0;
-               Captures[index++] = MoveFunctions.makeMove(to, from, 11, -1, Global.PROMO_B);
-               moveOrder[index] = 0;
-               Captures[index++] = MoveFunctions.makeMove(to, from, 11, -1, Global.PROMO_N);
-               moveOrder[index] = 0;
-               Captures[index++] = MoveFunctions.makeMove(to, from, 11, -1, Global.PROMO_R);
-            }
-            moveOrder[index] = 700;
-            Captures[index++] = MoveFunctions.makeMove(to, from, 11, -1, Global.PROMO_Q);
-         }
-      }
-      sortCaps(0, index, Captures);
-      return index;
-   }
 
    /**
     * Method getCheckEscapes
@@ -1486,7 +1267,7 @@ public final class Engine {
       int attackFrom = -1;
       int index = 0;
 		boolean kingLoseCastle;
-		Boolean rookLoseCastle;
+		boolean rookLoseCastle;
 		boolean attackRookCastle;
 
       if (side == -1) {			//white moving
@@ -1512,7 +1293,9 @@ public final class Engine {
       }
       kingPos = Long.numberOfTrailingZeros(king);
       long toSquares = chessBoard.getAttackBoard(kingPos) & ~friends;
-      long temp = chessBoard.getMagicBishopMoves(kingPos);
+
+
+		long temp = chessBoard.getMagicBishopMoves(kingPos);
       temp &= (bishops | queen);
 		long attackBits = temp;
       while (temp != 0) {
@@ -1555,27 +1338,18 @@ public final class Engine {
               continue;
             }
          }
-         int cP = Board.piece_in_square[to];
-         int value = 10;
+         int cP = chessBoard.piece_in_square[to];
+         int value;
          if (cP != -1) {
             type = Global.ORDINARY_CAPTURE;
-				value = SEE.getSEE(side, to, kingPos, -1, Global.ORDINARY_MOVE);
-            if (value >= 0) {
-               value += 10000;
-            } else {
-               value = 0;
-            }
+				value = 1000;
          } else {
-            if (side == -1) {
-               value = Hist2[kingPos][to];
-            } else {
-               value = Hist[kingPos][to];
-            }
+            value = 100;
          }
          moveOrder[index] = value;
          if( kingLoseCastle )
 				type = Global.MOVE_KING_LOSE_CASTLE;
-			escapes[index++] = MoveFunctions.makeMove(to, kingPos, Board.piece_in_square[kingPos], cP, type);    //generate king escape moves
+			escapes[index++] = MoveFunctions.makeMove(to, kingPos, chessBoard.piece_in_square[kingPos], cP, type);    //generate king escape moves
       }
       if (attacks > 2) {
          sortCaps(0, index, escapes);
@@ -1605,7 +1379,7 @@ public final class Engine {
       temp &= (friends & ~king);
       int type;
       int value;
-      int cP = Board.piece_in_square[attackFrom];
+      int cP = chessBoard.piece_in_square[attackFrom];
 
       while (temp != 0) {
          type = Global.ORDINARY_CAPTURE;
@@ -1616,43 +1390,35 @@ public final class Engine {
             continue;
          }
          
-         if (Board.piece_in_square[from] % 6 == 5) {
+         if (chessBoard.piece_in_square[from] % 6 == 5) {
             if ((attackFrom >> 3) == 0 || (attackFrom >> 3) == 7) {
 					if (PERFT_ENABLED) {
                   moveOrder[index] = 0;
-                  escapes[index++] = MoveFunctions.makeMove(attackFrom, from, Board.piece_in_square[from], cP, Global.PROMO_N);
+                  escapes[index++] = MoveFunctions.makeMove(attackFrom, from, chessBoard.piece_in_square[from], cP, Global.PROMO_N);
                   moveOrder[index] = 0;
-                  escapes[index++] = MoveFunctions.makeMove(attackFrom, from, Board.piece_in_square[from], cP, Global.PROMO_R);
+                  escapes[index++] = MoveFunctions.makeMove(attackFrom, from, chessBoard.piece_in_square[from], cP, Global.PROMO_R);
                   moveOrder[index] = 0;
-                  escapes[index++] = MoveFunctions.makeMove(attackFrom, from, Board.piece_in_square[from], cP, Global.PROMO_B);
+                  escapes[index++] = MoveFunctions.makeMove(attackFrom, from, chessBoard.piece_in_square[from], cP, Global.PROMO_B);
                }
                type = Global.PROMO_Q;
-					value = SEE.getSEE(side, attackFrom, from, -1, type);
+					value = 800 + Global.values[chessBoard.piece_in_square[attackFrom]];
 				}
 				else
-					value = SEE.getSEE(side, attackFrom, from, -1, Global.ORDINARY_MOVE);
+					value = Global.values[chessBoard.piece_in_square[attackFrom]] - Global.values[Global.PIECE_PAWN];
          }
 			else
 			{
-				value = SEE.getSEE(side, attackFrom, from, -1, Global.ORDINARY_MOVE);
+				value = Global.values[chessBoard.piece_in_square[attackFrom]] - Global.values[chessBoard.piece_in_square[from]];
 				if(attackRookCastle && (cP % 6) == 0)
 					type = Global.CAPTURE_ROOK_LOSE_CASTLE;
-				else if(rookLoseCastle && Board.piece_in_square[from] % 6 == 0)
+				else if(rookLoseCastle && chessBoard.piece_in_square[from] % 6 == 0)
 					type = Global.MOVE_ROOK_LOSE_CASTLE;
 			}
-
-			if (value >= 0) {
-				value += 10000;
-			} else {
-				value = 0;
-			}
-			
 			moveOrder[index] = value;
-			escapes[index++] = MoveFunctions.makeMove(attackFrom, from, Board.piece_in_square[from], cP, type);            //these are attacks on the king's attacker
+			escapes[index++] = MoveFunctions.makeMove(attackFrom, from, chessBoard.piece_in_square[from], cP, type);            //these are attacks on the king's attacker
       }
 
-
-      if (Board.piece_in_square[attackFrom] == 5) {
+      if (chessBoard.piece_in_square[attackFrom] == 5) {
          if ((attackFrom - 8) == chessBoard.getPassantW()) {
             temp = chessBoard.getWPawnAttack(attackFrom - 8) & chessBoard.blackpawns;
             while (temp != 0) {
@@ -1662,19 +1428,14 @@ public final class Engine {
                if (SEE.isPinned(side, attackFrom - 8, from)) {
 						continue;
                }
-               value = SEE.getSEE(side, attackFrom - 8, from, chessBoard.getPassantW(), Global.EN_PASSANT_CAP);
-               if (value >= 0) {
-                  value += 10000;
-               } else {
-                  value = 0;
-               }
+               value = 100;
                moveOrder[index] = value;
-               escapes[index++] = MoveFunctions.makeMove(attackFrom - 8, from, Board.piece_in_square[from], -1, Global.EN_PASSANT_CAP);
+               escapes[index++] = MoveFunctions.makeMove(attackFrom - 8, from, chessBoard.piece_in_square[from], -1, Global.EN_PASSANT_CAP);
             }
          }
       }
       //if attacking piece is a black pawn ( white moving )
-      if (Board.piece_in_square[attackFrom] == 11) {
+      if (chessBoard.piece_in_square[attackFrom] == 11) {
          if ((attackFrom + 8) == chessBoard.getPassantB()) {
             temp = chessBoard.getBPawnAttack(attackFrom + 8) & chessBoard.whitepawns;
             while (temp != 0) {
@@ -1682,21 +1443,16 @@ public final class Engine {
                temp ^= fromBit;
                int from = Long.numberOfTrailingZeros(fromBit);
                if (SEE.isPinned(side, attackFrom + 8, from)) {
-				continue;
+						continue;
                }
-               value = SEE.getSEE(side, attackFrom + 8, from, chessBoard.getPassantB(), Global.EN_PASSANT_CAP);
-               if (value >= 0) {
-                  value += 10000;
-               } else {
-                  value = 0;
-               }
+               value = 100;
                moveOrder[index] = value;
-               escapes[index++] = MoveFunctions.makeMove(attackFrom + 8, from, Board.piece_in_square[from], -1, Global.EN_PASSANT_CAP);
+               escapes[index++] = MoveFunctions.makeMove(attackFrom + 8, from, chessBoard.piece_in_square[from], -1, Global.EN_PASSANT_CAP);
             }
          }
       }
       //if one attacker is a slide piece, generate moves to block the sliding attack
-      if (!Global.slides[Board.piece_in_square[attackFrom]]) {
+      if (!Global.slides[chessBoard.piece_in_square[attackFrom]]) {
          return index;
       }
 
@@ -1756,49 +1512,48 @@ public final class Engine {
 				fromBit = attackers & -attackers;
             attackers ^= fromBit;
             int from = Long.numberOfTrailingZeros(fromBit);
-            if( rookLoseCastle && Board.piece_in_square[from] % 6 == 0 )
+            if( rookLoseCastle && chessBoard.piece_in_square[from] % 6 == 0 )
 					type = Global.MOVE_ROOK_LOSE_CASTLE;
 				
 				if (SEE.isPinned(side, to, from)) {
                continue;
             }
-            if (side == -1) {
-               value = Hist2[from][to];
-            } else {
-               value = Hist[from][to];
-            }
+
+				value =  -Global.values[chessBoard.piece_in_square[from]];
             
-            if (Board.piece_in_square[from] == 5) {
+            if (chessBoard.piece_in_square[from] == 5) {
                if (to > 55) {
                   if (PERFT_ENABLED) {
                      moveOrder[index] = value;
-                     escapes[index++] = MoveFunctions.makeMove(to, from, Board.piece_in_square[from], -1, Global.PROMO_N);
+                     escapes[index++] = MoveFunctions.makeMove(to, from, chessBoard.piece_in_square[from], -1, Global.PROMO_N);
                      moveOrder[index] = value;
-                     escapes[index++] = MoveFunctions.makeMove(to, from, Board.piece_in_square[from], -1, Global.PROMO_R);
+                     escapes[index++] = MoveFunctions.makeMove(to, from, chessBoard.piece_in_square[from], -1, Global.PROMO_R);
                      moveOrder[index] = value;
-                     escapes[index++] = MoveFunctions.makeMove(to, from, Board.piece_in_square[from], -1, Global.PROMO_B);
+                     escapes[index++] = MoveFunctions.makeMove(to, from, chessBoard.piece_in_square[from], -1, Global.PROMO_B);
                   }
-                  type = Global.PROMO_Q;
+                  value = -900;
+						type = Global.PROMO_Q;
                } else if((to - from) == 16)   {
                   type = Global.DOUBLE_PAWN;             //handle case where a double pawn move blocks the attack
                }
-            } else if (Board.piece_in_square[from] == 11) {
+            } else if (chessBoard.piece_in_square[from] == 11) {
                if (to < 8) {
                   if (PERFT_ENABLED) {
                      moveOrder[index] = value;
-                     escapes[index++] = MoveFunctions.makeMove(to, from, Board.piece_in_square[from], -1, Global.PROMO_N);
+                     escapes[index++] = MoveFunctions.makeMove(to, from, chessBoard.piece_in_square[from], -1, Global.PROMO_N);
                      moveOrder[index] = value;
-                     escapes[index++] = MoveFunctions.makeMove(to, from, Board.piece_in_square[from], -1, Global.PROMO_R);
+                     escapes[index++] = MoveFunctions.makeMove(to, from, chessBoard.piece_in_square[from], -1, Global.PROMO_R);
                      moveOrder[index] = value;
-                     escapes[index++] = MoveFunctions.makeMove(to, from, Board.piece_in_square[from], -1, Global.PROMO_B);
+                     escapes[index++] = MoveFunctions.makeMove(to, from, chessBoard.piece_in_square[from], -1, Global.PROMO_B);
                   }
-                  type = Global.PROMO_Q;
+                  value = -900;
+						type = Global.PROMO_Q;
                } else if((from - to) == 16)   {
                   type = Global.DOUBLE_PAWN;             //handle case where a double pawn move blocks the attack
                }
             }
             moveOrder[index] = value;
-				escapes[index++] = MoveFunctions.makeMove(to, from, Board.piece_in_square[from], -1, type);
+				escapes[index++] = MoveFunctions.makeMove(to, from, chessBoard.piece_in_square[from], -1, type);
          }
       }
       sortMoves(0, index, escapes);
@@ -1842,7 +1597,7 @@ public final class Engine {
          System.out.println("info string bad hash move2 "+move+" hash is "+chessBoard.hashValue);
          return false;
       }
-      if (Board.piece_in_square[from] != piece) {
+      if (chessBoard.piece_in_square[from] != piece) {
          System.out.println("info string bad hash move3 "+move);
          return false;
       }
@@ -1901,7 +1656,7 @@ public final class Engine {
       
       int from = MoveFunctions.getFrom(move);
 
-      if (Board.piece_in_square[from] != piece) {
+      if (chessBoard.piece_in_square[from] != piece) {
          return false;
       }
 
@@ -2013,7 +1768,18 @@ public final class Engine {
             case (1):
                if (!iid && HashTable.getDepth(key, index) >= depth) {
                   long hVal = HashTable.getValue(key, index);
-                  if (hVal > alpha && hVal < beta) {
+                  /*if(hVal == 0 )
+						{
+							 int mv = HashTable.getMove(key, index);
+							 int reps = chessBoard.MakeMove(mv, true);
+							 chessBoard.UnMake(mv, true);
+							 if(reps >= 2)
+							 {
+								 SavePV(TT_PV);
+								 return 0;
+							 }
+						}
+						else*/ if (hVal > alpha && hVal < beta) {
                      SavePV(TT_PV);
                      nodes++;
                      return HashTable.getValue(key, index);
@@ -2065,7 +1831,8 @@ public final class Engine {
        * -when the hash table tells us not to (nullFail)
        * -when we are in the endgame as zugzwangs are more likely
        */
-       if (!razored && !bFutilityPrune && !isInCheck && !nMove && nullFail != 1 && (chessBoard.pawnsKings != chessBoard.bitboard) && chessBoard.getMinNumberOfPieces() > 1) {
+       if (!razored && !bFutilityPrune && !isInCheck && !nMove && nullFail != 1 
+			&& ( (chessBoard.pieceTotals[5] + chessBoard.pieceTotals[11]) != (chessBoard.wPieceNo + chessBoard.bPieceNo -2)) && chessBoard.getMinNumberOfPieces() > 1) {
 
 			chessBoard.SwitchTurn();
          int reduce = 2;
@@ -2123,15 +1890,9 @@ public final class Engine {
 
       int badCapIndex = 0;
       int moveCount = 0;
-      int passant;
 
       boolean drawPV = false;
-      if (side == -1) {
-         passant = chessBoard.getPassantB();
-      } else {
-         passant = chessBoard.getPassantW();
-      }
-
+   
 		boolean testCheck = !isInCheck;
 		while (state != SEARCH_END) {
 
@@ -2140,7 +1901,7 @@ public final class Engine {
                testCheck = false;
 					index = HashTable.hasHash(key);
                if (index != 1) {
-                  theMove = HashTable.getMove(key, index);
+				  theMove = HashTable.getMove(key, index);
                   bestFullMove = theMove;
                   if (theMove != 0) {// && verifyHash(side, theMove)) {
                      hashArr[hashCount++] = theMove;
@@ -2301,12 +2062,21 @@ public final class Engine {
              * get placed in the bad capture array and are tried later
              */
             if (state == GOOD_CAPTURES) {
-					int toValue = Board.piece_in_square[to] == -1 ? Global.values[Global.PIECE_PAWN] : Global.values[Board.piece_in_square[to]];
-               if (Global.values[Board.piece_in_square[from]] >= toValue && SEE.getSEE(side, to, from, passant, MoveFunctions.moveType(theMove)) < 0) {
-                     moveArr[badCapIndex--] = theMove;
-                     continue;
-               }
-              
+					int type = MoveFunctions.moveType(theMove);
+
+					if( type < Global.PROMO_Q)
+					{
+						if (Global.values[chessBoard.piece_in_square[to]] < Global.values[chessBoard.piece_in_square[from]]
+						&& (SEE.GetSEE2(side, to, from, type, 0)) < 0) {
+								moveArr[badCapIndex--] = theMove;
+								continue;
+						}
+					}
+					else if(type != Global.EN_PASSANT_CAP && (SEE.GetSEE2(side, to, from, type, 0)) < 0)
+					{
+						moveArr[badCapIndex--] = theMove;
+						continue;
+					}
             }
             extendAmount = 0;
 
@@ -2333,7 +2103,7 @@ public final class Engine {
 						System.out.println("probs");
 						for(int j=0; j<64; j++)
 						{
-							System.out.print(Board.piece_in_square[j]+" ");
+							System.out.print(chessBoard.piece_in_square[j]+" ");
 							if((j & 7) == 7)
 								System.out.println();
 						}
@@ -2359,8 +2129,8 @@ public final class Engine {
                //recognize moves involving passed pawns
                //do not want to forward prune/lmr these moves
                boolean passedPawnMove = false;
-               if (piece % 6 == 5) {
-                  passedPawnMove = Evaluation2.isPassedPawn(side, to);
+					if (piece % 6 == 5) {
+						passedPawnMove = Evaluation2.isPassedPawn(side, to);
                }
 
                 // futility pruning code
@@ -2375,12 +2145,11 @@ public final class Engine {
           
                //late move reduction code
                boolean lmr = false;
-                if (state == NON_CAPS && ((alpha == beta - 1 && moveCount >= 4) || moveCount >= 15) && depth >= 2 && !passedPawnMove
+				if (state == NON_CAPS && ((alpha == beta - 1 && moveCount >= 4) || moveCount >= 15) && depth >= 2 && !passedPawnMove
                        && !isInCheck && !checkingMove) {// (MoveFunctions.moveType(theMove) == Global.ORDINARY_MOVE || MoveFunctions.moveType(theMove) > Global.DOUBLE_PAWN_WHITE)) {
                   extendAmount = -1;
                   lmr = true;
                }
-
                int nextDepth = depth - 1 + extendAmount;
                if (moveCount == 0) {
                   if (nextDepth > 0) {
@@ -2461,7 +2230,7 @@ public final class Engine {
                   alpha = value;
                }
                bMove = value;
-            }
+				}
             moveCount++;
          }  //end for
          state++;
@@ -2549,29 +2318,31 @@ public final class Engine {
          }
          //bValue = -20000 + thisDepth;
       } else {
-			/*value = Evaluation2.getEval(side);
+			/*value = Evaluation2.getEval(side, -1000, 1000);
 			int material = chessBoard.GetRawMaterialScore();
 			Board.getInstance().FlipPosition();
-			int value2 = Evaluation2.getEval(-side);
+			int value2 = Evaluation2.getEval(-side, -1000, 1000);
 			int material2 = chessBoard.GetRawMaterialScore();
 			if(material == -material2 && value != value2)
 			{
+				
 				System.out.println("info string here");
-				System.out.println("value2 is "+value2);
-				System.out.println("material2 is "+material2);
+				//System.out.println("value2 is "+value2);
+				//System.out.println("material2 is "+material2);
+				//Evaluation2.printEvalTerms();
+				//System.out.println("value is "+value);
+				//System.out.println("material is "+material);
+				value2 = Evaluation2.getEval(-side, -1000, 1000);
 				Evaluation2.printEvalTerms();
-				System.out.println("value is "+value);
-				System.out.println("material is "+material);
 
 				Board.getInstance().FlipPosition();
-				value2 = Evaluation2.getEval(side);
+				value2 = Evaluation2.getEval(side, -1000, 1000);
 				Evaluation2.printEvalTerms();
 			}
 			else
 			{
 				Board.getInstance().FlipPosition();
 			}*/
-			
 			value = Evaluation2.getEval(side, (int)alpha, (int)beta);
 			
 			if (value > alpha) {
@@ -2595,18 +2366,26 @@ public final class Engine {
 
          int to = MoveFunctions.getTo(capArr[i]);
          int from = MoveFunctions.getFrom(capArr[i]);
-
+			int neededScore = (int)Math.max(0, (alpha - testValue));
 			if (!isInCheck) {
-				int passant = side == -1 ? chessBoard.getPassantB() : chessBoard.getPassantW();
-				int toValue = Board.piece_in_square[to] == -1 ? Global.values[Global.PIECE_PAWN] : Global.values[Board.piece_in_square[to]];
+				int type = MoveFunctions.moveType(capArr[i]);
+				
+				if( type < Global.PROMO_Q)
+				{
+					if ((chessBoard.piece_in_square[to] - Global.values[chessBoard.piece_in_square[from]]) < neededScore
+					&& (SEE.GetSEE2(side, to, from, MoveFunctions.moveType(capArr[i]), neededScore)) < neededScore) {
 
-				if ((toValue - Global.values[Board.piece_in_square[from]]) < Math.max(0, alpha - testValue)
-				&& (SEE.getSEE(side, to, from, passant, MoveFunctions.moveType(capArr[i])) < Math.max(0, (alpha - testValue)))) {
 						bValue = alpha;
 						continue;
+					}
+				}
+				else if( (SEE.GetSEE2(side, to, from, MoveFunctions.moveType(capArr[i]), neededScore)) < neededScore)
+				{
+					bValue = alpha;
+					continue;
 				}
 			}
-
+			
          chessBoard.MakeMove(capArr[i], false);	
 
          if (!isInCheck && inCheck(side)) {

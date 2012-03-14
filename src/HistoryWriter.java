@@ -293,6 +293,15 @@ public final class HistoryWriter {
 						chessBoard.AddRepetitionRoot();
 						break;
 					}
+					else if( generatedTo == to && generatedFrom == from && type >= Global.PROMO_R )
+					{
+						int mv = MoveFunctions.makeMove(to, from, 5, chessBoard.piece_in_square[to], type);
+						chessBoard.AddMove( mv );
+						chessBoard.MakeMove( mv, false);
+						chessBoard.AddRepetitionRoot();
+						break;
+
+					}
 				}
 
 			}

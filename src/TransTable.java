@@ -46,8 +46,9 @@ public class TransTable {
    private int hashCount;
    private Board chessBoard;
    private static final long mask3 = ~((long)1 << 57 | (long)1 << 58 | (long)1 << 59);
-	
+	public static final long LAZY_BIT = ( (long)1 << 31);
    private static final int PAWN_TABLE_SIZE = 6;
+	 private static final int EVAL_TABLE_SIZE = 2;
 
 
 	/**flag indicating what type of table...0 regular, 1 pawn, 2 eval **/
@@ -69,7 +70,7 @@ public class TransTable {
 		else if (type == 1)
 			Table = new long[size*PAWN_TABLE_SIZE];
 		else if (type == 2)
-			Table3 = new long[size*2];
+			Table3 = new long[size*EVAL_TABLE_SIZE];
 		hashCount = 0;
 		chessBoard = Board.getInstance();
 	}
@@ -87,15 +88,19 @@ public class TransTable {
      * @param long passedBits - information about all the passed pawns packed into 64 bits
      *
      */ 
-	public final void addPawnHash(int key, long lock, int value_mg, int value_eg, int center, long passedBits, long whiteAttacks, long blackAttacks) {
+	public final void addPawnHash(int key, long lock, int value_mg, int value_eg, int center, int passPhase1Mid, int passPhase1End, int pawnShield, long passedBits, long whiteAttacks, long blackAttacks, long outposts) {
 		int index = key * PAWN_TABLE_SIZE;
 		Table[index] = lock;
 		Table[index+1] = (long)(value_mg + 4000)
 		| (long)(value_eg + 4000) << 13
-		| (long)(center + 50) << 26;
+		| (long)(center + 64) << 26
+		| (long)(passPhase1Mid + 512) << 33
+	   | (long)(passPhase1End + 512) << 43
+		| (long)(pawnShield + 128) << 53;
 		Table[index+2] = passedBits;
 		Table[index+3] = whiteAttacks;
 		Table[index+4] = blackAttacks;
+		Table[index+5] = outposts;
 	}
 	
     /*
@@ -109,10 +114,16 @@ public class TransTable {
      * @param long passedBits - information about all the passed pawns packed into 64 bits
      *
      */ 
-    public final void addEvalHash(int key, long lock, int value) {
-		int index = key*2;
+    public final void AddEvalHash(int key, long lock, int value) {
+		int index = key*EVAL_TABLE_SIZE;
 		Table3[index] = lock;
       Table3[index+1] = (long)value;
+	}
+
+	 public final void AddEvalHashLazy(int key, long lock, int value) {
+		int index = key*EVAL_TABLE_SIZE;
+		Table3[index] = lock;
+      Table3[index+1] = (long)value | LAZY_BIT;
 	}
 	
     /*
@@ -177,7 +188,7 @@ public class TransTable {
      *
      */ 
     public final int getEvalValue(int key) {
-		return (int)Table3[key*2+1];
+		return (int)Table3[key*EVAL_TABLE_SIZE+1];
 	}
      
     /*
@@ -189,16 +200,31 @@ public class TransTable {
      *
      * @return int - the evaluation stored
      */ 
-	public final int getPawnValueMiddle(int key) {
+	public final int GetPawnValueMiddle(int key) {
 		return (int)(Table[key*PAWN_TABLE_SIZE + 1] & ((1 << 13)-1) ) - 4000;
 	}
 
-	public final int getPawnValueEnd(int key) {
+	public final int GetPawnValueEnd(int key) {
 		return (int)(Table[key*PAWN_TABLE_SIZE + 1] >> 13 & ((1 << 13)-1) ) - 4000;
 	}
 
-   public final int getPawnCenterScore(int key) {
-		return (int)((Table[key*PAWN_TABLE_SIZE + 1] >> 26) - 50);
+   public final int GetPawnCenterScore(int key) {
+		return (int)((Table[key*PAWN_TABLE_SIZE + 1] >> 26 & 127L) - 64);
+	}
+
+	public final int GetPassPhase1Mid(int key) {
+		return (int)((Table[key*PAWN_TABLE_SIZE + 1] >> 33 & 1023L) - 512);
+	}
+
+	public final int GetPassPhase1End(int key) {
+		return (int)((Table[key*PAWN_TABLE_SIZE + 1] >> 43 & 1023L) - 512);
+	}
+
+	public final int GetPawnShield(int key) {
+		return (int)((Table[key*PAWN_TABLE_SIZE + 1] >> 53 & 255L) - 128);
+	}
+	public final long GetPawnOutposts(int key) {
+		return Table[key*PAWN_TABLE_SIZE + 5];
 	}
 
 	/*
@@ -339,7 +365,7 @@ public class TransTable {
      * @return boolean - is there an eval hash stored
      */ 
     public final boolean hasEvalHash(int key, long lock) {
-		int index = key*2;
+		int index = key*EVAL_TABLE_SIZE;
 		if(Table3[index] != lock)
 			return false;
 		return true;
@@ -424,7 +450,7 @@ public class TransTable {
      * 
      */ 
 	public final void clearEvalHash() {
-		for(int i=0;i<size*2;i+=2) {
+		for(int i=0;i<size*EVAL_TABLE_SIZE;i+=EVAL_TABLE_SIZE) {
 			Table3[i] = 0L;
 		}	
 	}
@@ -436,7 +462,7 @@ public class TransTable {
      * 
      */ 
 	public final void clearPawnHash() {
-		for(int i=0;i<size*PAWN_TABLE_SIZE;i+=4) {
+		for(int i=0;i<size*PAWN_TABLE_SIZE;i+=PAWN_TABLE_SIZE) {
 			Table[i] = 0L;
 			
 		}	

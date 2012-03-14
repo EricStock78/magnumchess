@@ -84,12 +84,6 @@ abstract class Global {
     public static final int INSUFICIENT_MATERIAL = 5;
 
 
-    /*  public static final int NO_CASTLE = 0;
-	public static final int CASTLED = 1;
-	public static final int BOTH_CASTLE = 7;
-	public static final int SHORT_CASTLE = 2;   /** also doubles as a move type */
-	//public static final int LONG_CASTLE = 3;    /** also doubles as a move type */
-
 	/** move types */
 	public static final int ORDINARY_MOVE = 0;
 	public static final int ORDINARY_CAPTURE = 1;
@@ -103,17 +97,14 @@ abstract class Global {
 	public static final int PROMO_N = 12;
 	public static final int EN_PASSANT_CAP = 13;
 
-	
-	
-
 	/** repetition table size */
 	public static int REPSIZE = 16384;
 	/** hash table size */
 	public static int HASHSIZE = 262144;				//8 mb initial hashsize
 	/** pawn hash table size */
-	public static int PawnHASHSIZE = 174762;            //4mb initial pawn hash table
+	public static int PawnHASHSIZE = 174762 * 4;
 	/** eval hash table size */
-	public static int EvalHASHSIZE = 349524;              //4mb initial eval hash table
+	public static int EvalHASHSIZE = 349524 * 2;             
 
 	/** various masks needed for evaluation and move generation */
 	public static final long[][] mask_behind = new long[2][64];
