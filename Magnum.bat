@@ -1,1 +1,1 @@
-java -Xms150m -Xmx1024m -classpath "build/classes" Main
+java -Xms150m -Xmx1024m -jar dist/MagnumChess.jar

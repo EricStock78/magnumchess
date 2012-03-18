@@ -1,9 +1,9 @@
 /**
  * Transtable.java
  *
- * Version 3.0   
+ * Version 4.0   
  * 
- * Copyright (c) 2010 Eric Stock
+ * Copyright (c) 2012 Eric Stock
  
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
@@ -34,8 +34,6 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  * Can also be a evaluation hash table (64 bit hash key)
  *
  *
- * @version 	3.00 25 Oct 2010
- * @author 	Eric Stock
  */
 
 public class TransTable {
@@ -144,17 +142,6 @@ public class TransTable {
      */ 
     public final void addHash(int key,int move,long value,int depth,int type,int nullFail,int ancient) {
 
-		/*if( chessBoard.hashValue == 5393893112606296676L)
-		{
-			for(int j=0; j<64; j++)
-			{
-				System.out.print(Board.piece_in_square[j]+" ");
-				if((j & 7) == 7)
-					System.out.println();
-			}
-			System.out.println("here");
-		}*/
-
 		int index = key*4;
 		/** if empty slot, add entry */
 		long word = (long)move
@@ -238,19 +225,6 @@ public class TransTable {
      */ 
     public final long getPawnPassed(int key) {
         return Table[key*PAWN_TABLE_SIZE + 2];
-      /*
-        int lowPass = Table[key*6+4];
-        int highPass = Table[key*6+5];
-
-        
-        if( (lowPass & int31) != 0) {           
-            lowPass ^= int31;
-            long passed = ((long)lowPass | ((long)highPass)<<32);
-            passed |= (long)1<<31;  
-            return passed;
-        } else {
-            return ((long)lowPass | ((long)highPass)<<32);
-        }   */
     }
 
 	 public final long getWhitePawnAttack(int key) {
@@ -260,9 +234,7 @@ public class TransTable {
 	 public final long getBlackPawnAttack(int key) {
 		 return Table[key*PAWN_TABLE_SIZE + 4];
 	 }
-
-
-       
+   
     /*
      * Method getValue
      * 
@@ -410,18 +382,6 @@ public class TransTable {
 	}
 	
     /*
-     * Method clearPosition
-     * 
-     * clears the position in the hash table
-     * 
-     * @param int key - index of hash entry
-     
-	public final void clearPosition(int key) {
-		Table2[key*4] = 0L;
-		Table2[key*4+2] = 0L;
-	}
-	
-    /*
      * Method setNew
      * 
      * re-sets the "freshness" of a hash entry
@@ -468,19 +428,6 @@ public class TransTable {
 		}	
 	}
 	
-    /*
-     * Method clearHash
-     * 
-     * clears every entry in the hash table
-     * 
-    
-	public final void clearHash() {
-		hashCount = 0;
-		for(int i=0;i<size*4;i+=2) {
-			Table2[i] = 0L;
-		}	
-	}
-    
     /*
      * Method getCount
      * 

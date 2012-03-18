@@ -1,9 +1,9 @@
 /**
  * Main.java
  *
- * Version 3.0   
+ * Version 4.0
  * 
- * Copyright (c) 2010 Eric Stock
+ * Copyright (c) 2012 Eric Stock
  
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
@@ -35,7 +35,7 @@ import java.io.*;
  *
  * 
  *
- * @version 	3.00 25 Oct 2010
+ * @version 	4.00 March 2012
  * @author 	Eric Stock
  */
 public class Main
@@ -87,7 +87,6 @@ public class Main
             reader = new BufferedReader(new InputStreamReader(System.in));
             latestMoves = "none";
 				printGreeting();
-            //uci();
 				getCmd();
         } catch(Exception ex) {
             System.out.print("info string ");
@@ -123,8 +122,6 @@ public class Main
         System.out.println("*****************MAGNUM CHESS***************");
         System.out.println("*****************Version 3.00***************");
         System.out.println("to play in UCI mode type \"uci\"");
-        //System.out.println("to launch GUI type \"launch\"");
-		
     }
 	/*
      * method uci
@@ -146,15 +143,9 @@ public class Main
 		System.out.println("id name Magnum");
 		System.out.println("id author Eric Stock");
 		
-		System.out.println("option name Hash type spin default 8 min 8 max 512");
-		System.out.println("option name Evaluation Table type spin default 4 min 1 max 64");
-		System.out.println("option name Pawn Table type spin default 4 min 1 max 64");
-		System.out.println("option name pawnv type spin default 100 min 0 max 1500");
-		System.out.println("option name bishopv type spin default 325 min 0 max 1500");
-		System.out.println("option name knightv type spin default 325 min 0 max 1500");
-		System.out.println("option name rookv type spin default 500 min 0 max 1500");
-		System.out.println("option name queenv type spin default 900 min 0 max 1500");
-        
+		System.out.println("option name Hash type spin default 64 min 8 max 512");
+		System.out.println("option name Evaluation Table type spin default 8 min 1 max 64");
+		System.out.println("option name Pawn Table type spin default 8 min 1 max 64");
 		System.out.println("uciok");
 		while(true) {
 			cmd = reader.readLine();
@@ -214,7 +205,7 @@ public class Main
 						Board.acceptFen(fen);
 					}
 				}
-			}	
+			}
          else if(cmd.startsWith("setoption")) {
 				int index = cmd.indexOf("Hash");
 				if(index != -1)  {
@@ -222,7 +213,7 @@ public class Main
 					cmd = cmd.substring(index+5);
 					cmd = cmd.trim();
 					int hashSize = Integer.parseInt(cmd.substring(0));
-					Global.HASHSIZE = hashSize*32768;
+					Global.HASHSIZE = hashSize * 65536;
 					Engine.resetHash();
 					System.out.println("info string hashsize is "+hashSize);
 				} else if(cmd.indexOf("Evaluation Table")!= -1) {
@@ -230,7 +221,7 @@ public class Main
                cmd = cmd.substring(index+5);
 					cmd = cmd.trim();
 					int evalSize = Integer.parseInt(cmd.substring(0));
-               Global.EvalHASHSIZE = evalSize * 87381;
+               Global.EvalHASHSIZE = evalSize * 131072;
                Evaluation2.reSizeEvalHash();
                System.out.println("info string evalHash is "+evalSize);
             } else if(cmd.indexOf("Pawn Table") != -1) {
@@ -238,263 +229,21 @@ public class Main
                cmd = cmd.substring(index+5);
 					cmd = cmd.trim();
 					int evalSize = Integer.parseInt(cmd.substring(0));
-               Global.EvalHASHSIZE = evalSize * 43690;
-               Evaluation2.reSizeEvalHash();
+               Global.PawnHASHSIZE = evalSize * 43960;
+               Evaluation2.reSizePawnHash();
                System.out.println("info string pawnHash is "+evalSize);
-            }  else if(cmd.indexOf("pawnv") != -1)  {
-					index = cmd.indexOf("value");
-					cmd = cmd.substring(index+5);
-					cmd = cmd.trim();
-					int pawnValue = Integer.parseInt(cmd.substring(0));
-					Global.values[Global.PIECE_PAWN] = pawnValue;
-					Global.values[Global.PIECE_PAWN + 6] = pawnValue;
-					System.out.println("info string pawn value is "+pawnValue);
-					Board.InitializeMaterialArray();
-					Board.newGame();
-				} else if(cmd.indexOf("bishopv") != -1)  {
-					index = cmd.indexOf("value");
-					cmd = cmd.substring(index+5);
-					cmd = cmd.trim();
-					int bishopValue = Integer.parseInt(cmd.substring(0));
-					Global.values[Global.PIECE_BISHOP] = bishopValue;
-					Global.values[Global.PIECE_BISHOP + 6] = bishopValue;
-					System.out.println("info string bishop value is "+bishopValue);
-					Board.InitializeMaterialArray();
-					Board.newGame();
-				} else if(cmd.indexOf("knightv") != -1)  {
-					index = cmd.indexOf("value");
-					cmd = cmd.substring(index+5);
-					cmd = cmd.trim();
-					int knightValue = Integer.parseInt(cmd.substring(0));
-					Global.values[Global.PIECE_KNIGHT] = knightValue;
-					Global.values[Global.PIECE_KNIGHT + 6] = knightValue;
-					System.out.println("info string knight value is "+knightValue);
-					Board.InitializeMaterialArray();
-					Board.newGame();
-				} else if(cmd.indexOf("rookv") != -1)  {
-					index = cmd.indexOf("value");
-					cmd = cmd.substring(index+5);
-					cmd = cmd.trim();
-					int rookValue = Integer.parseInt(cmd.substring(0));
-					Global.values[Global.PIECE_ROOK] = rookValue;
-					Global.values[Global.PIECE_ROOK + 6] = rookValue;
-					System.out.println("info string rook value is "+rookValue);
-					Board.InitializeMaterialArray();
-					Board.newGame();
-				} else if(cmd.indexOf("queenv") != -1)  {
-					index = cmd.indexOf("value");
-					cmd = cmd.substring(index+5);
-					cmd = cmd.trim();
-					int queenValue = Integer.parseInt(cmd.substring(0));
-					Global.values[Global.PIECE_QUEEN] = queenValue;
-					Global.values[Global.PIECE_QUEEN+ 6] = queenValue;
-					System.out.println("info string rook value is "+queenValue);
-					Board.InitializeMaterialArray();
-					Board.newGame();
-				}
+            }
 				else
 				{
                     System.out.println("info string command not recognized");
             }
 			}
-			else if(cmd.startsWith("setvalue")) {
-            
-				if(cmd.indexOf("pawnv") != -1)  {
-					int index = cmd.indexOf("pawnv");
-					cmd = cmd.substring(index+5);
-					cmd = cmd.trim();
-					int pawnValue = Integer.parseInt(cmd.substring(0));
-					Global.values[Global.PIECE_PAWN] = pawnValue;
-					Global.values[Global.PIECE_PAWN + 6] = pawnValue;
-					System.out.println("info string pawn value is "+pawnValue);
-					Board.InitializeMaterialArray();
-					Board.newGame();
-				} else if(cmd.indexOf("bishopv") != -1)  {
-					int index = cmd.indexOf("bishopv");
-					cmd = cmd.substring(index+7);
-					cmd = cmd.trim();
-					int bishopValue = Integer.parseInt(cmd.substring(0));
-					Global.values[Global.PIECE_BISHOP] = bishopValue;
-					Global.values[Global.PIECE_BISHOP + 6] = bishopValue;
-					System.out.println("info string bishop value is "+bishopValue);
-					Board.InitializeMaterialArray();
-					Board.newGame();
-				} else if(cmd.indexOf("knightv") != -1)  {
-					int index = cmd.indexOf("knightv");
-					cmd = cmd.substring(index+7);
-					cmd = cmd.trim();
-					int knightValue = Integer.parseInt(cmd.substring(0));
-					Global.values[Global.PIECE_KNIGHT] = knightValue;
-					Global.values[Global.PIECE_KNIGHT + 6] = knightValue;
-					System.out.println("info string knight value is "+knightValue);
-					Board.InitializeMaterialArray();
-					Board.newGame();
-				} else if(cmd.indexOf("rookv") != -1)  {
-					int index = cmd.indexOf("rookv");
-					cmd = cmd.substring(index+5);
-					cmd = cmd.trim();
-					int rookValue = Integer.parseInt(cmd.substring(0));
-					Global.values[Global.PIECE_ROOK] = rookValue;
-					Global.values[Global.PIECE_ROOK + 6] = rookValue;
-					System.out.println("info string rook value is "+rookValue);
-					Board.InitializeMaterialArray();
-					Board.newGame();
-				} else if(cmd.indexOf("queenv") != -1)  {
-					int index = cmd.indexOf("queenv");
-					cmd = cmd.substring(index+6);
-					cmd = cmd.trim();
-					int queenValue = Integer.parseInt(cmd.substring(0));
-					Global.values[Global.PIECE_QUEEN] = queenValue;
-					Global.values[Global.PIECE_QUEEN+ 6] = queenValue;
-					System.out.println("info string queen value is "+queenValue);
-					Board.InitializeMaterialArray();
-					Board.newGame();
-				}
- 				else if(cmd.indexOf("passerMG") != -1)	{
-					int index = cmd.indexOf("passerMG");
-					cmd = cmd.substring(index+8);
-					cmd = cmd.trim();
-					int iPasserMG = Integer.parseInt(cmd.substring(0));
-					for(int i=0; i<8; i++)
-					{
-						Evaluation2.CandidatePawnBonus[0][i] = (int)((float)Evaluation2.CandidatePawnBonus[0][i] * (((float)iPasserMG) / 10.0f));
-					}
-				}
-				else if(cmd.indexOf("passerEG") != -1)	{
-					int index = cmd.indexOf("passerEG");
-					cmd = cmd.substring(index+8);
-					cmd = cmd.trim();
-					int iPasserEG = Integer.parseInt(cmd.substring(0));
-					for(int i=0; i<8; i++)
-					{
-						Evaluation2.CandidatePawnBonus[1][i] = (int)((float)Evaluation2.CandidatePawnBonus[1][i] * (((float)iPasserEG) / 10.0f));
-
-					}
-				}
-				else if(cmd.indexOf("isolatedMG") != -1)	{
-					int index = cmd.indexOf("isolatedMG");
-					cmd = cmd.substring(index+10);
-					cmd = cmd.trim();
-					int iIsolatedMG = Integer.parseInt(cmd.substring(0));
-					if(Evaluation2.IsolatedPawn[0][0] != 6)
-					{
-						System.out.println("crash here "+6/0);
-					}
-
-					for(int i=0; i<8; i++)
-					{
-						Evaluation2.IsolatedPawn[0][i] = (int)((float)Evaluation2.IsolatedPawn[0][i] * (((float)iIsolatedMG) / 10.0f));
-					}
-				}
-				else if(cmd.indexOf("isolatedEG") != -1)	{
-					int index = cmd.indexOf("isolatedEG");
-					cmd = cmd.substring(index+10);
-					cmd = cmd.trim();
-					int iIsolatedEG = Integer.parseInt(cmd.substring(0));
-					for(int i=0; i<8; i++)
-					{
-						Evaluation2.IsolatedPawn[1][i] = (int)((float)Evaluation2.IsolatedPawn[1][i] * (((float)iIsolatedEG) / 10.0f));
-					}
-				}
-				else if(cmd.indexOf("chainMG") != -1)	{
-					int index = cmd.indexOf("chainMG");
-					cmd = cmd.substring(index+7);
-					cmd = cmd.trim();
-					int iChainMG = Integer.parseInt(cmd.substring(0));
-					for(int i=0; i<8; i++)
-					{
-						Evaluation2.ChainPawn[0][i] = (int)((float)Evaluation2.ChainPawn[0][i] * (((float)iChainMG) / 10.0f));
-					}
-				}
-				else if(cmd.indexOf("weakMG") != -1)	{
-					int index = cmd.indexOf("weakMG");
-					cmd = cmd.substring(index+6);
-					cmd = cmd.trim();
-					int iWeakMG = Integer.parseInt(cmd.substring(0));
-					for(int i=0; i<8; i++)
-					{
-						Evaluation2.WeakPawn[0][i] = (int)((float)Evaluation2.WeakPawn[0][i] * (((float)iWeakMG) / 10.0f));
-					}
-				}
-				else if(cmd.indexOf("weakEG") != -1)	{
-					int index = cmd.indexOf("weakEG");
-					cmd = cmd.substring(index+6);
-					cmd = cmd.trim();
-					int iWeakEG = Integer.parseInt(cmd.substring(0));
-					for(int i=0; i<8; i++)
-					{
-						Evaluation2.WeakPawn[1][i] = (int)((float)Evaluation2.WeakPawn[1][i] * (((float)iWeakEG) / 10.0f));
-					}
-				}
-				else if(cmd.indexOf("doubledMG") != -1)	{
-					int index = cmd.indexOf("doubledMG");
-					cmd = cmd.substring(index+9);
-					cmd = cmd.trim();
-					int iDoubledMG = Integer.parseInt(cmd.substring(0));
-					for(int i=0; i<8; i++)
-					{
-						Evaluation2.DoubledPawn[0][i] = (int)((float)Evaluation2.DoubledPawn[0][i] * (((float)iDoubledMG) / 10.0f));
-					}
-				}
-				else if(cmd.indexOf("doubledEG") != -1)	{
-					int index = cmd.indexOf("doubledEG");
-					cmd = cmd.substring(index+9);
-					cmd = cmd.trim();
-					int iDoubledEG = Integer.parseInt(cmd.substring(0));
-					for(int i=0; i<8; i++)
-					{
-						Evaluation2.DoubledPawn[1][i] = (int)((float)Evaluation2.DoubledPawn[1][i] * (((float)iDoubledEG) / 10.0f));
-					}
-				}
-				else if(cmd.indexOf("bishopMobilityMG") != -1)	{
-					int index = cmd.indexOf("bishopMobilityMG");
-					cmd = cmd.substring(index+16);
-					cmd = cmd.trim();
-					int iDoubledEG = Integer.parseInt(cmd.substring(0));
-					for(int i=0; i<16; i++)
-					{
-						Evaluation2.BISHOP_MOBILITY[0][i] = (int)((float)Evaluation2.BISHOP_MOBILITY[0][i] * (((float)iDoubledEG) / 100.0f));
-					}
-				}
-				else if(cmd.indexOf("bishopMobilityEG") != -1)	{
-					int index = cmd.indexOf("bishopMobilityEG");
-					cmd = cmd.substring(index+16);
-					cmd = cmd.trim();
-					int iDoubledEG = Integer.parseInt(cmd.substring(0));
-					for(int i=0; i<16; i++)
-					{
-						Evaluation2.BISHOP_MOBILITY[1][i] = (int)((float)Evaluation2.BISHOP_MOBILITY[1][i] * (((float)iDoubledEG) / 100.0f));
-					}
-				}
-				else if(cmd.indexOf("knightMobilityMG") != -1)	{
-					int index = cmd.indexOf("knightMobilityMG");
-					cmd = cmd.substring(index+16);
-					cmd = cmd.trim();
-					int iDoubledEG = Integer.parseInt(cmd.substring(0));
-					for(int i=0; i<8; i++)
-					{
-						Evaluation2.KNIGHT_MOBILITY[0][i] = (int)((float)Evaluation2.KNIGHT_MOBILITY[0][i] * (((float)iDoubledEG) / 100.0f));
-					}
-				}
-				else if(cmd.indexOf("knightMobilityEG") != -1)	{
-					int index = cmd.indexOf("knightMobilityEG");
-					cmd = cmd.substring(index+16);
-					cmd = cmd.trim();
-					int iDoubledEG = Integer.parseInt(cmd.substring(0));
-					for(int i=0; i<8; i++)
-					{
-						Evaluation2.KNIGHT_MOBILITY[1][i] = (int)((float)Evaluation2.KNIGHT_MOBILITY[1][i] * (((float)iDoubledEG) / 100.0f));
-					}
-				}
-				else
-				{
-               System.out.println("info string command not recognized");
-            }
-			}
+			
          else if(cmd.startsWith("go")) {
 				movetime = 0;
             maxMoveTime = 0;
 				searchDepth = 0;
+				infinite = false;
 				if(cmd.indexOf("depth")!=-1) {
 					try
 					{
@@ -624,7 +373,11 @@ public class Main
 				uci();
 				break;
 			}
-			if(cmd.equals("RandomTest")) {
+			else if(cmd.indexOf("setvalue") != -1)
+			{
+				SetClopParams(cmd);
+			}
+			else if(cmd.equals("RandomTest")) {
 				iNumberRandomGames = 0;
 				while(iNumberRandomGames < 1000)
 				{
@@ -694,5 +447,257 @@ public class Main
 				System.exit(0);
 
 		}		
-	}		
+	}
+
+	public static void SetClopParams(String command)
+	{
+		if(cmd.indexOf("pawnv") != -1)  {
+			int index = cmd.indexOf("pawnv");
+			cmd = cmd.substring(index+5);
+			cmd = cmd.trim();
+			int pawnValue = Integer.parseInt(cmd.substring(0));
+			Global.values[Global.PIECE_PAWN] = pawnValue;
+			Global.values[Global.PIECE_PAWN + 6] = pawnValue;
+			System.out.println("info string pawn value is "+pawnValue);
+			Board.InitializeMaterialArray();
+			Board.newGame();
+		} else if(cmd.indexOf("bishopv") != -1)  {
+			int index = cmd.indexOf("bishopv");
+			cmd = cmd.substring(index+7);
+			cmd = cmd.trim();
+			int bishopValue = Integer.parseInt(cmd.substring(0));
+			Global.values[Global.PIECE_BISHOP] = bishopValue;
+			Global.values[Global.PIECE_BISHOP + 6] = bishopValue;
+			System.out.println("info string bishop value is "+bishopValue);
+			Board.InitializeMaterialArray();
+			Board.newGame();
+		} else if(cmd.indexOf("knightv") != -1)  {
+			int index = cmd.indexOf("knightv");
+			cmd = cmd.substring(index+7);
+			cmd = cmd.trim();
+			int knightValue = Integer.parseInt(cmd.substring(0));
+			Global.values[Global.PIECE_KNIGHT] = knightValue;
+			Global.values[Global.PIECE_KNIGHT + 6] = knightValue;
+			System.out.println("info string knight value is "+knightValue);
+			Board.InitializeMaterialArray();
+			Board.newGame();
+		} else if(cmd.indexOf("rookv") != -1)  {
+			int index = cmd.indexOf("rookv");
+			cmd = cmd.substring(index+5);
+			cmd = cmd.trim();
+			int rookValue = Integer.parseInt(cmd.substring(0));
+			Global.values[Global.PIECE_ROOK] = rookValue;
+			Global.values[Global.PIECE_ROOK + 6] = rookValue;
+			System.out.println("info string rook value is "+rookValue);
+			Board.InitializeMaterialArray();
+			Board.newGame();
+		} else if(cmd.indexOf("queenv") != -1)  {
+			int index = cmd.indexOf("queenv");
+			cmd = cmd.substring(index+6);
+			cmd = cmd.trim();
+			int queenValue = Integer.parseInt(cmd.substring(0));
+			Global.values[Global.PIECE_QUEEN] = queenValue;
+			Global.values[Global.PIECE_QUEEN+ 6] = queenValue;
+			System.out.println("info string queen value is "+queenValue);
+			Board.InitializeMaterialArray();
+			Board.newGame();
+		}
+		else if(cmd.indexOf("passerMGv1") != -1)	{
+			int index = cmd.indexOf("passerMGv1");
+			cmd = cmd.substring(index+10);
+			cmd = cmd.trim();
+			int iPasserMG = Integer.parseInt(cmd.substring(0));
+			for(int i=0; i<8; i++)
+			{
+				Evaluation2.PassedPawnBonus[0][i] += iPasserMG;
+			}
+		}
+		else if(cmd.indexOf("passerEGv1") != -1)	{
+			int index = cmd.indexOf("passerEGv1");
+			cmd = cmd.substring(index+10);
+			cmd = cmd.trim();
+			int iPasserEG = Integer.parseInt(cmd.substring(0));
+			for(int i=0; i<8; i++)
+			{
+				Evaluation2.PassedPawnBonus[1][i] += iPasserEG;
+			}
+		}
+		else if(cmd.indexOf("passerMG") != -1)	{
+
+			int index = cmd.indexOf("passerMG");
+			cmd = cmd.substring(index+8);
+			cmd = cmd.trim();
+			int iPasserMG = Integer.parseInt(cmd.substring(0));
+			for(int i=0; i<8; i++)
+			{
+				Evaluation2.PassedPawnBonus[0][i] = (int)((float)Evaluation2.PassedPawnBonus[0][i] * (((float)iPasserMG) / 10.0f));
+			}
+		}
+		else if(cmd.indexOf("passerEG") != -1)	{
+			int index = cmd.indexOf("passerEG");
+			cmd = cmd.substring(index+8);
+			cmd = cmd.trim();
+			int iPasserEG = Integer.parseInt(cmd.substring(0));
+			for(int i=0; i<8; i++)
+			{
+				Evaluation2.PassedPawnBonus[1][i] = (int)((float)Evaluation2.PassedPawnBonus[1][i] * (((float)iPasserEG) / 10.0f));
+			}
+		}
+		else if(cmd.indexOf("cPasserMGv1") != -1)	{
+			int index = cmd.indexOf("cPasserMGv1");
+			cmd = cmd.substring(index+11);
+			cmd = cmd.trim();
+			int iPasserMG = Integer.parseInt(cmd.substring(0));
+			for(int i=0; i<8; i++)
+			{
+				Evaluation2.CandidatePawnBonus[0][i] += iPasserMG;
+			}
+		}
+		else if(cmd.indexOf("cPasserEGv1") != -1)	{
+			int index = cmd.indexOf("cPasserEGv1");
+			cmd = cmd.substring(index+11);
+			cmd = cmd.trim();
+			int iPasserEG = Integer.parseInt(cmd.substring(0));
+			for(int i=0; i<8; i++)
+			{
+				Evaluation2.CandidatePawnBonus[1][i] += iPasserEG;
+
+			}
+		}
+		else if(cmd.indexOf("cPasserMG") != -1)	{
+			int index = cmd.indexOf("cPasserMG");
+			cmd = cmd.substring(index+9);
+			cmd = cmd.trim();
+			int iPasserMG = Integer.parseInt(cmd.substring(0));
+			for(int i=0; i<8; i++)
+			{
+				Evaluation2.CandidatePawnBonus[0][i] = (int)((float)Evaluation2.CandidatePawnBonus[0][i] * (((float)iPasserMG) / 10.0f));
+			}
+		}
+		else if(cmd.indexOf("cPasserEG") != -1)	{
+			int index = cmd.indexOf("cPasserEG");
+			cmd = cmd.substring(index+9);
+			cmd = cmd.trim();
+			int iPasserEG = Integer.parseInt(cmd.substring(0));
+			for(int i=0; i<8; i++)
+			{
+				Evaluation2.CandidatePawnBonus[1][i] = (int)((float)Evaluation2.CandidatePawnBonus[1][i] * (((float)iPasserEG) / 10.0f));
+
+			}
+		}
+		else if(cmd.indexOf("isolatedMG") != -1)	{
+			int index = cmd.indexOf("isolatedMG");
+			cmd = cmd.substring(index+10);
+			cmd = cmd.trim();
+			int iIsolatedMG = Integer.parseInt(cmd.substring(0));
+			for(int i=0; i<8; i++)
+			{
+				Evaluation2.IsolatedPawn[0][i] = (int)((float)Evaluation2.IsolatedPawn[0][i] * (((float)iIsolatedMG) / 10.0f));
+			}
+		}
+		else if(cmd.indexOf("isolatedEG") != -1)	{
+			int index = cmd.indexOf("isolatedEG");
+			cmd = cmd.substring(index+10);
+			cmd = cmd.trim();
+			int iIsolatedEG = Integer.parseInt(cmd.substring(0));
+			for(int i=0; i<8; i++)
+			{
+				Evaluation2.IsolatedPawn[1][i] = (int)((float)Evaluation2.IsolatedPawn[1][i] * (((float)iIsolatedEG) / 10.0f));
+			}
+		}
+		else if(cmd.indexOf("chainMG") != -1)	{
+			int index = cmd.indexOf("chainMG");
+			cmd = cmd.substring(index+7);
+			cmd = cmd.trim();
+			int iChainMG = Integer.parseInt(cmd.substring(0));
+			for(int i=0; i<8; i++)
+			{
+				Evaluation2.ChainPawn[0][i] = (int)((float)Evaluation2.ChainPawn[0][i] * (((float)iChainMG) / 10.0f));
+			}
+		}
+		else if(cmd.indexOf("weakMG") != -1)	{
+			int index = cmd.indexOf("weakMG");
+			cmd = cmd.substring(index+6);
+			cmd = cmd.trim();
+			int iWeakMG = Integer.parseInt(cmd.substring(0));
+			for(int i=0; i<8; i++)
+			{
+				Evaluation2.WeakPawn[0][i] = (int)((float)Evaluation2.WeakPawn[0][i] * (((float)iWeakMG) / 10.0f));
+			}
+		}
+		else if(cmd.indexOf("weakEG") != -1)	{
+			int index = cmd.indexOf("weakEG");
+			cmd = cmd.substring(index+6);
+			cmd = cmd.trim();
+			int iWeakEG = Integer.parseInt(cmd.substring(0));
+			for(int i=0; i<8; i++)
+			{
+				Evaluation2.WeakPawn[1][i] = (int)((float)Evaluation2.WeakPawn[1][i] * (((float)iWeakEG) / 10.0f));
+			}
+		}
+		else if(cmd.indexOf("doubledMG") != -1)	{
+			int index = cmd.indexOf("doubledMG");
+			cmd = cmd.substring(index+9);
+			cmd = cmd.trim();
+			int iDoubledMG = Integer.parseInt(cmd.substring(0));
+			for(int i=0; i<8; i++)
+			{
+				Evaluation2.DoubledPawn[0][i] = (int)((float)Evaluation2.DoubledPawn[0][i] * (((float)iDoubledMG) / 10.0f));
+			}
+		}
+		else if(cmd.indexOf("doubledEG") != -1)	{
+			int index = cmd.indexOf("doubledEG");
+			cmd = cmd.substring(index+9);
+			cmd = cmd.trim();
+			int iDoubledEG = Integer.parseInt(cmd.substring(0));
+			for(int i=0; i<8; i++)
+			{
+				Evaluation2.DoubledPawn[1][i] = (int)((float)Evaluation2.DoubledPawn[1][i] * (((float)iDoubledEG) / 10.0f));
+			}
+		}
+		else if(cmd.indexOf("bishopMobilityMG") != -1)	{
+			int index = cmd.indexOf("bishopMobilityMG");
+			cmd = cmd.substring(index+16);
+			cmd = cmd.trim();
+			int iDoubledEG = Integer.parseInt(cmd.substring(0));
+			for(int i=0; i<16; i++)
+			{
+				Evaluation2.BISHOP_MOBILITY[0][i] = (int)((float)Evaluation2.BISHOP_MOBILITY[0][i] * (((float)iDoubledEG) / 100.0f));
+			}
+		}
+		else if(cmd.indexOf("bishopMobilityEG") != -1)	{
+			int index = cmd.indexOf("bishopMobilityEG");
+			cmd = cmd.substring(index+16);
+			cmd = cmd.trim();
+			int iDoubledEG = Integer.parseInt(cmd.substring(0));
+			for(int i=0; i<16; i++)
+			{
+				Evaluation2.BISHOP_MOBILITY[1][i] = (int)((float)Evaluation2.BISHOP_MOBILITY[1][i] * (((float)iDoubledEG) / 100.0f));
+			}
+		}
+		else if(cmd.indexOf("knightMobilityMG") != -1)	{
+			int index = cmd.indexOf("knightMobilityMG");
+			cmd = cmd.substring(index+16);
+			cmd = cmd.trim();
+			int iDoubledEG = Integer.parseInt(cmd.substring(0));
+			for(int i=0; i<8; i++)
+			{
+				Evaluation2.KNIGHT_MOBILITY[0][i] = (int)((float)Evaluation2.KNIGHT_MOBILITY[0][i] * (((float)iDoubledEG) / 100.0f));
+			}
+		}
+		else if(cmd.indexOf("knightMobilityEG") != -1)	{
+			int index = cmd.indexOf("knightMobilityEG");
+			cmd = cmd.substring(index+16);
+			cmd = cmd.trim();
+			int iDoubledEG = Integer.parseInt(cmd.substring(0));
+			for(int i=0; i<8; i++)
+			{
+				Evaluation2.KNIGHT_MOBILITY[1][i] = (int)((float)Evaluation2.KNIGHT_MOBILITY[1][i] * (((float)iDoubledEG) / 100.0f));
+			}
+		}
+		else
+		{
+			System.out.println("info string command not recognized" + 6/0);
+		}
+	}
 }

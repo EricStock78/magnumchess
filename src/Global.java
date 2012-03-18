@@ -1,9 +1,9 @@
 /**
  * Global.java
  *
- * Version 3.0   
+ * Version 4.0
  * 
- * Copyright (c) 2010 Eric Stock
+ * Copyright (c) 2012 Eric Stock
  
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
@@ -31,9 +31,9 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  * This abstract class contains only public static members
  * These variables are global variables used throughout the program
  * 
+ * Version 4.0
  *
- * @version 	3.00 25 Oct 2010
- * @author 	Eric Stock
+ * Copyright (c) 2012 Eric Stock
  */
 
 abstract class Global {
@@ -52,13 +52,11 @@ abstract class Global {
     public static final String pieces[]= new String[] {"wRook","wKnight","wBishop","wQueen","wKing","wPawn",
 													"bRook","bKnight","bBishop","bQueen","bKing","bPawn"};
     /** material values for each piece */
-    public static final int values[] = new int[] {500,325,325,900,2000,100,500,325,325,900,2000,100};
+	 public static final int values[] = new int[] {753,454,515,1421,2000,132,753,454,515,1421,2000,132};
 
     public static int totalValue;
 
-	 public static final int[] materialOffset =/* new int[] {4, 324, 36, 1, 0, 2916,
-                                                      12, 972, 108, 2, 0, 26244};*/
-                                                 new int[] {1, 81, 9, 729, 0, 2916,
+	 public static final int[] materialOffset =				new int[] {1, 81, 9, 729, 0, 2916,
                                                             3, 243, 27, 1458, 0, 26244};
 
     public static final int materialDraw = 999999;
@@ -96,15 +94,13 @@ abstract class Global {
 	public static final int PROMO_B = 11;
 	public static final int PROMO_N = 12;
 	public static final int EN_PASSANT_CAP = 13;
-
-	/** repetition table size */
-	public static int REPSIZE = 16384;
+	
 	/** hash table size */
-	public static int HASHSIZE = 262144;				//8 mb initial hashsize
+	public static int HASHSIZE = 65536 * 64;				//64 mb initial hashsize
 	/** pawn hash table size */
-	public static int PawnHASHSIZE = 174762 * 4;
+	public static int PawnHASHSIZE = 43960 * 8;		//8 mb initial pawn hash size
 	/** eval hash table size */
-	public static int EvalHASHSIZE = 349524 * 2;             
+	public static int EvalHASHSIZE = 131072 * 8;		//8 mb initial eval hash size
 
 	/** various masks needed for evaluation and move generation */
 	public static final long[][] mask_behind = new long[2][64];
@@ -173,45 +169,4 @@ abstract class Global {
                                                          1,2,3,4,5,6,7,8,
                                                          0,1,2,3,4,5,6,7,};
 	
-	/** mask used to seperate outer and inner squares */
-	public static final int innerIndex[] = new int[]    {0,0,0,0,0,0,0,0,
-                                                         0,1,1,1,1,1,1,0,
-                                                         0,1,1,1,1,1,1,0,
-                                                         0,1,1,1,1,1,1,0,
-                                                         0,1,1,1,1,1,1,0,
-                                                         0,1,1,1,1,1,1,0,
-                                                         0,1,1,1,1,1,1,0,
-                                                         0,0,0,0,0,0,0,0};
-	
-    /** piece sqaure tables for black knights */
-	public static final int bKnightVals[] = new int[]	{0,0,0,0,0,0,0,0,
-														 0,3,3,3,3,3,3,0,
-														 0,3,8,10,10,8,3,0,
-														 0,3,8,10,10,8,3,0,
-														 0,3,7,8,8,7,3,0,
-														 0,3,6,6,6,6,3,0,
-														 0,3,3,3,3,3,3,0,
-														 0,0,0,0,0,0,0,0};
-	
-    /** piece sqaure tables for white knights */
-	public static final int wKnightVals[] = new int[]	{0,0,0,0,0,0,0,0,
-														 0,3,3,3,3,3,3,0,
-														 0,3,6,6,6,6,3,0,
-														 0,3,7,8,8,7,3,0,
-														 0,3,8,10,10,8,3,0,
-														 0,3,8,10,10,8,3,0,
-														 0,3,3,3,3,3,3,0,
-														 0,0,0,0,0,0,0,0};	
-	
-	
-    /** piece sqaure tables for bishops */
-	public static final int bishopVals[] = new int[] 	{8,8,8,8,8,8,8,8,
-														 8,10,10,10,10,10,10,8,
-														 8,10,12,12,12,12,10,8,
-														 8,10,12,14,14,12,10,8,
-														 8,10,12,14,14,12,10,8,
-														 8,10,12,12,12,12,10,8,
-														 8,10,10,10,10,10,10,8,
-														 8,8,8,8,8,8,8,8};	
-				
 }		

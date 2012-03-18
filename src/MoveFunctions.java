@@ -1,9 +1,9 @@
 /**
  * MovesFunctions.java
  *
- * Version 3.0   
+ * Version 4.0
  * 
- * Copyright (c) 2010 Eric Stock
+ * Copyright (c) 2012 Eric Stock
  
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
@@ -29,7 +29,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  * MoveFunctions is a static class which packs information about a move into a 32 bit integer
  * MoveFunctions also is able to retrieve information from the packed 32 bit integer
  *
- * @version 	3.00 25 Oct 2010
+ * @version 	4.00 March 2012
  * @author 	Eric Stock
  */
 
