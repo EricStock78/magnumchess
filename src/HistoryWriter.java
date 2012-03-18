@@ -1,9 +1,9 @@
 /**
  * HistoryWriter.java
  *
- * Version 3.0   
+ * Version 4.0
  * 
- * Copyright (c) 2010 Eric Stock
+ * Copyright (c) 2012 Eric Stock
  
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
@@ -58,8 +58,6 @@ public final class HistoryWriter {
     /** use an array list to store all made moves */
 	private static ArrayList<String> history;
 
-
-	
 	/*
      * Constructor HistoryWriter
      * 
@@ -75,7 +73,6 @@ public final class HistoryWriter {
 		search = pSearch;
 	}
 	
-    
     /*
      * method acceptMoves
      * 
@@ -208,13 +205,10 @@ public final class HistoryWriter {
 
 		if(movesProcessed < numberBoardMoves)
 		{
-			int numberMovesToUndo = numberBoardMoves - movesProcessed;
-
-			for(int i=0; i<numberMovesToUndo; i++)
-			{
-				chessBoard.UnMake(chessBoard.GetBoardMove(numberBoardMoves-1-i), true);
-				history.remove(history.size()-1);
-			}
+			//if we are accepting less moves than we have played, we must re-made all of them from scratch
+			chessBoard.undoAll();
+			acceptMoves(moves);
+			return;
 		}
 		chessBoard.ResetMovesDepth();
 

@@ -3,10 +3,10 @@ package magnumdatawriter;
 /**
  * MoveHelper.java
  *
- * Version 3.0   
- * 
- * Copyright (c) 2010 Eric Stock
- 
+ * Version 4.0
+ *
+ * Copyright (c) 2012 Eric Stock
+
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
 "Software"), to deal in the Software without restriction, including
@@ -14,10 +14,10 @@ without limitation the rights to use, copy, modify, merge, publish,
 distribute, sublicense, and/or sell copies of the Software, and to
 permit persons to whom the Software is furnished to do so, subject to
 the following conditions:
- 
+
 The above copyright notice and this permission notice shall be
 included in all copies or substantial portions of the Software.
- 
+
 THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
 EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
 MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
@@ -26,27 +26,6 @@ LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
 OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
 WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
-
-/*
- * MoveHelper.java
- *
- * follows singleton design pattern
- * this class initializes and stores in memory arrays of attacks for non sliding pieces
- * the pieces are king
- * There are also functions to assist in rook, bishop and queen moves  
- * 
- * To-do - The king move and castle move board should be placed into the Board.java class
- *       - All functions which rotate the bitboards, and collect the moves for sliding pieces to be placed in Magic move arrays
- *       should be placed in this class
- *
- *       So basically, the Board class needs to have only the data structures containing the pre-computed moves and functions
- *          to retrieve the moves
- *       This class should only have data and functions to fill the Board class's data structures
- *
- * @version 	3.00 25 Oct 2010
- * @author 	Eric Stock
- */
-
 
 public final class MoveHelper{	
 	

@@ -1,11 +1,11 @@
-import java.util.Random; // Only the Random class
+import java.util.Random;
 
 /**
  * Engine.java
  *
- * Version 3.0
+ * Version 4.0
  * 
- * Copyright (c) 2010 Eric Stock
+ * Copyright (c) 2012 Eric Stock
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
@@ -33,7 +33,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  * -move generation functions - which uses chessBoard.java's individual piece move functions
  * -divide and perft functions for move generation testing and verification
  *
- * @version 	3.00 25 Oct 2010
+ * @version 	4.00 March 2012
  * @author 	Eric Stock
  */
 public final class Engine {
@@ -2121,7 +2121,7 @@ public final class Engine {
 
                //passed pawn push extension
                boolean pawnExtension = false;
-               if ((chessBoard.getTotalValue() < 5000) && !checkingMove && !isInCheck && ((piece % 6) == 5 && ((to >> 3) == 6 || (to >> 3) == 1))) {	//extention for close to promotion
+               if ((chessBoard.getTotalValue() < Global.totalValue * 0.4) && !checkingMove && !isInCheck && ((piece % 6) == 5 && ((to >> 3) == 6 || (to >> 3) == 1))) {	//extention for close to promotion
                   pawnExtension = true;
                   extendAmount++;
                }

@@ -1,9 +1,9 @@
 /**
  * Board.java
  *
- * Version 3.0   
+ * Version 4.0
  * 
- * Copyright (c) 2010 Eric Stock
+ * Copyright (c) 2012 Eric Stock
  
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
@@ -27,9 +27,8 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 
 import java.io.File;
-import java.util.Random;
 import java.util.Arrays;
-import java.io.FileInputStream;
+import java.io.InputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 
@@ -42,13 +41,13 @@ import java.io.IOException;
  * loading a fen position
  * starting a new game
  *
- * @version 	3.00 25 Oct 2010
+ * @version 	4.00 25 March 2012
  * @author 	Eric Stock
  */
 
 public final class Board { //extends java.util.Observable{
 
-	FileInputStream fileInputStream;
+	InputStream inputStream;
 	DataInputStream dataInputStream;
 
 	/** count of all moves made over the board*/
@@ -239,7 +238,6 @@ public final class Board { //extends java.util.Observable{
     private Board()
 	 {
 		initQueenDist();
-		setHash();
 		InitializeData();
 		InitializeDataFromFile();
       zorbistDepth = 1;
@@ -252,8 +250,10 @@ public final class Board { //extends java.util.Observable{
 	{
 		try
 		{
-			fileInputStream = new FileInputStream("initialization.dat");
-			dataInputStream = new DataInputStream(fileInputStream);
+			final String inputfile = "resources/initialization.dat";
+			inputStream = Board.class.getResourceAsStream(inputfile);
+
+			dataInputStream = new DataInputStream(inputStream);
 
 			for(int i=0; i<64; i++)
 			{
@@ -300,6 +300,25 @@ public final class Board { //extends java.util.Observable{
 				WhitePawnAttackBoard[i] = dataInputStream.readLong();
 				BlackPawnMoveBoard[i] = dataInputStream.readLong();
 				BlackPawnAttackBoard[i] = dataInputStream.readLong();
+			}
+
+			//read the generated random 64 bit hash values used to generate the zorbist key
+			for(int i=0;i<64;i++) {
+				for(int j=0;j<12;j++) {
+					pHash[i][j] = dataInputStream.readLong();
+				}
+			}
+
+			for(int i=0;i<9;i++) {
+				passantHashW[i] = dataInputStream.readLong();
+				passantHashB[i] = dataInputStream.readLong();
+			}
+
+			bHashMove = dataInputStream.readLong();
+
+			for(int i=0;i<8;i++) {
+				bCastleHash[i] = dataInputStream.readLong();
+				wCastleHash[i] = dataInputStream.readLong();
 			}
 
 			dataInputStream.close();
@@ -1068,35 +1087,6 @@ public final class Board { //extends java.util.Observable{
 
 		return hash;
 }	
-	
-    /** 
-     *  method setHash()
-     * 
-     * fills the various hash values for each square, castling and passant
-     * 
-     */
-    private  final void setHash() {
-	
-		Random rand = new Random(80392848);
-		for(int i=0;i<64;i++) {
-			for(int j=0;j<12;j++) {
-				pHash[i][j] = rand.nextLong() & Long.MAX_VALUE;
-			}
-		}
-	
-		/**set castle hashes and enPassant hashes */
-		for(int i=0;i<9;i++) {
-			passantHashW[i] = rand.nextLong() & Long.MAX_VALUE;
-			passantHashB[i] = rand.nextLong() & Long.MAX_VALUE;
-		}				
-					
-		bHashMove = rand.nextLong() & Long.MAX_VALUE;
-			
-		for(int i=0;i<8;i++) {
-			bCastleHash[i] = rand.nextLong() & Long.MAX_VALUE;
-			wCastleHash[i] = rand.nextLong() & Long.MAX_VALUE;
-		}		
-	}				
 
 	 int GetLazyPieceTotals()
 	 {
@@ -1506,17 +1496,7 @@ public final class Board { //extends java.util.Observable{
         return attack;
     }
 
-	 public final long GetBishopAttacks2SEE(int i)
-	 {
-		 return getMagicBishopMoves(i) & (whitebishops|blackbishops|whitequeen|blackqueen);
-	 }
-	 
-	 public  final long GetRookAttacks2SEE(int i)
-	 {
-		 return getMagicRookMoves(i) &  (whiterooks|blackrooks|whitequeen|blackqueen);
-	 }
-
-	  public  final long GetSlideAttacks2SEE(int i)
+	 public  final long GetSlideAttacks2SEE(int i)
 	 {
 		 return getMagicRookMoves(i) &  (whiterooks|blackrooks|whitequeen|blackqueen)
 				| getMagicBishopMoves(i) & (whitebishops|blackbishops|whitequeen|blackqueen);
