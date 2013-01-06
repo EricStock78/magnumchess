@@ -110,7 +110,7 @@ public class Evaluation2 {
     private static final long kingZoneMask = 7 | 7 << 8 | 7 << 16;
     private static final int[] kingFileShifts = { 0, 0, 1, 2, 3, 4, 5, 5 };
 
-	 /** king safety penalty - formula based on attack pattern and protection patterns */
+    /** king safety penalty - formula based on attack pattern and protection patterns */
     private static final int[] kingSafetyEval = {   0,  2,  3,  6, 12, 18, 25, 37, 50, 75,
                                                 100,125,150,175,200,225,250,275,300,325,
                                                 350,375,400,425,450,475,500,525,550,575,
@@ -173,7 +173,7 @@ public class Evaluation2 {
                                                         -2,1,1,1,1,1,1,-2,
                                                         -2,-2,-2,-2,-2,-2,-2,-2};
 
-  /** pawn piece square tables */
+    /** pawn piece square tables */
     private static final int PawnVals[][] =         {{0, 0, 0, 0, 0, 0, 0, 0,
                                                      0, 0, 0, -10, -10, 0, 0, 0,
                                                      1, 1, 1, 10, 10, 1, 1, 1,
@@ -375,9 +375,9 @@ public class Evaluation2 {
         }
         /** get the material score */
         material = chessBoard.GetRawMaterialScore();
-        if( material > 100000)
-                return 0;
-
+        if( material > 100000) {
+            return 0;
+        }
         int lazyMargin = LAZY_MARGIN +  chessBoard.GetLazyPieceTotals() * 3;
 
         /** initialize evaluation terms */
@@ -515,10 +515,12 @@ public class Evaluation2 {
 
         if( endGameCoefficient <=  0.70)
         {
-            if(chessBoard.GetPieceTotal(9) > 0)
+            if(chessBoard.GetPieceTotal(9) > 0) {
                 kingSafety = GetKingSafety(Global.COLOUR_WHITE);
-            if(chessBoard.GetPieceTotal(3) > 0)
+            }
+            if(chessBoard.GetPieceTotal(3) > 0) {
                 kingSafety -= GetKingSafety(Global.COLOUR_BLACK);
+            }
         }
 
         /** calculate passed pawn bonuses..which INCLUDE attack square calculation...needed for lazy eval*/
@@ -528,11 +530,11 @@ public class Evaluation2 {
         /** hung scores */
         hungPenalty = sideMult * HungPieces(side, chessBoard.pieceBits[side][Global.PIECE_ALL] ^ chessBoard.pieceBits[side][Global.PIECE_KING]);
 
-        if(centre < 0)
+        if(centre < 0) {
             centre = CenterScoreArray[-centre] * -1;
-        else
+        } else {
             centre = CenterScoreArray[centre];
-
+        }
         int midScores = pawnScore[MIDDLE_GAME] + passScore[MIDDLE_GAME] + centre + mobility[MIDDLE_GAME] + develop + castle + kingSafety + pawnShield + rookEval[MIDDLE_GAME];
         int endScores = pawnScore[END_GAME] + queenEval + passScore[END_GAME] + endKingSafety + rookEval[END_GAME] + mobility[END_GAME];
         int allScores = bishopEval + knightEval + tempo + hungPenalty + material + trapped;
@@ -545,7 +547,7 @@ public class Evaluation2 {
         return finalScore;
     }
 
-	/**
+    /**
      * Method printEvalTerms()
      *
      * used to debug the evaluation routine by examining each term
@@ -589,7 +591,7 @@ public class Evaluation2 {
      *
      */
     private static void setTrapPenalties() {
-       if((chessBoard.pieceBits[Global.COLOUR_WHITE][Global.PIECE_BISHOP] & Global.set_Mask[48]) != 0) {
+        if((chessBoard.pieceBits[Global.COLOUR_WHITE][Global.PIECE_BISHOP] & Global.set_Mask[48]) != 0) {
             if (((chessBoard.pieceBits[Global.COLOUR_BLACK][Global.PIECE_PAWN] & Global.set_Mask[41]) != 0) && ((chessBoard.pieceBits[Global.COLOUR_BLACK][Global.PIECE_PAWN] & Global.set_Mask[50]) != 0))
                 trapped += 150;
         }
@@ -634,48 +636,48 @@ public class Evaluation2 {
      *
      */
     private static void setDevelopmentBonus() {
-       switch(chessBoard.castleFlag[Global.COLOUR_WHITE]) {
-			case(Global.CASTLED):
-				castle -= 40;
-			break;
-			case(Global.SHORT_CASTLE):
-				if((chessBoard.pieceBits[Global.COLOUR_WHITE][Global.PIECE_QUEEN] & Global.set_Mask[3])!= 0)
-					develop-=20;
-				castle -= 10;
-			break;
-			case(Global.LONG_CASTLE):
-				if((chessBoard.pieceBits[Global.COLOUR_WHITE][Global.PIECE_QUEEN] & Global.set_Mask[3])!= 0)
-					develop-=20;
-				castle -= 10;
-			break;
-			case(Global.BOTH_CASTLE):
-				if((chessBoard.pieceBits[Global.COLOUR_WHITE][Global.PIECE_QUEEN] & Global.set_Mask[3])!= 0)
-					develop-=20;
-				castle -= 20;
-			break;
-		}
+        switch(chessBoard.castleFlag[Global.COLOUR_WHITE]) {
+            case(Global.CASTLED):
+                    castle -= 40;
+            break;
+            case(Global.SHORT_CASTLE):
+                    if((chessBoard.pieceBits[Global.COLOUR_WHITE][Global.PIECE_QUEEN] & Global.set_Mask[3])!= 0)
+                        develop-=20;
+                    castle -= 10;
+            break;
+            case(Global.LONG_CASTLE):
+                    if((chessBoard.pieceBits[Global.COLOUR_WHITE][Global.PIECE_QUEEN] & Global.set_Mask[3])!= 0)
+                        develop-=20;
+                    castle -= 10;
+            break;
+            case(Global.BOTH_CASTLE):
+                    if((chessBoard.pieceBits[Global.COLOUR_WHITE][Global.PIECE_QUEEN] & Global.set_Mask[3])!= 0)
+                        develop-=20;
+                    castle -= 20;
+            break;
+        }   
 
-		switch(chessBoard.castleFlag[Global.COLOUR_BLACK]) {
-			case(Global.CASTLED):
-				castle += 40;
-			break;
-			case(Global.SHORT_CASTLE):
-				if((chessBoard.pieceBits[Global.COLOUR_BLACK][Global.PIECE_QUEEN] & Global.set_Mask[59]) != 0)
-					develop+=20;
-				castle += 10;
-			break;
-			case(Global.LONG_CASTLE):
-				if((chessBoard.pieceBits[Global.COLOUR_BLACK][Global.PIECE_QUEEN] & Global.set_Mask[59]) != 0)
-					develop+=20;
-				castle += 10;
-			break;
-			case(Global.BOTH_CASTLE):
-				if((chessBoard.pieceBits[Global.COLOUR_BLACK][Global.PIECE_QUEEN] & Global.set_Mask[59]) != 0)
-					develop+=20;
-				castle += 20;
-			break;
-		}
-	 }
+        switch(chessBoard.castleFlag[Global.COLOUR_BLACK]) {
+            case(Global.CASTLED):
+                castle += 40;
+            break;
+            case(Global.SHORT_CASTLE):
+                if((chessBoard.pieceBits[Global.COLOUR_BLACK][Global.PIECE_QUEEN] & Global.set_Mask[59]) != 0)
+                    develop+=20;
+                castle += 10;
+            break;
+            case(Global.LONG_CASTLE):
+                if((chessBoard.pieceBits[Global.COLOUR_BLACK][Global.PIECE_QUEEN] & Global.set_Mask[59]) != 0)
+                    develop+=20;
+                castle += 10;
+            break;
+            case(Global.BOTH_CASTLE):
+                if((chessBoard.pieceBits[Global.COLOUR_BLACK][Global.PIECE_QUEEN] & Global.set_Mask[59]) != 0)
+                    develop+=20;
+                castle += 20;
+            break;
+        }
+    }
     /**
      * Method setPawnAttack
      *
@@ -683,199 +685,198 @@ public class Evaluation2 {
      *
      */
 
-   private static void SetPawnAttack(int side)
-	{
-		int leftOffset = side == Global.COLOUR_WHITE ? 7 : -9;
-		int rightOffset = side == Global.COLOUR_WHITE ? 9 : -7;
-		int piece = side == Global.COLOUR_WHITE ? 5 : 11;
-		
-		for(int i=0; i < chessBoard.pieceTotals[piece]; i++)
-		{
-			int position = chessBoard.pieceList[piece][i];
-			if(position % 8 > 0) {
-            boardAttacks[side][PAWN_BOARD] |= (long)1 << (position + leftOffset);
-				boardAttacks[side][ALL_BOARD] |= (long)1 << (position + leftOffset);   
-         }
-         if(position % 8 < 7) {
-            boardAttacks[side][PAWN_BOARD] |= (long)1 << (position + rightOffset);
-				boardAttacks[side][ALL_BOARD] |= (long)1 << (position + rightOffset);
-         }
-      }
-		centre += Long.bitCount(CENTER_BITS & boardAttacks[side][PAWN_BOARD]) * (-1 + side * 2);
-   }
+    private static void SetPawnAttack(int side)
+    {
+        int leftOffset = side == Global.COLOUR_WHITE ? 7 : -9;
+        int rightOffset = side == Global.COLOUR_WHITE ? 9 : -7;
+        int piece = side == Global.COLOUR_WHITE ? 5 : 11;
 
-	/**
-	* Method getPawnsScore
-	*
-	* this method calculates penalties for doubled pawns, isolated pawns, weak pawns and the positional score
-	* for white pawns
-	*
-	* @return int - the pawn positional eval score
-	*
-	*/
-	private static void GetPawnsScore(int side) {
-		boolean isolated, backward, chain, opposed, passed;
-		long temp = chessBoard.pieceBits[side][Global.PIECE_PAWN];
-		int behindValue;
-		int forwardValue;
-		if(side == Global.COLOUR_WHITE )
-		{
-			behindValue =  -1;
-			forwardValue = 1;
-		}
-		else
-		{
-			behindValue =  1;
-			forwardValue = -1;
-		}
+        for(int i=0; i < chessBoard.pieceTotals[piece]; i++)
+        {
+            int position = chessBoard.pieceList[piece][i];
+            if(position % 8 > 0) {
+                boardAttacks[side][PAWN_BOARD] |= (long)1 << (position + leftOffset);
+                boardAttacks[side][ALL_BOARD] |= (long)1 << (position + leftOffset);   
+            }
+            if(position % 8 < 7) {
+                boardAttacks[side][PAWN_BOARD] |= (long)1 << (position + rightOffset);
+                boardAttacks[side][ALL_BOARD] |= (long)1 << (position + rightOffset);
+            }
+        }
+        centre += Long.bitCount(CENTER_BITS & boardAttacks[side][PAWN_BOARD]) * (-1 + side * 2);
+    }
 
-		while(temp != 0)
-		{
-			long piece = temp & -temp;
-			temp ^= piece;
-			int position = Long.numberOfTrailingZeros(piece);
-			int rank = position >> 3;
-			int file = position & 7;
-			int relativeRank = RelativeRanks[side][rank];//Board.GetRelativeRank(side, position);
-			int relativePosition = (relativeRank << 3) + file;// Board.GetRelativePosition(side, position);
-			int rankBehind = rank + behindValue;
-			int rankForward = rank + forwardValue;
-			
-			//positional score
-			pawnScore[MIDDLE_GAME] += PawnVals[MIDDLE_GAME][relativePosition];
-			pawnScore[END_GAME] += PawnVals[END_GAME][relativePosition];
+    /**
+    * Method getPawnsScore
+    *
+    * this method calculates penalties for doubled pawns, isolated pawns, weak pawns and the positional score
+    * for white pawns
+    *
+    * @return int - the pawn positional eval score
+    *
+    */
+    private static void GetPawnsScore(int side) {
+        boolean isolated, backward, chain, opposed, passed;
+        long temp = chessBoard.pieceBits[side][Global.PIECE_PAWN];
+        int behindValue;
+        int forwardValue;
+        if(side == Global.COLOUR_WHITE )
+        {
+            behindValue =  -1;
+            forwardValue = 1;
+        }
+        else
+        {
+            behindValue =  1;
+            forwardValue = -1;
+        }
 
-			if((Global.passed_masks[side][position] & chessBoard.pieceBits[(side+1)&1][Global.PIECE_PAWN]) == 0)
-			{
-				passBits |= piece;
-				passed = true;
-			}
-			else
-			{
-				passed = false;
-			}
+        while(temp != 0)
+        {
+            long piece = temp & -temp;
+            temp ^= piece;
+            int position = Long.numberOfTrailingZeros(piece);
+            int rank = position >> 3;
+            int file = position & 7;
+            int relativeRank = RelativeRanks[side][rank];//Board.GetRelativeRank(side, position);
+            int relativePosition = (relativeRank << 3) + file;// Board.GetRelativePosition(side, position);
+            int rankBehind = rank + behindValue;
+            int rankForward = rank + forwardValue;
 
-			//doubled
-			long friendPawnsInFront =  Global.mask_in_front[side][position] & chessBoard.pieceBits[side][Global.PIECE_PAWN];
-			int numberPawns = Long.bitCount(friendPawnsInFront);
+            //positional score
+            pawnScore[MIDDLE_GAME] += PawnVals[MIDDLE_GAME][relativePosition];
+            pawnScore[END_GAME] += PawnVals[END_GAME][relativePosition];
 
-			if(numberPawns >= 1)
-			{
-				if(numberPawns == 1)
-				{
-					pawnScore[MIDDLE_GAME] -= DoubledPawn[MIDDLE_GAME][file];
-					pawnScore[END_GAME] -= DoubledPawn[END_GAME][file];
-				}
-				else
-				{
-					pawnScore[MIDDLE_GAME] -= DoubledPawn[MIDDLE_GAME][file] * 2;
-					pawnScore[END_GAME] -= DoubledPawn[END_GAME][file] * 2;
-				}
-			}
+            if((Global.passed_masks[side][position] & chessBoard.pieceBits[(side+1)&1][Global.PIECE_PAWN]) == 0)
+            {
+                    passBits |= piece;
+                    passed = true;
+            }
+            else
+            {
+                    passed = false;
+            }
 
-			//chain
-			if((chessBoard.pieceBits[side][Global.PIECE_PAWN] & Global.neighbour_files[file] & (Global.rankMasks[rankBehind] | Global.rankMasks[rank] )) != 0)
-			{
-				chain = true;
-				pawnScore[MIDDLE_GAME] += ChainPawn[MIDDLE_GAME][file];
-				pawnScore[END_GAME] += ChainPawn[END_GAME][file];
-			}
-			else
-			{
-				chain = false;
-			}
+            //doubled
+            long friendPawnsInFront =  Global.mask_in_front[side][position] & chessBoard.pieceBits[side][Global.PIECE_PAWN];
+            int numberPawns = Long.bitCount(friendPawnsInFront);
 
-			//opposed
-			if((chessBoard.pieceBits[(side+1)&1][Global.PIECE_PAWN] & Global.mask_in_front[side][position]) != 0)
-			{
-				opposed = true;
-			}
-			else
-			{
-				opposed = false;
-			}
+            if(numberPawns >= 1)
+            {
+                if(numberPawns == 1)
+                {
+                    pawnScore[MIDDLE_GAME] -= DoubledPawn[MIDDLE_GAME][file];
+                    pawnScore[END_GAME] -= DoubledPawn[END_GAME][file];
+                }
+                else
+                {
+                    pawnScore[MIDDLE_GAME] -= DoubledPawn[MIDDLE_GAME][file] * 2;
+                    pawnScore[END_GAME] -= DoubledPawn[END_GAME][file] * 2;
+                }
+            }
 
-			//isolated
-			if((Global.neighbour_files[file] & chessBoard.pieceBits[side][Global.PIECE_PAWN]) == 0)
-			{
-				isolated = true;
-				pawnScore[MIDDLE_GAME] -= IsolatedPawn[MIDDLE_GAME][file];
-				pawnScore[END_GAME] -= IsolatedPawn[END_GAME][file];
-				if(!opposed)
-				{
-					pawnScore[MIDDLE_GAME] -= IsolatedPawn[MIDDLE_GAME][file] / 2;
-					pawnScore[END_GAME] -= IsolatedPawn[END_GAME][file] / 2;
-				}
-			}
-			else
-			{
-				isolated = false;
-			}
+            //chain
+            if((chessBoard.pieceBits[side][Global.PIECE_PAWN] & Global.neighbour_files[file] & (Global.rankMasks[rankBehind] | Global.rankMasks[rank] )) != 0)
+            {
+                chain = true;
+                pawnScore[MIDDLE_GAME] += ChainPawn[MIDDLE_GAME][file];
+                pawnScore[END_GAME] += ChainPawn[END_GAME][file];
+            }
+            else
+            {
+                chain = false;
+            }
 
-			if ( !( passed | isolated | chain)
-				&& ((boardAttacks[(side+1)%2][PAWN_BOARD] & ((long)1 << position)) == 0)
-				&& ((chessBoard.pieceBits[side][Global.PIECE_PAWN] & Global.neighbour_files[file] & Global.mask_forward[(side+1) & 1][position]) == 0))
-			{
-				long forwardAttacks = Global.rankMasks[rankForward] & Global.neighbour_files[file];// & Global.mask_forward[side][position];
-				while ((forwardAttacks & (chessBoard.pieceBits[(side+1)&1][Global.PIECE_PAWN] | chessBoard.pieceBits[side][Global.PIECE_PAWN])) == 0)
-				{
-					if(side == Global.COLOUR_WHITE)
-					{
-						forwardAttacks <<= 8;
-					}
-					else
-					{
-						forwardAttacks >>= 8;
-					}
-				}
-				long nextRankForward = side == Global.COLOUR_WHITE ? forwardAttacks << 8 : forwardAttacks >> 8;
-				if(((forwardAttacks | nextRankForward) & chessBoard.pieceBits[(side+1)&1][Global.PIECE_PAWN] ) != 0)
-				{
-					backward = true;
-				}
-				else
-				{
-					backward = false;
-				}
-			}
-			else
-			{
-				backward = false;
-			}
+            //opposed
+            if((chessBoard.pieceBits[(side+1)&1][Global.PIECE_PAWN] & Global.mask_in_front[side][position]) != 0)
+            {
+                opposed = true;
+            }
+            else
+            {
+                opposed = false;
+            }
 
-			if(backward)
-			{
-				pawnScore[MIDDLE_GAME] -= WeakPawn[MIDDLE_GAME][file];
-				pawnScore[END_GAME] -= WeakPawn[END_GAME][file];
+            //isolated
+            if((Global.neighbour_files[file] & chessBoard.pieceBits[side][Global.PIECE_PAWN]) == 0)
+            {
+                isolated = true;
+                pawnScore[MIDDLE_GAME] -= IsolatedPawn[MIDDLE_GAME][file];
+                pawnScore[END_GAME] -= IsolatedPawn[END_GAME][file];
+                if(!opposed)
+                {
+                    pawnScore[MIDDLE_GAME] -= IsolatedPawn[MIDDLE_GAME][file] / 2;
+                    pawnScore[END_GAME] -= IsolatedPawn[END_GAME][file] / 2;
+                }
+            }
+            else
+            {
+                isolated = false;
+            }
 
-				if(!opposed)
-				{
-					pawnScore[MIDDLE_GAME] -= WeakPawn[MIDDLE_GAME][file] / 2;
-					pawnScore[END_GAME] -= WeakPawn[END_GAME][file] / 2;
-				}
-			}
+            if ( !( passed | isolated | chain)
+                    && ((boardAttacks[(side+1)%2][PAWN_BOARD] & ((long)1 << position)) == 0)
+                    && ((chessBoard.pieceBits[side][Global.PIECE_PAWN] & Global.neighbour_files[file] & Global.mask_forward[(side+1) & 1][position]) == 0))
+            {
+                long forwardAttacks = Global.rankMasks[rankForward] & Global.neighbour_files[file];// & Global.mask_forward[side][position];
+                while ((forwardAttacks & (chessBoard.pieceBits[(side+1)&1][Global.PIECE_PAWN] | chessBoard.pieceBits[side][Global.PIECE_PAWN])) == 0)
+                {
+                    if(side == Global.COLOUR_WHITE)
+                    {
+                        forwardAttacks <<= 8;
+                    }
+                    else
+                    {
+                        forwardAttacks >>= 8;
+                    }
+                }
+                long nextRankForward = side == Global.COLOUR_WHITE ? forwardAttacks << 8 : forwardAttacks >> 8;
+                if(((forwardAttacks | nextRankForward) & chessBoard.pieceBits[(side+1)&1][Global.PIECE_PAWN] ) != 0)
+                {
+                    backward = true;
+                }
+                else
+                {
+                    backward = false;
+                }
+            }
+            else
+            {
+                backward = false;
+            }
 
-			//candidate passer
-			if(!opposed && !passed)
-			{
-				int posForward = side == Global.COLOUR_WHITE  ? position + 8 : position - 8;
+            if(backward)
+            {
+                pawnScore[MIDDLE_GAME] -= WeakPawn[MIDDLE_GAME][file];
+                pawnScore[END_GAME] -= WeakPawn[END_GAME][file];
 
-				long helperPawns = Global.neighbour_files[file] & Global.mask_forward[(side+1) & 1][posForward] & chessBoard.pieceBits[side][Global.PIECE_PAWN];
-				if(helperPawns != 0)
-				{
-					long opponentPawns = Global.neighbour_files[file] & Global.mask_forward[side][position] & chessBoard.pieceBits[(side+1)&1][Global.PIECE_PAWN];
-					if(Long.bitCount(helperPawns) >= Long.bitCount(opponentPawns))
-					{
-						pawnScore[MIDDLE_GAME] += CandidatePawnBonus[MIDDLE_GAME][relativeRank];
-						pawnScore[END_GAME] += CandidatePawnBonus[END_GAME][relativeRank];
-					}
-				}
-			}
-		}
-	}
+                if(!opposed)
+                {
+                    pawnScore[MIDDLE_GAME] -= WeakPawn[MIDDLE_GAME][file] / 2;
+                    pawnScore[END_GAME] -= WeakPawn[END_GAME][file] / 2;
+                }
+            }
 
+            //candidate passer
+            if(!opposed && !passed)
+            {
+                int posForward = side == Global.COLOUR_WHITE  ? position + 8 : position - 8;
 
-	 /**
+                long helperPawns = Global.neighbour_files[file] & Global.mask_forward[(side+1) & 1][posForward] & chessBoard.pieceBits[side][Global.PIECE_PAWN];
+                if(helperPawns != 0)
+                {
+                    long opponentPawns = Global.neighbour_files[file] & Global.mask_forward[side][position] & chessBoard.pieceBits[(side+1)&1][Global.PIECE_PAWN];
+                    if(Long.bitCount(helperPawns) >= Long.bitCount(opponentPawns))
+                    {
+                        pawnScore[MIDDLE_GAME] += CandidatePawnBonus[MIDDLE_GAME][relativeRank];
+                        pawnScore[END_GAME] += CandidatePawnBonus[END_GAME][relativeRank];
+                    }
+                }
+            }
+        }
+    }
+
+    /**
      * Method GePassedPawnScorePhase2
      *
      * calculates the passed pawn bonus for passed pawns
@@ -888,81 +889,54 @@ public class Evaluation2 {
      * @return int - the passed pawn bonus score
      *
      */
-	private static void GetPassedPawnScorePhase2(long passers, int side)
-	{
-		long piece;
-		long friendPawns;
-		long friendPieces;
-		long enemyPieces;
-		int position;
-		int nextSquareIncrement;
-		int enemyKingPos;
-		int friendKingPos;
+    private static void GetPassedPawnScorePhase2(long passers, int side)
+    {
+        while(passers != 0)
+        {
+            long piece = passers & -passers;
+            passers ^= piece;
+            int position = Long.numberOfTrailingZeros(piece);
+            int blockPos = position + Global.forwardRank[side];
+            int rank = position>>3;
+            int relativeRank = RelativeRanks[side][rank];
+            int endScore = PassedPawnBonus[END_GAME][relativeRank];
+            int endBonus = 0;
+            int kingEndBonus = 0;
 
-		if(side == Global.COLOUR_WHITE)
-		{
-			friendPawns = chessBoard.pieceBits[Global.COLOUR_WHITE][Global.PIECE_PAWN];
-			friendPieces = chessBoard.pieceBits[Global.COLOUR_WHITE][Global.PIECE_ALL];
-			enemyPieces = chessBoard.pieceBits[Global.COLOUR_BLACK][Global.PIECE_ALL];
-			nextSquareIncrement = 8;
-			enemyKingPos = kingPos[Global.COLOUR_BLACK];
-			friendKingPos = kingPos[Global.COLOUR_WHITE];
-		}
-		else
-		{
-			friendPawns = chessBoard.pieceBits[Global.COLOUR_BLACK][Global.PIECE_PAWN];
-			friendPieces = chessBoard.pieceBits[Global.COLOUR_BLACK][Global.PIECE_ALL];
-			enemyPieces = chessBoard.pieceBits[Global.COLOUR_WHITE][Global.PIECE_ALL];
-			nextSquareIncrement = -8;
-			enemyKingPos = kingPos[Global.COLOUR_WHITE];
-			friendKingPos = kingPos[Global.COLOUR_BLACK];
-		}
+            //apply score based on path to queen
+            long forwardPath = Global.mask_in_front[side][position];
+            long unsafeSquares = forwardPath & (boardAttacks[(side+1) & 1][ALL_BOARD] | chessBoard.pieceBits[side ^ 1][Global.PIECE_ALL]);
+            long defendedSquares = forwardPath & boardAttacks[side][ALL_BOARD];
 
-		while(passers != 0)
-		{
-			piece = passers & -passers;
-			passers ^= piece;
-			position = Long.numberOfTrailingZeros(piece);
-			int blockPos = position + nextSquareIncrement;
-			int rank = position>>3;
-			int relativeRank = RelativeRanks[side][rank];
-			int endScore = PassedPawnBonus[END_GAME][relativeRank];
-			int endBonus = 0;
-			int kingEndBonus = 0;
+            if(unsafeSquares == 0)
+            {
+                endBonus += endScore / 3;
+            }
+            else if((unsafeSquares & defendedSquares) == unsafeSquares)
+            {
+                endBonus += endScore / 5;
+            }
+            else
+            {
+                if( (forwardPath & chessBoard.pieceBits[side][Global.PIECE_ALL]) == 0)
+                {
+                    endBonus += endScore / 7;
+                }
+            }
 
-			//apply score based on path to queen
-			long forwardPath = Global.mask_in_front[side][position];
-			long unsafeSquares = forwardPath & (boardAttacks[(side+1) & 1][ALL_BOARD] | enemyPieces);
-			long defendedSquares = forwardPath & boardAttacks[side][ALL_BOARD];
+            //doubled pawn - reduce bonus
+            if((Global.mask_in_front[side][position] & chessBoard.pieceBits[side][Global.PIECE_PAWN]) != 0) {
+                endBonus /= 3;
+            }
 
-			if(unsafeSquares == 0)
-			{
-				endBonus += endScore / 3;
-			}
-			else if((unsafeSquares & defendedSquares) == unsafeSquares)
-			{
-				endBonus += endScore / 5;
-			}
-			else
-			{
-				if( (forwardPath & friendPieces) == 0)
-				{
-					endBonus += endScore / 7;
-				}
-			}
+            kingEndBonus = -chessBoard.getDistance(kingPos[side], blockPos) * endBonus / 20;
+            kingEndBonus += chessBoard.getDistance(enemyKingPos[side], blockPos) * endBonus / 20;
 
-			//doubled pawn - reduce bonus
-			if((Global.mask_in_front[side][position] & friendPawns) != 0)
-				endBonus /= 3;
+            passScore[END_GAME] += (kingEndBonus + endBonus) * (-1 + side * 2);
+        }
+    }
 
-			kingEndBonus = -chessBoard.getDistance(friendKingPos, blockPos) * endBonus / 20;
-			kingEndBonus += chessBoard.getDistance(enemyKingPos, blockPos) * endBonus / 20;
-
-			passScore[END_GAME] += (kingEndBonus + endBonus) * (-1 + side * 2);
-		}
-	}
-
-	 /**
+    /**
      * Method GePassedPawnScorePhase1
      *
      * calculates the passed pawn bonus for passed pawns
@@ -975,80 +949,60 @@ public class Evaluation2 {
      * @return int - the passed pawn bonus score
      *
      */
-	private static void GetPassedPawnScorePhase1(long passers, int side)
-	{
-		long piece;
-		long friendPawns  = chessBoard.pieceBits[side][Global.PIECE_PAWN];
-		int position;
-		int nextSquareIncrement;
-		int enemyKingPos;
-		int friendKingPos;
+    private static void GetPassedPawnScorePhase1(long passers, int side)
+    {
+        while(passers != 0)
+        {
+            long piece = passers & -passers;
+            passers ^= piece;
+            int position = Long.numberOfTrailingZeros(piece);
+            int blockPos = position + Global.forwardRank[side];
+            int rank = position>>3;
+            int file = position&7;
+            int relativeRank = RelativeRanks[side][rank];//Board.GetRelativeRank(side, position);
+            int middleScore = PassedPawnBonus[MIDDLE_GAME][relativeRank];
+            int endScore = PassedPawnBonus[END_GAME][relativeRank];
+            int kingEndBonus = 0;
 
-		if(side == Global.COLOUR_WHITE)
-		{
-			//friendPawns = chessBoard.pieceBits[Global.COLOUR_WHITE][Global.PIECE_PAWN];
-			nextSquareIncrement = 8;
-			enemyKingPos = kingPos[Global.COLOUR_BLACK];
-			friendKingPos = kingPos[Global.COLOUR_WHITE];
-		}
-		else
-		{
-			//friendPawns = chessBoard.pieceBits[Global.COLOUR_BLACK][Global.PIECE_PAWN];
-			nextSquareIncrement = -8;
-			enemyKingPos = kingPos[Global.COLOUR_WHITE];
-			friendKingPos = kingPos[Global.COLOUR_BLACK];
-		}
+            //bonus for supporting pawns
+            long neighbourPawns = chessBoard.pieceBits[side][Global.PIECE_PAWN] & Global.neighbour_files[file] & (Global.rankMasks[rank] 
+                    | Global.rankMasks[Board.GetPreviousRank(side, rank)]);
+            int neighbourBonusMid = 0;
+            int neighbourBonusEnd = 0;
+            while(neighbourPawns != 0)
+            {
+                long neighbour = neighbourPawns & -neighbourPawns;
+                neighbourPawns ^= neighbour;
+                int neighbourPos = Long.numberOfTrailingZeros(neighbour);
+                if(neighbourPos / 8 == rank)
+                {
+                    neighbourBonusMid += middleScore / 4;
+                    neighbourBonusEnd += endScore / 4;
+                }
+                else
+                {
+                    neighbourBonusMid += middleScore / 6;
+                    neighbourBonusEnd += endScore / 6;
+                }
+            }
+            middleScore += neighbourBonusMid;
+            endScore += neighbourBonusEnd;
 
-		while(passers != 0)
-		{
-			piece = passers & -passers;
-			passers ^= piece;
-			position = Long.numberOfTrailingZeros(piece);
-			int blockPos = position + nextSquareIncrement;
-			int rank = position>>3;
-			int file = position&7;
-			int relativeRank = RelativeRanks[side][rank];//Board.GetRelativeRank(side, position);
-			int middleScore = PassedPawnBonus[MIDDLE_GAME][relativeRank];
-			int endScore = PassedPawnBonus[END_GAME][relativeRank];
-			int kingEndBonus = 0;
+            //doubled pawn - reduce bonus
+            if((Global.mask_in_front[side][position] & chessBoard.pieceBits[side][Global.PIECE_PAWN]) != 0) {
+                endScore /= 3;
+            }
+            
+            kingEndBonus = -chessBoard.getDistance(kingPos[side ], blockPos) * endScore / 20;
+            kingEndBonus += chessBoard.getDistance(kingPos[side ^ 1], blockPos) * endScore / 20;
 
-			//bonus for supporting pawns
-			long neighbourPawns = friendPawns & Global.neighbour_files[file] & (Global.rankMasks[rank] | Global.rankMasks[Board.GetPreviousRank(side, rank)]);
-			int neighbourBonusMid = 0;
-			int neighbourBonusEnd = 0;
-			while(neighbourPawns != 0)
-			{
-				long neighbour = neighbourPawns & -neighbourPawns;
-				neighbourPawns ^= neighbour;
-				int neighbourPos = Long.numberOfTrailingZeros(neighbour);
-				if(neighbourPos / 8 == rank)
-				{
-					neighbourBonusMid += middleScore / 4;
-					neighbourBonusEnd += endScore / 4;
-				}
-				else
-				{
-					neighbourBonusMid += middleScore / 6;
-					neighbourBonusEnd += endScore / 6;
-				}
-			}
-			middleScore += neighbourBonusMid;
-			endScore += neighbourBonusEnd;
-
-			//doubled pawn - reduce bonus
-			if((Global.mask_in_front[side][position] & friendPawns) != 0)
-				endScore /= 3;
-
-			kingEndBonus = -chessBoard.getDistance(friendKingPos, blockPos) * endScore / 20;
-			kingEndBonus += chessBoard.getDistance(enemyKingPos, blockPos) * endScore / 20;
-
-			passScore[MIDDLE_GAME] += middleScore * (-1 + side * 2);
-			passScore[END_GAME] += (endScore + kingEndBonus) * (-1 + side * 2);
-		}
-	}
+            passScore[MIDDLE_GAME] += middleScore * (-1 + side * 2);
+            passScore[END_GAME] += (endScore + kingEndBonus) * (-1 + side * 2);
+        }
+    }
 
 
-	/**
+    /**
      * Method isPassedPawn
      *
      * this method determines using a bitmask whether a pawn is passed
@@ -1072,63 +1026,65 @@ public class Evaluation2 {
      * @return int - knight positional score
      *
      */
-	private static int GetKnightEval(int side, long mobilityArea)
-	{
-		int score = 0;
-		
-      for(int i=0; i < chessBoard.pieceTotals[1 + side*6]; i++)
-		{
-			int position = chessBoard.pieceList[1 + side*6][i];
-			int relativeRank = RelativeRanks[side][position>>3] ;
-			int relativePosition = (relativeRank << 3) + (position & 7);
-			if(relativeRank == 0)
-				develop -= BACKRANK_MINOR *  (-1 + side * 2);
-			long attacks = chessBoard.getKnightMoves(position);
-			boardAttacks[side][KNIGHT_BOARD] |= attacks;
-			boardAttacks[side][ALL_BOARD] |= attacks;
-			long mobilitySquares = mobilityArea & attacks;
-			int mobilityNumber = Long.bitCount(mobilitySquares);
-			mobility[MIDDLE_GAME] += KNIGHT_MOBILITY[MIDDLE_GAME][mobilityNumber] * (-1 + side * 2);
-			mobility[END_GAME] += KNIGHT_MOBILITY[END_GAME][mobilityNumber] * (-1 + side * 2);
-			centre += Long.bitCount(CENTER_BITS & attacks) * (-1 + side * 2);
-			score -= chessBoard.getDistance(position, enemyKingPos[side]);
-			score += KnightVals[ relativePosition ];
-			score += GetOutpostScore(position, relativePosition, side, KNIGHT_OUTPOST);
-		}
-		return score;
+    private static int GetKnightEval(int side, long mobilityArea)
+    {
+        int score = 0;
+        for(int i=0; i < chessBoard.pieceTotals[1 + side*6]; i++)
+        {
+            int position = chessBoard.pieceList[1 + side*6][i];
+            int relativeRank = RelativeRanks[side][position>>3] ;
+            int relativePosition = (relativeRank << 3) + (position & 7);
+            if(relativeRank == 0) {
+                develop -= BACKRANK_MINOR *  (-1 + side * 2);
+            }
+            long attacks = chessBoard.getKnightMoves(position);
+            boardAttacks[side][KNIGHT_BOARD] |= attacks;
+            boardAttacks[side][ALL_BOARD] |= attacks;
+            long mobilitySquares = mobilityArea & attacks;
+            int mobilityNumber = Long.bitCount(mobilitySquares);
+            mobility[MIDDLE_GAME] += KNIGHT_MOBILITY[MIDDLE_GAME][mobilityNumber] * (-1 + side * 2);
+            mobility[END_GAME] += KNIGHT_MOBILITY[END_GAME][mobilityNumber] * (-1 + side * 2);
+            centre += Long.bitCount(CENTER_BITS & attacks) * (-1 + side * 2);
+            score -= chessBoard.getDistance(position, enemyKingPos[side]);
+            score += KnightVals[ relativePosition ];
+            score += GetOutpostScore(position, relativePosition, side, KNIGHT_OUTPOST);
+        }
+        return score;
     }
 
-	public static void GenerateOutpostSquares()
-	{
-		for(int i=16; i<=47; i++)
-		{
-			if( (Global.mask_in_front[Global.COLOUR_WHITE][i] & Global.neighbour_files[i & 7] & chessBoard.pieceBits[Global.COLOUR_BLACK][Global.PIECE_PAWN]) == 0)
-				arrOutposts[Global.COLOUR_WHITE] |= (long)1 << (i);
+    public static void GenerateOutpostSquares()
+    {
+        for(int i=16; i<=47; i++)
+        {
+            if( (Global.mask_in_front[Global.COLOUR_WHITE][i] & Global.neighbour_files[i & 7] & chessBoard.pieceBits[Global.COLOUR_BLACK][Global.PIECE_PAWN]) == 0) {
+                arrOutposts[Global.COLOUR_WHITE] |= (long)1 << (i);
+            }    
 
+            if( (Global.mask_in_front[Global.COLOUR_BLACK][i] & Global.neighbour_files[i & 7] & chessBoard.pieceBits[Global.COLOUR_WHITE][Global.PIECE_PAWN]) == 0) {
+                arrOutposts[Global.COLOUR_BLACK] |= (long)1 << (i);
+            }    
+        }
+        combinedOutposts = (arrOutposts[Global.COLOUR_BLACK] >> 16) | (arrOutposts[Global.COLOUR_WHITE] << 16);
+    }
 
-			if( (Global.mask_in_front[Global.COLOUR_BLACK][i] & Global.neighbour_files[i & 7] & chessBoard.pieceBits[Global.COLOUR_WHITE][Global.PIECE_PAWN]) == 0)
-				arrOutposts[Global.COLOUR_BLACK] |= (long)1 << (i);
-		}
-		combinedOutposts = (arrOutposts[Global.COLOUR_BLACK] >> 16) | (arrOutposts[Global.COLOUR_WHITE] << 16);
-	}
+    public static int GetOutpostScore(int position, int relativePosition, int side, int outpostType)
+    {
+        if( (arrOutposts[side] & (long)1 << (position)) != 0)
+        {
+            int bonus = OutpostBonus[outpostType][relativePosition];
+            long friendPawns = chessBoard.pieceBits[side][Global.PIECE_PAWN];
+            if((Global.mask_in_front[side][position] & Global.neighbour_files[position & 7] & friendPawns) != 0  )
+            {
+                bonus += bonus/2;
+            }
+            return bonus;
+        }
+        else {
+            return 0;
+        }
+     }
 
-	public static int GetOutpostScore(int position, int relativePosition, int side, int outpostType)
-	{
-		if( (arrOutposts[side] & (long)1 << (position)) != 0)
-		{
-			int bonus = OutpostBonus[outpostType][relativePosition];
-			long friendPawns = chessBoard.pieceBits[side][Global.PIECE_PAWN];
-			if((Global.mask_in_front[side][position] & Global.neighbour_files[position & 7] & friendPawns) != 0  )
-			{
-				bonus += bonus/2;
-			}
-			return bonus;
-		}
-		else
-			return 0;
-	}
-
-	/**
+    /**
      * Method getWBishopEval
      *
      * calculates positional score for white bishop
@@ -1137,29 +1093,31 @@ public class Evaluation2 {
      * @return int - bishop positional score
      *
      */
-	private static int GetBishopEval(int side, long mobilityArea)
-	{
-		int score = 0;
-		for(int i=0; i < chessBoard.pieceTotals[2 + side*6]; i++)
-		{
-			int position = chessBoard.pieceList[2 + side*6][i];
-			int relativeRank = RelativeRanks[side][position>>3] ;
-			int relativePosition = (relativeRank << 3) + (position & 7);
-			if(RelativeRanks[side][position>>3] == 0) //if(Board.GetRelativeRank(side, position) == 0)
-				develop -= BACKRANK_MINOR *  (-1 + side * 2);
-			long attacks = chessBoard.getMagicBishopMoves(position);
-			boardAttacks[side][BISHOP_BOARD] |= attacks;
-			boardAttacks[side][ALL_BOARD] |= attacks;
-			long mobilitySquares = mobilityArea & attacks;
-			int mobilityNumber = Long.bitCount(mobilitySquares);
-			mobility[MIDDLE_GAME] += BISHOP_MOBILITY[MIDDLE_GAME][mobilityNumber] * (-1 + side * 2);
-			mobility[END_GAME] += BISHOP_MOBILITY[END_GAME][mobilityNumber] * (-1 + side * 2);
-			centre += Long.bitCount(CENTER_BITS & attacks) * (-1 + side * 2);
-			score -= chessBoard.getDistance(position, enemyKingPos[side]);
-			score += GetOutpostScore(position, relativePosition, side, BISHOP_OUTPOST);
-		}
-	return score;
-	}
+    private static int GetBishopEval(int side, long mobilityArea)
+    {
+        int score = 0;
+        for(int i=0; i < chessBoard.pieceTotals[2 + side*6]; i++)
+        {
+            int position = chessBoard.pieceList[2 + side*6][i];
+            int relativeRank = RelativeRanks[side][position>>3] ;
+            int relativePosition = (relativeRank << 3) + (position & 7);
+            if(RelativeRanks[side][position>>3] == 0) {
+                develop -= BACKRANK_MINOR *  (-1 + side * 2);
+            }
+            long attacks = chessBoard.getMagicBishopMoves(position);
+            boardAttacks[side][BISHOP_BOARD] |= attacks;
+            boardAttacks[side][ALL_BOARD] |= attacks;
+            long mobilitySquares = mobilityArea & attacks;
+            int mobilityNumber = Long.bitCount(mobilitySquares);
+            mobility[MIDDLE_GAME] += BISHOP_MOBILITY[MIDDLE_GAME][mobilityNumber] * (-1 + side * 2);
+            mobility[END_GAME] += BISHOP_MOBILITY[END_GAME][mobilityNumber] * (-1 + side * 2);
+            centre += Long.bitCount(CENTER_BITS & attacks) * (-1 + side * 2);
+            score -= chessBoard.getDistance(position, enemyKingPos[side]);
+            score += GetOutpostScore(position, relativePosition, side, BISHOP_OUTPOST);
+        }
+        return score;
+    }
+    
     /**
      * Method getWQueenEval
      *
@@ -1169,112 +1127,111 @@ public class Evaluation2 {
      * @return int - queen positional score
      *
      */
-	private static int GetQueenEval(int side, long mobilityArea)
-	{
-		int score = 0;
-		for(int i=0; i<chessBoard.pieceTotals[3 + side*6]; i++)
-		{
-			int position = chessBoard.pieceList[3 + side*6][i];
-			long attacks = chessBoard.getQueenMoves(position);        
-			boardAttacks[side][QUEEN_BOARD] |= attacks;
-			boardAttacks[side][ALL_BOARD] |= attacks;
-			long mobilitySquares = mobilityArea & attacks;
-			int mobilityNumber = Long.bitCount(mobilitySquares);
-			mobility[MIDDLE_GAME] += QUEEN_MOBILITY[MIDDLE_GAME][mobilityNumber] * (-1 + side * 2);
-			mobility[END_GAME] += QUEEN_MOBILITY[END_GAME][mobilityNumber] * (-1 + side * 2);
-			centre += Long.bitCount(CENTER_BITS & attacks) * (-1 + side * 2);
-			score -= 3 * chessBoard.getDistance(position, enemyKingPos[side]);
-		}
-		return score;
-	}
+    private static int GetQueenEval(int side, long mobilityArea)
+    {
+        int score = 0;
+        for(int i=0; i<chessBoard.pieceTotals[3 + side*6]; i++)
+        {
+            int position = chessBoard.pieceList[3 + side*6][i];
+            long attacks = chessBoard.getQueenMoves(position);        
+            boardAttacks[side][QUEEN_BOARD] |= attacks;
+            boardAttacks[side][ALL_BOARD] |= attacks;
+            long mobilitySquares = mobilityArea & attacks;
+            int mobilityNumber = Long.bitCount(mobilitySquares);
+            mobility[MIDDLE_GAME] += QUEEN_MOBILITY[MIDDLE_GAME][mobilityNumber] * (-1 + side * 2);
+            mobility[END_GAME] += QUEEN_MOBILITY[END_GAME][mobilityNumber] * (-1 + side * 2);
+            centre += Long.bitCount(CENTER_BITS & attacks) * (-1 + side * 2);
+            score -= 3 * chessBoard.getDistance(position, enemyKingPos[side]);
+        }
+        return score;
+    }
 
 
-	/**
-	* Method getWRookEval
-	*
-	* calculates positional score for white rook
-	* adds rook attack to WB array
-	*
-	* @return int - rook positional score
-	*
-	*/
-	private static void GetRookEval(int side, long mobilityArea)
-	{
-		int enemyKingRelativeRank = RelativeRanks[side][enemyKingPos[side]>>3];//Board.GetRelativeRank(side, enemyKingPos);
-		int oldFile = -1;
-		int oldRank = -1;
+    /**
+    * Method getWRookEval
+    *
+    * calculates positional score for white rook
+    * adds rook attack to WB array
+    *
+    * @return int - rook positional score
+    *
+    */
+    private static void GetRookEval(int side, long mobilityArea)
+    {
+        int enemyKingRelativeRank = RelativeRanks[side][enemyKingPos[side]>>3];//Board.GetRelativeRank(side, enemyKingPos);
+        int oldFile = -1;
+        int oldRank = -1;
 
-		for(int i=0; i<chessBoard.pieceTotals[side*6]; i++)
-		{
-			int position = chessBoard.pieceList[side*6][i];
-			int file = position & 7;
-			int rank = position >> 3;
-			int relativeRank = RelativeRanks[side][rank];//Board.GetRelativeRank(side, position);
-			int nearEnemyKing = 1;
-			if(enemyKingRelativeRank == 7 && relativeRank == 6 )
-			{
-				rookEval[MIDDLE_GAME] += ROOK_7TH_RANK;
-				rookEval[END_GAME] += ROOK_7TH_RANK;
+        for(int i=0; i<chessBoard.pieceTotals[side*6]; i++)
+        {
+            int position = chessBoard.pieceList[side*6][i];
+            int file = position & 7;
+            int rank = position >> 3;
+            int relativeRank = RelativeRanks[side][rank];//Board.GetRelativeRank(side, position);
+            int nearEnemyKing = 1;
+            if(enemyKingRelativeRank == 7 && relativeRank == 6 )
+            {
+                rookEval[MIDDLE_GAME] += ROOK_7TH_RANK;
+                rookEval[END_GAME] += ROOK_7TH_RANK;
 
-				if(rank == oldRank)
-				{
-					rookEval[MIDDLE_GAME] += DOUBLED_ROOKS_7TH;
-					rookEval[END_GAME] += DOUBLED_ROOKS_7TH;
-				}
-				if((Global.rankMasks[rank] & chessBoard.pieceBits[side][Global.PIECE_QUEEN]) != 0)
-				{
-					rookEval[MIDDLE_GAME] += QUEEN_ROOK_7TH_RANK;
-					rookEval[END_GAME] += QUEEN_ROOK_7TH_RANK;
-				}
-			}
-			if((chessBoard.pieceBits[side][Global.PIECE_PAWN] & Global.fileMasks[file]) == 0 )
-			{
-				if(Math.abs(file - (enemyKingPos[side] & 7)) < 2)
-				{
-					nearEnemyKing = 2;
-				}
-				if((Global.mask_behind[side][position] & chessBoard.pieceBits[side][Global.PIECE_QUEEN]) != 0)
-				{
-					rookEval[MIDDLE_GAME] += ROOK_IN_FRONT_QUEEN;
-				}
-				else if((Global.mask_in_front[side][position] & chessBoard.pieceBits[side][Global.PIECE_QUEEN]) != 0)
-				{
-					rookEval[MIDDLE_GAME] += ROOK_BEHIND_QUEEN;
-				}
-				if(file == oldFile)
-				{
-					rookEval[MIDDLE_GAME] += ROOK_DOUBLED * nearEnemyKing;
-					rookEval[END_GAME] += ROOK_DOUBLED * nearEnemyKing;
-				}
-				if((chessBoard.pieceBits[(side+1)&1][Global.PIECE_PAWN] & Global.fileMasks[file]) == 0 )          // open file
-				{
-					rookEval[END_GAME] += ROOK_OPEN * nearEnemyKing;
-					rookEval[MIDDLE_GAME] += ROOK_OPEN * nearEnemyKing;
-				}
-				else
-				{
-					rookEval[END_GAME] += ROOK_OPEN * nearEnemyKing;
-					rookEval[MIDDLE_GAME] += ROOK_SEMI * nearEnemyKing;
-				}
-			}
-			
-			long attacks = chessBoard.getMagicRookMoves(position);
-			boardAttacks[side][ROOK_BOARD] |= attacks;
-			boardAttacks[side][ALL_BOARD] |= attacks;
-			long mobilitySquares = mobilityArea & attacks;
-			int mobilityNumber = Long.bitCount(mobilitySquares);
-			mobility[MIDDLE_GAME] += ROOK_MOBILITY[MIDDLE_GAME][mobilityNumber] * (-1 + side * 2);
-			mobility[END_GAME] += ROOK_MOBILITY[END_GAME][mobilityNumber] * (-1 + side * 2);
-			centre += Long.bitCount(CENTER_BITS & attacks) * (-1 + side * 2);
-			rookEval[MIDDLE_GAME] -= chessBoard.getDistance(position, enemyKingPos[side]);
-			rookEval[END_GAME] -= chessBoard.getDistance(position, enemyKingPos[side]);
+                if(rank == oldRank)
+                {
+                    rookEval[MIDDLE_GAME] += DOUBLED_ROOKS_7TH;
+                    rookEval[END_GAME] += DOUBLED_ROOKS_7TH;
+                }
+                if((Global.rankMasks[rank] & chessBoard.pieceBits[side][Global.PIECE_QUEEN]) != 0)
+                {
+                    rookEval[MIDDLE_GAME] += QUEEN_ROOK_7TH_RANK;
+                    rookEval[END_GAME] += QUEEN_ROOK_7TH_RANK;
+                }
+            }
+            if((chessBoard.pieceBits[side][Global.PIECE_PAWN] & Global.fileMasks[file]) == 0 )
+            {
+                if(Math.abs(file - (enemyKingPos[side] & 7)) < 2)
+                {
+                    nearEnemyKing = 2;
+                }
+                if((Global.mask_behind[side][position] & chessBoard.pieceBits[side][Global.PIECE_QUEEN]) != 0)
+                {
+                    rookEval[MIDDLE_GAME] += ROOK_IN_FRONT_QUEEN;
+                }
+                else if((Global.mask_in_front[side][position] & chessBoard.pieceBits[side][Global.PIECE_QUEEN]) != 0)
+                {
+                    rookEval[MIDDLE_GAME] += ROOK_BEHIND_QUEEN;
+                }
+                if(file == oldFile)
+                {
+                    rookEval[MIDDLE_GAME] += ROOK_DOUBLED * nearEnemyKing;
+                    rookEval[END_GAME] += ROOK_DOUBLED * nearEnemyKing;
+                }
+                if((chessBoard.pieceBits[(side+1)&1][Global.PIECE_PAWN] & Global.fileMasks[file]) == 0 )          // open file
+                {
+                    rookEval[END_GAME] += ROOK_OPEN * nearEnemyKing;
+                    rookEval[MIDDLE_GAME] += ROOK_OPEN * nearEnemyKing;
+                }
+                else
+                {
+                    rookEval[END_GAME] += ROOK_OPEN * nearEnemyKing;
+                    rookEval[MIDDLE_GAME] += ROOK_SEMI * nearEnemyKing;
+                }
+            }
 
-			oldFile = file;
-			oldRank = rank;
-		}
-	}
+            long attacks = chessBoard.getMagicRookMoves(position);
+            boardAttacks[side][ROOK_BOARD] |= attacks;
+            boardAttacks[side][ALL_BOARD] |= attacks;
+            long mobilitySquares = mobilityArea & attacks;
+            int mobilityNumber = Long.bitCount(mobilitySquares);
+            mobility[MIDDLE_GAME] += ROOK_MOBILITY[MIDDLE_GAME][mobilityNumber] * (-1 + side * 2);
+            mobility[END_GAME] += ROOK_MOBILITY[END_GAME][mobilityNumber] * (-1 + side * 2);
+            centre += Long.bitCount(CENTER_BITS & attacks) * (-1 + side * 2);
+            rookEval[MIDDLE_GAME] -= chessBoard.getDistance(position, enemyKingPos[side]);
+            rookEval[END_GAME] -= chessBoard.getDistance(position, enemyKingPos[side]);
+            oldFile = file;
+            oldRank = rank;
+        }
+    }
 
-	/**
+    /**
      * Method SetKingEval
      *
      * sets the king position, attack zone, and updates the WB table
@@ -1282,26 +1239,25 @@ public class Evaluation2 {
      */
     private static void SetKingEval() 
     {
-		 int side = Global.COLOUR_WHITE;
-       int kingFile = kingPos[side] & 7;
-       int kingRank = kingPos[side] >> 3;
-       int fileShift = kingFileShifts[kingFile];
-       int rankShift = Math.min(5, kingRank);
-       kingZone[side] = kingZoneMask << ((rankShift << 3) + fileShift);
-       long attacks = chessBoard.getKingMoves(kingPos[side]);
-		 boardAttacks[side][KING_BOARD] |= attacks;
-		 boardAttacks[side][ALL_BOARD] |= attacks;
-		
-       side = Global.COLOUR_BLACK;
-       kingFile = kingPos[side] & 7;
-       kingRank = kingPos[side] >> 3;
-       fileShift = kingFileShifts[kingFile];
-		 rankShift = Math.max(0, kingRank-2);
-		 kingZone[side] = kingZoneMask << ((rankShift << 3) + fileShift);
-       attacks = chessBoard.getKingMoves(kingPos[side]);
-		 boardAttacks[side][KING_BOARD] |= attacks;
-		 boardAttacks[side][ALL_BOARD] |= attacks;      
-	}
+        int side = Global.COLOUR_WHITE;
+        int kingFile = kingPos[side] & 7;
+        int kingRank = kingPos[side] >> 3;
+        int fileShift = kingFileShifts[kingFile];
+        int rankShift = Math.min(5, kingRank);
+        kingZone[side] = kingZoneMask << ((rankShift << 3) + fileShift);
+        long attacks = chessBoard.getKingMoves(kingPos[side]);
+        boardAttacks[side][KING_BOARD] |= attacks;
+        boardAttacks[side][ALL_BOARD] |= attacks;
+        side = Global.COLOUR_BLACK;
+        kingFile = kingPos[side] & 7;
+        kingRank = kingPos[side] >> 3;
+        fileShift = kingFileShifts[kingFile];
+        rankShift = Math.max(0, kingRank-2);
+        kingZone[side] = kingZoneMask << ((rankShift << 3) + fileShift);
+        attacks = chessBoard.getKingMoves(kingPos[side]);
+        boardAttacks[side][KING_BOARD] |= attacks;
+        boardAttacks[side][ALL_BOARD] |= attacks;      
+    }
 
     /**
      * Method getEndGameKing
@@ -1311,144 +1267,134 @@ public class Evaluation2 {
      * @return int - endgame king position score
      *
      */
-	private static int GetEndGameKing() {
-		int score = 0;
-		score -= kingVals[kingPos[Global.COLOUR_WHITE]];
-		score += kingVals[kingPos[Global.COLOUR_BLACK]];
-		return score;
-	}
+    private static int GetEndGameKing() {
+        int score = 0;
+        score -= kingVals[kingPos[Global.COLOUR_WHITE]];
+        score += kingVals[kingPos[Global.COLOUR_BLACK]];
+        return score;
+    }
 
- 
-	
-	private static int GetKingPawnShield(int side)
-	{
-		int score = 0;
-		//mark king's critical files as semi open if no friend pawn is on the file
-		int kingFile = kingPos[side] & 7;
-		int fileShift = kingFileShifts[kingFile];
+    private static int GetKingPawnShield(int side)
+    {
+        int score = 0;
+        //mark king's critical files as semi open if no friend pawn is on the file
+        int kingFile = kingPos[side] & 7;
+        int fileShift = kingFileShifts[kingFile];
 
-		for(int i=0; i<3; i++)
-		{
-			long pawnFile = chessBoard.pieceBits[side][Global.PIECE_PAWN] & Global.fileMasks[fileShift + i];
-			if( (pawnFile) != 0)
-			{
-				long zonePawns = pawnFile & kingZone[side];
-				if(zonePawns != 0)
-				{
-					int position = side == Global.COLOUR_WHITE ? Long.numberOfTrailingZeros(zonePawns) : (63 - Long.numberOfLeadingZeros(zonePawns));
-					score += PawnProtection[RelativeRanks[side][position>>3]];
-				}
-			}
-			else
-			{
-				score -= KING_PAWN_SEMI_OPEN;
-				if( (chessBoard.pieceBits[(side+1) & 1][Global.PIECE_PAWN] & Global.fileMasks[fileShift + i]) == 0 )
-				{
-					score -= KING_PAWN_OPEN;
-				}
-			}
-		}
-		return score;
-	}
+        for(int i=0; i<3; i++)
+        {
+            long pawnFile = chessBoard.pieceBits[side][Global.PIECE_PAWN] & Global.fileMasks[fileShift + i];
+            if( (pawnFile) != 0)
+            {
+                long zonePawns = pawnFile & kingZone[side];
+                if(zonePawns != 0)
+                {
+                    int position = side == Global.COLOUR_WHITE ? Long.numberOfTrailingZeros(zonePawns) : (63 - Long.numberOfLeadingZeros(zonePawns));
+                    score += PawnProtection[RelativeRanks[side][position>>3]];
+                }
+            }
+            else
+            {
+                score -= KING_PAWN_SEMI_OPEN;
+                if( (chessBoard.pieceBits[(side+1) & 1][Global.PIECE_PAWN] & Global.fileMasks[fileShift + i]) == 0 )
+                {
+                    score -= KING_PAWN_OPEN;
+                }
+            }
+        }
+        return score;
+    }
 
-	 private static int GetKingSafety(int side)
-	 {
-		 //get all king squares attacked
-		 long attacks = boardAttacks[(side+1) & 1][ALL_BOARD] & kingZone[side];
-		 
-		 long undefendedAttacks = attacks & ~(boardAttacks[side][ALL_BOARD] ^ boardAttacks[side][KING_BOARD]);
-		 
-		 int count = Long.bitCount(attacks) + Long.bitCount(undefendedAttacks);
+    private static int GetKingSafety(int side)
+    {
+        //get all king squares attacked
+        long attacks = boardAttacks[(side+1) & 1][ALL_BOARD] & kingZone[side];
 
-		 if(count > 0)
-		 {
-			 int mask = 0;
+        long undefendedAttacks = attacks & ~(boardAttacks[side][ALL_BOARD] ^ boardAttacks[side][KING_BOARD]);
 
-			 if((boardAttacks[(side+1) & 1][PAWN_BOARD] & kingZone[side]) != 0)
-				mask |= 1;
+        int count = Long.bitCount(attacks) + Long.bitCount(undefendedAttacks);
 
-			 if( ((boardAttacks[(side+1) & 1][KNIGHT_BOARD] | boardAttacks[( side + 1) %2][BISHOP_BOARD]) & kingZone[side]) != 0)
-				mask |= 2;
+        if(count > 0)
+        {
+            int mask = 0;
 
-			 if((boardAttacks[(side+1) & 1][ROOK_BOARD] & kingZone[side]) != 0)
-				mask |= 4;
+            if((boardAttacks[(side+1) & 1][PAWN_BOARD] & kingZone[side]) != 0)
+                mask |= 1;
 
-			 if((boardAttacks[(side+1) & 1][QUEEN_BOARD] & kingZone[side]) != 0)
-				mask |= 8;
+            if( ((boardAttacks[(side+1) & 1][KNIGHT_BOARD] | boardAttacks[( side + 1) %2][BISHOP_BOARD]) & kingZone[side]) != 0)
+                mask |= 2;
 
-			 count += TABLE[mask];
-		 }
+            if((boardAttacks[(side+1) & 1][ROOK_BOARD] & kingZone[side]) != 0)
+                mask |= 4;
 
-		 return kingSafetyEval[count + KingAttackVal[ (RelativeRanks[side][kingPos[side]>>3] << 3 ) + ( kingPos[side] & 7 ) ]];
-	 }
+            if((boardAttacks[(side+1) & 1][QUEEN_BOARD] & kingZone[side]) != 0)
+                mask |= 8;
 
-	
-	private static int HungPieces(int side, long piecesNoKing)
-	{
-		int enemySide = side ^ 1;
-		piecesNoKing  &= boardAttacks[enemySide][ALL_BOARD];
+            count += TABLE[mask];
+        }
 
-		int hung=0;
-		//long hungBits = 0;
-		while(piecesNoKing != 0)
-		{
-			long bit = piecesNoKing & -piecesNoKing;
-			piecesNoKing ^= bit;
+        return kingSafetyEval[count + KingAttackVal[ (RelativeRanks[side][kingPos[side]>>3] << 3 ) + ( kingPos[side] & 7 ) ]];
+    }
 
-			if( (boardAttacks[side][ALL_BOARD] & bit) == 0 )
-			{
-				//hungBits |= bit;
-				hung++;
-			}
-			else
-			{
-				int position = Long.numberOfTrailingZeros( bit );
-				switch(chessBoard.piece_in_square[position] % 6)
-				{
-					case 0:
-						//if(( (boardAttacks[enemySide][PAWN_BOARD] | boardAttacks[enemySide][BISHOP_BOARD] | boardAttacks[enemySide][KNIGHT_BOARD] | boardAttacks[enemySide][KING_BOARD]) & bit) != 0 )
-						if(( (boardAttacks[enemySide][PAWN_BOARD] | boardAttacks[enemySide][BISHOP_BOARD] | boardAttacks[enemySide][KNIGHT_BOARD] | boardAttacks[enemySide][KING_BOARD]) & bit) != 0 )
-						{
-							//hungBits |= bit;
-							hung++;
-						}
-					break;
+    private static int HungPieces(int side, long piecesNoKing)
+    {
+        int enemySide = side ^ 1;
+        piecesNoKing  &= boardAttacks[enemySide][ALL_BOARD];
 
-					case 1:
-						if(( (boardAttacks[enemySide][PAWN_BOARD] | boardAttacks[enemySide][BISHOP_BOARD] | boardAttacks[enemySide][KING_BOARD]) & bit) != 0 )
-						{
-							//hungBits |= bit;
-							hung++;
-						}
-					case 2:
-						if(( (boardAttacks[enemySide][PAWN_BOARD] | boardAttacks[enemySide][KNIGHT_BOARD] | boardAttacks[enemySide][KING_BOARD]) & bit) != 0 )
-						{
-							//hungBits |= bit;
-							hung++;
-						}
-					break;
+        int hung=0; 
+        while(piecesNoKing != 0)
+        {
+            long bit = piecesNoKing & -piecesNoKing;
+            piecesNoKing ^= bit;
 
-					case 3:
-							if(( (boardAttacks[enemySide][PAWN_BOARD] | boardAttacks[enemySide][BISHOP_BOARD] | boardAttacks[enemySide][KNIGHT_BOARD] | boardAttacks[enemySide][ROOK_BOARD]) & bit) != 0 )
-							{
-								//hungBits |= bit;
-								hung++;
-							}
-					break;
+            if( (boardAttacks[side][ALL_BOARD] & bit) == 0 )
+            {
+                hung++;
+            }
+            else
+            {
+                int position = Long.numberOfTrailingZeros( bit );
+                switch(chessBoard.piece_in_square[position] % 6)
+                {
+                    case 0:
+                        if(( (boardAttacks[enemySide][PAWN_BOARD] | boardAttacks[enemySide][BISHOP_BOARD] | boardAttacks[enemySide][KNIGHT_BOARD] | boardAttacks[enemySide][KING_BOARD]) & bit) != 0 )
+                        {
+                            hung++;
+                        }
+                    break;
 
-				}
-			}
-		}
+                    case 1:
+                        if(( (boardAttacks[enemySide][PAWN_BOARD] | boardAttacks[enemySide][BISHOP_BOARD] | boardAttacks[enemySide][KING_BOARD]) & bit) != 0 )
+                        {
+                            hung++;
+                        }
+                    case 2:
+                        if(( (boardAttacks[enemySide][PAWN_BOARD] | boardAttacks[enemySide][KNIGHT_BOARD] | boardAttacks[enemySide][KING_BOARD]) & bit) != 0 )
+                        {
+                            hung++;
+                        }
+                    break;
 
-		if(hung >= 2)
-		{
-			if(hung == 2)
-				return -HUNG_PENALTY;
-			else
-			 return -HUNG_PENALTY * 2;
-		}
-		else
-			return 0;
-	}
+                    case 3:
+                        if(( (boardAttacks[enemySide][PAWN_BOARD] | boardAttacks[enemySide][BISHOP_BOARD] | boardAttacks[enemySide][KNIGHT_BOARD] | boardAttacks[enemySide][ROOK_BOARD]) & bit) != 0 )
+                        {
+                            hung++;
+                        }
+                    break;
+                }
+            }
+        }
+
+        if(hung >= 2)
+        {
+            if(hung == 2) {
+                return -HUNG_PENALTY;
+            } else {
+                return -HUNG_PENALTY * 2;
+            }
+        } else { 
+            return 0;
+        }
+    }
 }
 
