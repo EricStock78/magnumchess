@@ -61,18 +61,8 @@ public class SEE {
     public static boolean isPinned(int side, int to, int from) {
     	int relation;
     	
-    	long enemies;
-    	long king;
-
-    	if(side==1) {
-			king = Board.blackking;
-			enemies = Board.whitepieces;
-
-		}
-		else {
-			king = Board.whiteking;
-			enemies = Board.blackpieces;
-		}
+    	long king = Board.pieceBits[side][Global.PIECE_KING];
+		long enemies = Board.pieceBits[side ^ 1][Global.PIECE_ALL];
 
     	int kingPos = Long.numberOfTrailingZeros(king);
     	
@@ -80,14 +70,8 @@ public class SEE {
     	
     		return false;	
     	}
-      if(side==1) {
-			enemies &= (Board.whitequeen | Board.whitebishops | Board.whiterooks);
-		}
-		else {
-			enemies &= (Board.blackqueen | Board.blackbishops | Board.blackrooks);
-		}
-      //enemies &= Board.slidePieces;
-    	
+      enemies &= ( Board.pieceBits[side ^ 1][Global.PIECE_QUEEN] | Board.pieceBits[side ^ 1][Global.PIECE_BISHOP] | Board.pieceBits[side ^ 1][Global.PIECE_ROOK] );
+	
     	int difference = kingPos - from;
     	int rankDifference = (kingPos >> 3) - (from >> 3);
     	if(difference < 0)
@@ -208,7 +192,7 @@ public class SEE {
 		{
 			case(Global.EN_PASSANT_CAP):
 				tempVal = Global.values[Global.PIECE_PAWN];
-				removedBits |= side == -1 ? Global.set_Mask[to-8] : Global.set_Mask[to+8];
+				removedBits |= side == Global.COLOUR_WHITE ? Global.set_Mask[to-8] : Global.set_Mask[to+8];
 				arrPieces[friendSide][arrPieceCount[friendSide]++] = (Global.values[Global.PIECE_PAWN] << 6 | from );
 			break;
 

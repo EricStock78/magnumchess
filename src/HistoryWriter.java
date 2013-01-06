@@ -624,7 +624,7 @@ public final class HistoryWriter {
 			}	
 		}	
 		else {
-			if(chessBoard.getTurn()==-1)
+			if(chessBoard.getTurn()==Global.COLOUR_WHITE)
 				pieces = getPieces(move1,false);
 			else
 				pieces = getPieces(move1,true);
@@ -710,39 +710,39 @@ public final class HistoryWriter {
 		switch(p) {
 			case(66):			//bishop 
 				if(side)
-					temp = chessBoard.blackbishops;
+					temp = chessBoard.pieceBits[Global.COLOUR_BLACK][Global.PIECE_BISHOP];
 				else
-					temp = chessBoard.whitebishops;
+					temp = chessBoard.pieceBits[Global.COLOUR_WHITE][Global.PIECE_BISHOP];
 					break;
 			case(75):			//king
 				if(side)
-					temp = chessBoard.blackking;
+					temp = chessBoard.pieceBits[Global.COLOUR_BLACK][Global.PIECE_KING];
 				else
-					temp = chessBoard.whiteking;
+					temp = chessBoard.pieceBits[Global.COLOUR_WHITE][Global.PIECE_KING];
 					break;
 			case(78):			//knight
 				if(side)
-					temp = chessBoard.blackknights;
+					temp = chessBoard.pieceBits[Global.COLOUR_BLACK][Global.PIECE_KNIGHT];
 				else
-					temp = chessBoard.whiteknights;
+					temp = chessBoard.pieceBits[Global.COLOUR_WHITE][Global.PIECE_KNIGHT];
 					break;
 			case(82):			//rook
 				if(side)
-					temp = chessBoard.blackrooks;
+					temp = chessBoard.pieceBits[Global.COLOUR_BLACK][Global.PIECE_ROOK];
 				else
-					temp = chessBoard.whiterooks;
+					temp = chessBoard.pieceBits[Global.COLOUR_WHITE][Global.PIECE_ROOK];
 					break;
 			case(81):			//queen
 				if(side)
-					temp = chessBoard.blackqueen;
+					temp = chessBoard.pieceBits[Global.COLOUR_BLACK][Global.PIECE_QUEEN];
 				else
-					temp = chessBoard.whitequeen;
+					temp = chessBoard.pieceBits[Global.COLOUR_WHITE][Global.PIECE_QUEEN];
 					break;
 			default:				//pawn move
 				if(side)
-					temp = chessBoard.blackpawns;
+					temp = chessBoard.pieceBits[Global.COLOUR_WHITE][Global.PIECE_PAWN];
 				else
-					temp = chessBoard.whitepawns;
+					temp = chessBoard.pieceBits[Global.COLOUR_BLACK][Global.PIECE_PAWN];
 					break;
         }
         return temp;	
@@ -854,22 +854,12 @@ public final class HistoryWriter {
 		long pieces;
 		switch(pType) {
 			case 0:				//white rook
-				pieces = chessBoard.whiterooks;
-				break;
 			case 1:				//white knight
-				pieces = chessBoard.whiteknights;
-				break;
 			case 3:
-				pieces = chessBoard.whitequeen;
-				break;
 			case 6:				//white rook
-				pieces = chessBoard.blackrooks;
-				break;
 			case 7:				//white knight
-				pieces = chessBoard.blackknights;
-				break;
 			case 9:
-				pieces = chessBoard.blackqueen;
+				pieces = chessBoard.pieceBits[pType/6][pType%6];
 				break;
 			default:
 				//this shouldn't happen

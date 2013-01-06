@@ -90,8 +90,10 @@ public class Main
 				getCmd();
         } catch(Exception ex) {
             System.out.print("info string ");
-            File f = new File("./errorLogs/file"+Math.random()*500+".log");
-				f.createNewFile();
+            //File f = new File("errorLogs"+File.separator+"file"+Math.random()*500+".log");
+				File f = new File("error");
+            System.out.println(f.getCanonicalPath());
+            f.createNewFile();
 				FileWriter fileWriter;
 				BufferedWriter buffWriter;
 				try {
@@ -152,12 +154,12 @@ public class Main
 			if(cmd.startsWith("quit"))
                 System.exit(0);
 		else if(cmd.equals("eval_dump_white")) {
-            Evaluation2.getEval(-1, -2000, 2000);
+            Evaluation2.getEval(Global.COLOUR_WHITE, -2000, 2000);
             Evaluation2.printEvalTerms();
 		}
 		else if(cmd.equals("eval_dump_black"))
 		{
-		  Evaluation2.getEval(1, -2000, 2000);
+		  Evaluation2.getEval(Global.COLOUR_BLACK, -2000, 2000);
             Evaluation2.printEvalTerms();
 		}
 		else if(cmd.equals("see_test"))

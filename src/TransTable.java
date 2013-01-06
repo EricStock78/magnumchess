@@ -93,8 +93,8 @@ public class TransTable {
 		| (long)(value_eg + 4000) << 13
 		| (long)(center + 64) << 26
 		| (long)(passPhase1Mid + 512) << 33
-	   | (long)(passPhase1End + 512) << 43
-		| (long)(pawnShield + 128) << 53;
+	   | (long)(passPhase1End + 1024) << 43
+		| (long)(pawnShield + 64) << 54;
 		Table[index+2] = passedBits;
 		Table[index+3] = whiteAttacks;
 		Table[index+4] = blackAttacks;
@@ -204,11 +204,11 @@ public class TransTable {
 	}
 
 	public final int GetPassPhase1End(int key) {
-		return (int)((Table[key*PAWN_TABLE_SIZE + 1] >> 43 & 1023L) - 512);
+		return (int)((Table[key*PAWN_TABLE_SIZE + 1] >> 43 & 2047L) - 1024);
 	}
 
 	public final int GetPawnShield(int key) {
-		return (int)((Table[key*PAWN_TABLE_SIZE + 1] >> 53 & 255L) - 128);
+		return (int)((Table[key*PAWN_TABLE_SIZE + 1] >> 54 & 127L) - 64);
 	}
 	public final long GetPawnOutposts(int key) {
 		return Table[key*PAWN_TABLE_SIZE + 5];
@@ -245,8 +245,8 @@ public class TransTable {
      *
      * @return int - the value
      */     
-    public final long getValue(int key,int probe) {
-		return ((Table2[key*4+1+probe] >>> 32)&65535L) - 21000;
+    public final int getValue(int key,int probe) {
+		return (int) (((Table2[key*4+1+probe] >>> 32)&65535L) - 21000);
     }
 	
     /*
