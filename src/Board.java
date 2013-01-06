@@ -66,24 +66,13 @@ public final class Board { //extends java.util.Observable{
 
 	 public static int materialValues[] = new int[9 * 9 * 3 * 3 * 3 * 3 * 3 * 3 * 2 * 2];
     public static int materialKey = 0;
-    /** number of white pieces on the board */
-    public int wPieceNo;					
-	
-    /** number of black pieces on the board */
-    public int bPieceNo;
-
+    
+    public int[] noPieces = new int[2];
+    
     /** value used to adjust material table when 2 queens of a side or both are present */
     private int materialAdjust;
 
     private int[][] QueenMaterialAdjustArray = new int[8][8];
-
-    /** variables representing the number of white and black queens
-    *  used to correct material tables when more than one queen of a colour is present
-    * Note - this will not correct the problem exactly, but it is expected that by showing the dominant queen material
-    * the search will not suffer
-    */
-    private int numberWhiteQueens;
-    private int numberBlackQueens;
 
     /** total material on the board */
     public int totalValue;
@@ -92,20 +81,23 @@ public final class Board { //extends java.util.Observable{
     private static final long[] KnightMoveBoard = new long[64];
     /** white pawn moves for each square */
     private static final long[] WhitePawnMoveBoard	= new long[64];
-	/** white pawn attack moves for each sqaure */
-    private static final long[] WhitePawnAttackBoard = new long[64];
-	/** black pawn moves for each square */
-    private static final long[] BlackPawnMoveBoard	= new long[64];
-	/** black pawn attack moves for each square */
-    private static long[] BlackPawnAttackBoard = new long[64];
+    /** black pawn attack moves for each square */
+    private static long[] BlackPawnMoveBoard = new long[64];
+	/** pawn attack moves for each sqaure */
+    private static final long[][] PawnAttackBoard = new long[2][64];
+	
+	
 
     /** The following 64 bit longs represent the bitboards used to
      * represent the occupancy for various pieces on the board
      */
     public long bitboard;
-	 public long whitepieces;
-	 public long blackpieces;
-	 public long whitepawns;
+	 //public long whitepieces;
+	 //public long blackpieces;
+	 
+    public long[][] pieceBits = new long[2][7];
+    
+    /*public long whitepawns;
 	 public long blackpawns;
 	 public long whiteknights;
 	 public long blackknights;
@@ -116,11 +108,12 @@ public final class Board { //extends java.util.Observable{
 	 public long whitequeen;
 	 public long blackqueen;
 	 public long whiteking;
-	 public long blackking;
-	 public long slidePieces;
+	 public long blackking;*/
+	 
+    public long slidePieces;
 	
 	 /** castle status variables for each side*/
-    public int bCastle, wCastle;
+    public int[] castleFlag = new int[2];
 	
     /** this is the occupancy information for the initial chess position */
     private static final int[] init =     {0,1,2,3,4,2,1,0,
@@ -164,10 +157,13 @@ public final class Board { //extends java.util.Observable{
      * note this is optimized for 32 bit computers
      */
     private static final long[][] pHash = new long[64][12];
+    private static final long[][] pawnKingHash = new long[64][12];
 	
+    
+    
     /** these are the hash values for the status of each sides castling */
-    private static final long wCastleHash[] = new long[8];
-	 private static final long bCastleHash[] = new long[8];
+    private static final long CastleHash[][] = new long[2][8];
+	 //private static final long bCastleHash[] = new long[8];
 	
     /** side to move hash value */
     private long bHashMove;						//hash for when black is to move
@@ -297,16 +293,18 @@ public final class Board { //extends java.util.Observable{
 			{
 				KnightMoveBoard[i] = dataInputStream.readLong();
 				WhitePawnMoveBoard[i] = dataInputStream.readLong();
-				WhitePawnAttackBoard[i] = dataInputStream.readLong();
-				BlackPawnMoveBoard[i] = dataInputStream.readLong();
-				BlackPawnAttackBoard[i] = dataInputStream.readLong();
+            PawnAttackBoard[Global.COLOUR_WHITE][i] = dataInputStream.readLong();
+            BlackPawnMoveBoard[i] = dataInputStream.readLong();
+				PawnAttackBoard[Global.COLOUR_BLACK][i] = dataInputStream.readLong();
 			}
 
 			//read the generated random 64 bit hash values used to generate the zorbist key
 			for(int i=0;i<64;i++) {
 				for(int j=0;j<12;j++) {
 					pHash[i][j] = dataInputStream.readLong();
-				}
+               if( j%6 == 5 || j%6 == 4)
+                  pawnKingHash[i][j] = pHash[i][j];
+            }
 			}
 
 			for(int i=0;i<9;i++) {
@@ -317,8 +315,8 @@ public final class Board { //extends java.util.Observable{
 			bHashMove = dataInputStream.readLong();
 
 			for(int i=0;i<8;i++) {
-				bCastleHash[i] = dataInputStream.readLong();
-				wCastleHash[i] = dataInputStream.readLong();
+				CastleHash[Global.COLOUR_WHITE][i] = dataInputStream.readLong();
+				CastleHash[Global.COLOUR_BLACK][i] = dataInputStream.readLong();
 			}
 
 			dataInputStream.close();
@@ -408,21 +406,21 @@ public final class Board { //extends java.util.Observable{
 		for(int i=8; i<64; i++) {
 			int file = i%8;
 			if(file == 0)
-				Global.whitePassedPawnMasks[i] = Global.plus8[i] | Global.plus8[i+1];
+				Global.passed_masks[Global.COLOUR_WHITE][i] = Global.plus8[i] | Global.plus8[i+1];
 			else  if (file == 7)
-				Global.whitePassedPawnMasks[i] = Global.plus8[i] | Global.plus8[i-1];
+				Global.passed_masks[Global.COLOUR_WHITE][i] = Global.plus8[i] | Global.plus8[i-1];
 			else
-				Global.whitePassedPawnMasks[i] = Global.plus8[i] | Global.plus8[i+1] | Global.plus8[i-1];
+				Global.passed_masks[Global.COLOUR_WHITE][i] = Global.plus8[i] | Global.plus8[i+1] | Global.plus8[i-1];
 		}
 
 		for(int i=55 ; i>=0; i--) {
 			int rank = i%8;
 			if(rank == 0)
-				Global.blackPassedPawnMasks[i] = Global.minus8[i] | Global.minus8[i+1];
+				Global.passed_masks[Global.COLOUR_BLACK][i] = Global.minus8[i] | Global.minus8[i+1];
 			else if(rank == 7)
-				Global.blackPassedPawnMasks[i] = Global.minus8[i] | Global.minus8[i-1];
+				Global.passed_masks[Global.COLOUR_BLACK][i] = Global.minus8[i] | Global.minus8[i-1];
 			else
-				Global.blackPassedPawnMasks[i] = Global.minus8[i] | Global.minus8[i+1] | Global.minus8[i-1];
+				Global.passed_masks[Global.COLOUR_BLACK][i] = Global.minus8[i] | Global.minus8[i+1] | Global.minus8[i-1];
 		}
 
 
@@ -432,7 +430,6 @@ public final class Board { //extends java.util.Observable{
 			{
 				Global.mask_behind[i][j] = (i == Global.COLOUR_WHITE) ? Global.minus8[j] : Global.plus8[j];
 				Global.mask_in_front[i][j] = (i == Global.COLOUR_WHITE) ? Global.plus8[j] : Global.minus8[j];
-				Global.passed_masks[i][j] = (i == Global.COLOUR_WHITE) ? Global.whitePassedPawnMasks[j] : Global.blackPassedPawnMasks[j];
 			}
 		}
 
@@ -530,8 +527,8 @@ public final class Board { //extends java.util.Observable{
 				hashValue ^= pHash[i][init[i]];
 			}	
 		}
-		hashValue ^= bCastleHash[bCastle];
-		hashValue ^= wCastleHash[wCastle];
+		hashValue ^= CastleHash[Global.COLOUR_BLACK][castleFlag[Global.COLOUR_BLACK]];
+		hashValue ^= CastleHash[Global.COLOUR_WHITE][castleFlag[Global.COLOUR_WHITE]];
 		hashValue ^= passantHashW[passantW%9];
 		hashValue ^= passantHashB[passantB%9];
 		Engine.resetHash();
@@ -661,11 +658,11 @@ public final class Board { //extends java.util.Observable{
         char c = fen.charAt(0);
         fen = fen.substring(fen.indexOf(" ")+1);
         if(c == 'w') {
-            turn = -1;
+            turn = Global.COLOUR_WHITE;
         } else {
-            turn = 1;
+            turn = Global.COLOUR_BLACK;
         }
-        if(turn==1) {
+        if(turn == Global.COLOUR_BLACK) {
 			hashValue ^= bHashMove;
 		 }
         /** now process the castling rights */
@@ -676,22 +673,22 @@ public final class Board { //extends java.util.Observable{
             c = token.charAt(i);
             switch(c) {
                 case('K'):
-                    wCastle = Global.SHORT_CASTLE;
+                    castleFlag[Global.COLOUR_WHITE] = Global.SHORT_CASTLE;
                     break;
                 case('Q'):
-                    if(wCastle == Global.NO_CASTLE)
-                        wCastle = Global.LONG_CASTLE;
+                    if(castleFlag[Global.COLOUR_WHITE] == Global.NO_CASTLE)
+                        castleFlag[Global.COLOUR_WHITE] = Global.LONG_CASTLE;
                     else
-                        wCastle = Global.BOTH_CASTLE;
+                        castleFlag[Global.COLOUR_WHITE] = Global.BOTH_CASTLE;
                     break;
                 case('k'):
-                    bCastle = Global.SHORT_CASTLE;
+                    castleFlag[Global.COLOUR_BLACK] = Global.SHORT_CASTLE;
                     break;
                 case('q'):
-                    if(bCastle == Global.NO_CASTLE)
-                        bCastle = Global.LONG_CASTLE;
+                    if(castleFlag[Global.COLOUR_BLACK] == Global.NO_CASTLE)
+                        castleFlag[Global.COLOUR_BLACK] = Global.LONG_CASTLE;
                     else
-                        bCastle = Global.BOTH_CASTLE;
+                        castleFlag[Global.COLOUR_BLACK] = Global.BOTH_CASTLE;
                     break;
             }
         }
@@ -703,7 +700,7 @@ public final class Board { //extends java.util.Observable{
         if(c != '-') {
             token = fen.substring(0,fen.indexOf(" "));
             int pSq = HistoryWriter.getNumericPosition(token);
-            if(turn == -1)                  //white moving
+            if(turn == Global.COLOUR_WHITE)                  
                 passantB = pSq;
             else
                 passantW = pSq;
@@ -732,39 +729,24 @@ public final class Board { //extends java.util.Observable{
 		  hashValue ^= passantHashB[passantB%9];
 
 		  /** set the has values for the recently set castling rights */
-        hashValue ^= bCastleHash[bCastle];
-        hashValue ^= wCastleHash[wCastle];
+        hashValue ^= CastleHash[Global.COLOUR_BLACK][castleFlag[Global.COLOUR_BLACK]];
+        hashValue ^= CastleHash[Global.COLOUR_WHITE][castleFlag[Global.COLOUR_WHITE]];
     }
 
 	 private void ClearBoard()
 	 {
 		materialKey = 0;
 		materialAdjust = 0;
-		numberWhiteQueens = 0;
-		numberBlackQueens = 0;
 		zorbistDepth = 1;
-		blackpieces = 0;
-		whitepieces = 0;
 		moveCount = 0;
 		drawCount = 0;
 		bitboard = 0;
-		whiteknights = 0;
-		blackknights = 0;
-		whitebishops = 0;
-		blackbishops = 0;
-		whiterooks = 0;
-		blackrooks = 0;
-		whiteking = 0;
-		blackking = 0;
-		whitequeen = 0;
-		blackqueen = 0;
-		whitepawns = 0;
-		blackpawns = 0;
+      Arrays.fill( pieceBits[Global.COLOUR_BLACK], 0 );
+		Arrays.fill( pieceBits[Global.COLOUR_WHITE], 0 );
 		slidePieces = 0;
-		totalValue = 0;
-		turn = -1;						//white moves first
-		wPieceNo = 0;
-		bPieceNo = 0;
+		totalValue = -Global.values[Global.PIECE_KING] * 2;
+		turn = Global.COLOUR_WHITE;						//white moves first
+		noPieces[0] = noPieces[1] = 0;
 		iCurrentMovesDepth = 0;
 		Arrays.fill(piece_in_square, -1);
 		Arrays.fill(pieceListIndices, -1);
@@ -773,8 +755,8 @@ public final class Board { //extends java.util.Observable{
 		}
 		Arrays.fill( pieceTotals, 0);
 
-		bCastle = Global.BOTH_CASTLE;
-		wCastle = Global.BOTH_CASTLE;
+		castleFlag[Global.COLOUR_BLACK] = Global.BOTH_CASTLE;
+		castleFlag[Global.COLOUR_WHITE] = Global.BOTH_CASTLE;
 		passantW = NO_PASSANT_WHITE;
 		passantB = NO_PASSANT_BLACK;
 		hashValue = 0;
@@ -785,31 +767,16 @@ public final class Board { //extends java.util.Observable{
 		hashValue = 0;
 		materialKey = 0;
 		materialAdjust = 0;
-		numberWhiteQueens = 0;
-		numberBlackQueens = 0;
-		blackpieces = 0;
-		whitepieces = 0;
 		bitboard = 0;
-		whiteknights = 0;
-		blackknights = 0;
-		whitebishops = 0;
-		blackbishops = 0;
-		whiterooks = 0;
-		blackrooks = 0;
-		whiteking = 0;
-		blackking = 0;
-		whitequeen = 0;
-		blackqueen = 0;
-		whitepawns = 0;
-		blackpawns = 0;
+		Arrays.fill( pieceBits[Global.COLOUR_BLACK], 0 );
+		Arrays.fill( pieceBits[Global.COLOUR_WHITE], 0 );
 		slidePieces = 0;
-		totalValue = 0;
-		turn = -turn;	
-		if(turn==1) {
+		totalValue = -Global.values[Global.PIECE_KING] * 2;
+		turn ^= 1;	
+		if(turn == Global.COLOUR_BLACK) {
 			hashValue ^= bHashMove;
 		}
-		wPieceNo = 0;
-		bPieceNo = 0;
+		noPieces[0] = noPieces[1] = 0;
 
 		int tempPassantB = passantB;
 		if(passantW != NO_PASSANT_WHITE) {
@@ -831,11 +798,11 @@ public final class Board { //extends java.util.Observable{
 
 		pawnHash = 0;
 
-		int tempCastle = bCastle;
-		bCastle = wCastle;
-		wCastle = tempCastle;
-		hashValue ^= bCastleHash[bCastle];
-		hashValue ^= wCastleHash[wCastle];
+		int tempCastle = castleFlag[Global.COLOUR_BLACK];
+		castleFlag[Global.COLOUR_BLACK] = castleFlag[Global.COLOUR_WHITE];
+		castleFlag[Global.COLOUR_WHITE] = tempCastle;
+		hashValue ^= CastleHash[Global.COLOUR_BLACK][castleFlag[Global.COLOUR_BLACK]];
+		hashValue ^= CastleHash[Global.COLOUR_WHITE][castleFlag[Global.COLOUR_WHITE]];
 
 		Arrays.fill(pieceListIndices, -1);
 		for(int i = 0; i < pieceList.length; i++) {
@@ -1078,10 +1045,10 @@ public final class Board { //extends java.util.Observable{
 		hash ^= passantHashW[passantW%9];
 		hash ^= passantHashB[passantB%9];
 		
-		hash ^= bCastleHash[bCastle];
-		hash ^= wCastleHash[wCastle];
+		hash ^= CastleHash[Global.COLOUR_BLACK][castleFlag[Global.COLOUR_BLACK]];
+		hash ^= CastleHash[Global.COLOUR_WHITE][castleFlag[Global.COLOUR_WHITE]];
 	
-		if(turn==1) {
+		if(turn == Global.COLOUR_BLACK) {
 			hash^=bHashMove;
 		}
 
@@ -1109,281 +1076,67 @@ public final class Board { //extends java.util.Observable{
      */
 	public  final void setBoard(int i,int piece) {
 		bitboard |= Global.set_Mask[i];
-		piece_in_square[i] = piece;
-
+		int type = piece % 6;
+      int side = piece / 6;
+      piece_in_square[i] = piece;
 		pieceListIndices[i] = pieceTotals[piece];
 		pieceList[piece][pieceTotals[piece]++] = i;
+      noPieces[side]++;
+      pieceBits[side][type] |= Global.set_Mask[i];
+      pieceBits[side][Global.PIECE_ALL] |= Global.set_Mask[i];
+      materialKey += Global.materialOffset[piece];
+      totalValue +=Global.values[piece];
+      materialAdjust = QueenMaterialAdjustArray[pieceTotals[3]][pieceTotals[9]];
+      pawnHash ^= pawnKingHash[i][piece];
 
-		switch(piece) {
-			case 0:
-				wPieceNo++;
-				whitepieces |= Global.set_Mask[i];
-				whiterooks |= Global.set_Mask[i];
-				materialKey += Global.materialOffset[piece];
-            totalValue +=Global.values[piece];
-				break;
-			case 1:
-				wPieceNo++;
-				whitepieces |= Global.set_Mask[i];
-				whiteknights |= Global.set_Mask[i];
-				materialKey += Global.materialOffset[piece];
-            totalValue +=Global.values[piece];
-				break;
-			case 2:
-				wPieceNo++;
-				whitepieces |= Global.set_Mask[i];
-				whitebishops |= Global.set_Mask[i];
-				materialKey += Global.materialOffset[piece];
-            totalValue +=Global.values[piece];
-				break;
-			case 3:
-				wPieceNo++;
-				materialAdjust = QueenMaterialAdjustArray[++numberWhiteQueens][numberBlackQueens];
-				whitepieces |= Global.set_Mask[i];
-				whitequeen |= Global.set_Mask[i];
-				materialKey += Global.materialOffset[piece];
-            totalValue +=Global.values[piece];
-				break;
-			case 4:
-				wPieceNo++;
-				whitepieces |= Global.set_Mask[i];
-				whiteking |= Global.set_Mask[i];
-				pawnHash ^= pHash[i][piece];
-				break;
-			case 5:
-				wPieceNo++;
-				whitepieces |= Global.set_Mask[i];
-				whitepawns |= Global.set_Mask[i];
-				materialKey += Global.materialOffset[piece];
-            totalValue += Global.values[piece];
-				pawnHash ^= pHash[i][piece];
-				break;			
-			case 6:
-				bPieceNo++;
-				blackpieces |= Global.set_Mask[i];
-				blackrooks |= Global.set_Mask[i];
-				materialKey += Global.materialOffset[piece];
-            totalValue +=Global.values[piece];
-				break;
-			case 7:
-				bPieceNo++;
-				blackpieces |= Global.set_Mask[i];
-				blackknights |= Global.set_Mask[i];
-				materialKey += Global.materialOffset[piece];
-            totalValue +=Global.values[piece];
-				break;
-			case 8:
-				bPieceNo++;
-				blackpieces |= Global.set_Mask[i];
-				blackbishops |= Global.set_Mask[i];
-				materialKey += Global.materialOffset[piece];
-            totalValue +=Global.values[piece];
-				break;
-			case 9:
-				bPieceNo++;
-				materialAdjust = QueenMaterialAdjustArray[numberWhiteQueens][++numberBlackQueens];
-				blackpieces |= Global.set_Mask[i];
-				blackqueen |= Global.set_Mask[i];	
-				materialKey += Global.materialOffset[piece];
-            totalValue +=Global.values[piece];
-				break;
-			case 10:
-				bPieceNo++;
-				blackpieces |= Global.set_Mask[i];
-				blackking |= Global.set_Mask[i];
-				pawnHash ^= pHash[i][piece];
-				break;
-			case 11:
-				bPieceNo++;
-				blackpieces |= Global.set_Mask[i];
-				blackpawns |= Global.set_Mask[i];
-				materialKey += Global.materialOffset[piece];
-            totalValue +=Global.values[piece];
-				pawnHash ^= pHash[i][piece];
-				break;
-		}
 	}
 	
-	/***********************************************************************
-		Name:		updateBoard
-		Parameters:	int, String
-		Returns:	None
-		Description:This method updates all of the boards so that on index
-					int there exists piece String
-	***********************************************************************/	
-	private  final void updateBoard(int i,int j) {
-		//long bit = Global.set_Mask[i] | Global.set_Mask[j];
-		long bit = (long)1 << i | (long)1 << j;
-      bitboard ^= bit;
-		int piece = piece_in_square[j];
-		piece_in_square[i] = piece;
-		piece_in_square[j] = -1;
-
-		pieceListIndices[i] = pieceListIndices[j];
-		pieceList[piece][pieceListIndices[i]] = i;
-
-		switch(piece) {
-			case(0):		
-				whitepieces ^= bit;
-				whiterooks ^= bit;
-				break;
-			case(1):
-				whitepieces ^= bit;
-				whiteknights ^= bit;
-				break;
-			case(2):
-				whitepieces ^= bit;
-				whitebishops ^= bit;
-				break;
-			case(3):
-				whitepieces ^= bit;
-				whitequeen ^= bit;
-				break;
-			case(4):
-				whitepieces ^= bit;
-				whiteking ^= bit;
-				pawnHash ^= pHash[i][piece];
-				pawnHash ^= pHash[j][piece];
-				break;
-			case(5):
-				whitepieces ^= bit;
-				whitepawns ^= bit;
-				pawnHash ^= pHash[i][piece];
-				pawnHash ^= pHash[j][piece];
-				break;
-			case(6):
-				blackpieces ^= bit;
-				blackrooks ^= bit;
-				break;
-			case(7):
-				blackpieces ^= bit;
-				blackknights ^= bit;
-				break;
-			case(8):
-				blackpieces ^= bit;
-				blackbishops ^= bit;
-				break;
-			case(9):
-				blackpieces ^= bit;
-				blackqueen ^= bit;
-				break;
-			case(10):
-				blackpieces ^= bit;
-				blackking ^= bit;
-				pawnHash ^= pHash[i][piece];
-				pawnHash ^= pHash[j][piece];
-				break;
-			case(11):
-				blackpieces ^= bit;
-				blackpawns ^= bit;
-				pawnHash ^= pHash[i][piece];
-				pawnHash ^= pHash[j][piece];
-				break;
-		}
-	}
+/***********************************************************************
+        Name:		updateBoard
+        Parameters:	int, String
+        Returns:	None
+        Description:This method updates all of the boards so that on index
+                                int there exists piece String
+***********************************************************************/	
+private  final void updateBoard(int i,int j) 
+{
+    long bit = (long)1 << i | (long)1 << j;
+    bitboard ^= bit;
+    int piece = piece_in_square[j];
+    int type = piece % 6;
+    int side = piece / 6;
+    piece_in_square[i] = piece;
+    piece_in_square[j] = -1;
+    pieceListIndices[i] = pieceListIndices[j];
+    pieceList[piece][pieceListIndices[i]] = i;
+    pieceBits[side][type] ^= bit;
+    pieceBits[side][Global.PIECE_ALL] ^= bit;
+    pawnHash ^= pawnKingHash[i][piece];
+    pawnHash ^= pawnKingHash[j][piece];
+}
     
-	/***********************************************************************
-		Name:		clearBoard
-		Parameters:	int, String
-		Returns:	None
-		Description:On index i String s is removed by this method
-	***********************************************************************/
-	public  final void clearBoard(int i) {
-		bitboard ^= Global.set_Mask[i];
-		int piece = piece_in_square[i];
-		pieceList[piece][pieceListIndices[i]] = pieceList[piece][pieceTotals[piece]-1];
-		pieceListIndices[pieceList[piece][--pieceTotals[piece]]] = pieceListIndices[i];
-
-		switch(piece) {
-			case 0:
-				wPieceNo--;
-				whitepieces ^= Global.set_Mask[i];
-				whiterooks ^= Global.set_Mask[i];
-				materialKey -= Global.materialOffset[piece];
-            totalValue -=Global.values[piece];
-				break;
-			case 1:
-				wPieceNo--;
-				whitepieces ^= Global.set_Mask[i];
-				whiteknights ^= Global.set_Mask[i];
-				materialKey -= Global.materialOffset[piece];
-            totalValue -=Global.values[piece];
-				break;
-			case 2:
-				wPieceNo--;
-				whitepieces ^= Global.set_Mask[i];
-				whitebishops ^= Global.set_Mask[i];
-				materialKey -= Global.materialOffset[piece];
-            totalValue -=Global.values[piece];
-				break;
-			case 3:
-				wPieceNo--;
-            materialAdjust = QueenMaterialAdjustArray[--numberWhiteQueens][numberBlackQueens];
-				whitepieces ^= Global.set_Mask[i];
-				whitequeen ^= Global.set_Mask[i];
-				materialKey -= Global.materialOffset[piece];
-            totalValue -=Global.values[piece];
-				break;
-			case 4:
-				wPieceNo--;
-				whitepieces ^= Global.set_Mask[i];
-				whiteking ^= Global.set_Mask[i];
-				pawnHash ^= pHash[i][piece];
-				break;
-			case 5:
-				wPieceNo--;
-				whitepieces ^= Global.set_Mask[i];
-				whitepawns ^= Global.set_Mask[i];
-				materialKey -= Global.materialOffset[piece];
-            totalValue -=Global.values[piece];
-				pawnHash ^= pHash[i][piece];
-				break;		
-			case 6:
-				bPieceNo--;
-				blackpieces ^= Global.set_Mask[i];
-				blackrooks ^= Global.set_Mask[i];
-				materialKey -= Global.materialOffset[piece];
-            totalValue -=Global.values[piece];
-				break;
-			case 7:
-				bPieceNo--;
-				blackpieces ^= Global.set_Mask[i];
-				blackknights ^= Global.set_Mask[i];
-				materialKey -= Global.materialOffset[piece];
-            totalValue -=Global.values[piece];
-				break;
-			case 8:
-				bPieceNo--;
-				blackpieces ^= Global.set_Mask[i];
-				blackbishops ^= Global.set_Mask[i];
-				materialKey -= Global.materialOffset[piece];
-            totalValue -=Global.values[piece];
-				break;
-			case 9:
-				bPieceNo--;
-            materialAdjust = QueenMaterialAdjustArray[numberWhiteQueens][--numberBlackQueens];
-				blackpieces ^= Global.set_Mask[i];
-				blackqueen ^= Global.set_Mask[i];
-				materialKey -= Global.materialOffset[piece];
-            totalValue -=Global.values[piece];
-				break;	
-			case 10:
-				bPieceNo--;
-				blackpieces ^= Global.set_Mask[i];
-				blackking ^= Global.set_Mask[i];
-				pawnHash ^= pHash[i][piece];
-				break;	
-			case 11:
-				bPieceNo--;
-				blackpieces ^= Global.set_Mask[i];
-				blackpawns ^= Global.set_Mask[i];
-				materialKey -= Global.materialOffset[piece];
-            totalValue -=Global.values[piece];
-				pawnHash ^= pHash[i][piece];
-				break;
-		}	
-		piece_in_square[i] = -1;
-	}
+/***********************************************************************
+        Name:		clearBoard
+        Parameters:	int, String
+        Returns:	None
+        Description:On index i String s is removed by this method
+***********************************************************************/
+public  final void clearBoard(int i) {
+    bitboard ^= Global.set_Mask[i];
+    int piece = piece_in_square[i];
+    int type = piece % 6;
+    int side = piece / 6;
+    pieceList[piece][pieceListIndices[i]] = pieceList[piece][pieceTotals[piece]-1];
+    pieceListIndices[pieceList[piece][--pieceTotals[piece]]] = pieceListIndices[i];
+    noPieces[side]--;
+    pieceBits[side][type] ^= Global.set_Mask[i];
+    pieceBits[side][Global.PIECE_ALL] ^= Global.set_Mask[i];
+    materialKey -= Global.materialOffset[piece];
+    totalValue -=Global.values[piece];
+    piece_in_square[i] = -1;
+    materialAdjust = QueenMaterialAdjustArray[pieceTotals[3]][pieceTotals[9]];
+    pawnHash ^= pawnKingHash[i][piece];
+}
 	
     /** 
      *  method getMaterialScore
@@ -1408,12 +1161,16 @@ public final class Board { //extends java.util.Observable{
      *
      */
     public  final int GetMaterialScore(int side) {
-		 if((materialValues[materialKey] == Global.materialDraw))
-          return 0;
-       else
-          return side * (materialValues[materialKey] + materialAdjust);
-	}
-	
+        if(materialValues[materialKey] == Global.materialDraw)
+        {
+            return 0;
+        }
+        else
+        {
+            return (-1 + side) * (materialValues[materialKey] + materialAdjust);
+        }
+    }
+    
     /** 
      *  method getTotalValue
      * 
@@ -1459,7 +1216,7 @@ public final class Board { //extends java.util.Observable{
             case 4:
                 return kingMoveTable[i];
             case 5:
-                return WhitePawnAttackBoard[i];
+                return PawnAttackBoard[Global.COLOUR_WHITE][i];
             case 6:
                 return getMagicRookMoves(i);
             case 7:
@@ -1471,7 +1228,7 @@ public final class Board { //extends java.util.Observable{
             case 10:
                 return kingMoveTable[i];
             case 11:
-                return BlackPawnAttackBoard[i];
+                return PawnAttackBoard[Global.COLOUR_BLACK][i];
         } 
         return 0;
     }
@@ -1487,19 +1244,23 @@ public final class Board { //extends java.util.Observable{
      *
      */	
     public  final long getAttack2(int i) {
-        long attack = getMagicBishopMoves(i) & (whitebishops|blackbishops|whitequeen|blackqueen);
-        attack |= getMagicRookMoves(i) & (whiterooks|blackrooks|whitequeen|blackqueen);
-        attack |= KnightMoveBoard[i] & (whiteknights|blackknights);
-        attack |= kingMoveTable[i] & (whiteking|blackking);
-        attack |= WhitePawnAttackBoard[i] & blackpawns;
-        attack |= BlackPawnAttackBoard[i] & whitepawns;
+        long attack = getMagicBishopMoves(i) & ( pieceBits[Global.COLOUR_BLACK][Global.PIECE_BISHOP] | pieceBits[Global.COLOUR_WHITE][Global.PIECE_BISHOP] 
+                                                | pieceBits[Global.COLOUR_BLACK][Global.PIECE_QUEEN] | pieceBits[Global.COLOUR_WHITE][Global.PIECE_QUEEN] );
+        attack |= getMagicRookMoves(i) & ( pieceBits[Global.COLOUR_BLACK][Global.PIECE_ROOK] | pieceBits[Global.COLOUR_WHITE][Global.PIECE_ROOK] 
+                                       | pieceBits[Global.COLOUR_BLACK][Global.PIECE_QUEEN] | pieceBits[Global.COLOUR_WHITE][Global.PIECE_QUEEN] );
+        attack |= KnightMoveBoard[i] & ( pieceBits[Global.COLOUR_BLACK][Global.PIECE_KNIGHT] | pieceBits[Global.COLOUR_WHITE][Global.PIECE_KNIGHT] );
+        attack |= kingMoveTable[i] & ( pieceBits[Global.COLOUR_BLACK][Global.PIECE_KING] | pieceBits[Global.COLOUR_WHITE][Global.PIECE_KING] );
+        attack |= PawnAttackBoard[Global.COLOUR_WHITE][i] & pieceBits[Global.COLOUR_BLACK][Global.PIECE_PAWN];
+        attack |= PawnAttackBoard[Global.COLOUR_BLACK][i] & pieceBits[Global.COLOUR_WHITE][Global.PIECE_PAWN];
         return attack;
     }
 
 	 public  final long GetSlideAttacks2SEE(int i)
 	 {
-		 return getMagicRookMoves(i) &  (whiterooks|blackrooks|whitequeen|blackqueen)
-				| getMagicBishopMoves(i) & (whitebishops|blackbishops|whitequeen|blackqueen);
+		 return getMagicRookMoves(i) &  ( pieceBits[Global.COLOUR_BLACK][Global.PIECE_ROOK] | pieceBits[Global.COLOUR_WHITE][Global.PIECE_ROOK] 
+                                       | pieceBits[Global.COLOUR_BLACK][Global.PIECE_QUEEN] | pieceBits[Global.COLOUR_WHITE][Global.PIECE_QUEEN] )
+				| getMagicBishopMoves(i) & ( pieceBits[Global.COLOUR_BLACK][Global.PIECE_BISHOP] | pieceBits[Global.COLOUR_WHITE][Global.PIECE_BISHOP] 
+                                       | pieceBits[Global.COLOUR_BLACK][Global.PIECE_QUEEN] | pieceBits[Global.COLOUR_WHITE][Global.PIECE_QUEEN] );
 	 }
     
     /** 
@@ -1516,32 +1277,55 @@ public final class Board { //extends java.util.Observable{
      */	
     public  final long getMovesTo(int i) {
         long temp = getMagicBishopMoves(i);
-        long movers = temp&(whitebishops|blackbishops|whitequeen|blackqueen);
+        long movers = temp & ( pieceBits[Global.COLOUR_BLACK][Global.PIECE_BISHOP] | pieceBits[Global.COLOUR_WHITE][Global.PIECE_BISHOP] 
+                           | pieceBits[Global.COLOUR_BLACK][Global.PIECE_QUEEN] | pieceBits[Global.COLOUR_WHITE][Global.PIECE_QUEEN] );
         temp = getMagicRookMoves(i);
-        movers |= temp&(whiterooks|blackrooks|whitequeen|blackqueen);
+        movers |= temp & ( pieceBits[Global.COLOUR_BLACK][Global.PIECE_ROOK] | pieceBits[Global.COLOUR_WHITE][Global.PIECE_ROOK] 
+                       | pieceBits[Global.COLOUR_BLACK][Global.PIECE_QUEEN] | pieceBits[Global.COLOUR_WHITE][Global.PIECE_QUEEN] );
         temp = KnightMoveBoard[i];
-        movers |= temp&(whiteknights|blackknights);
+        movers |= temp & ( pieceBits[Global.COLOUR_BLACK][Global.PIECE_KNIGHT] | pieceBits[Global.COLOUR_WHITE][Global.PIECE_KNIGHT] );
         if(piece_in_square[i] == -1) {
             if(i/8 >0) {
                 temp = Global.set_Mask[i-8];
-                movers |= (temp & whitepawns);
+                movers |= (temp & pieceBits[Global.COLOUR_WHITE][Global.PIECE_PAWN]);
                 if((i/8 == 3) && (piece_in_square[i-8] == -1)) {
                     temp = Global.set_Mask[i-16];
-                    movers |= (temp & whitepawns);
+                    movers |= (temp & pieceBits[Global.COLOUR_WHITE][Global.PIECE_PAWN] );
                 }
             }
             if(i/8<7) {
                 temp = Global.set_Mask[i+8];
-                movers |= (temp & blackpawns);
+                movers |= (temp & pieceBits[Global.COLOUR_BLACK][Global.PIECE_PAWN] );
                 if((i/8 == 4)&& (piece_in_square[i+8] == -1)) {
                     temp = Global.set_Mask[i+16];
-                    movers |= (temp & blackpawns);
+                    movers |= (temp & pieceBits[Global.COLOUR_BLACK][Global.PIECE_PAWN] );
                 }
             }
         }
         return movers;
     }	
 
+    /** 
+     *  method isAttacked(int i)
+     * 
+     * This method determine if a given square occupied by a piece is attacked
+     * 
+     * @param int i - the position of the square  piece
+     * @param int side - side who has piece 
+     * @return boolean - is the square attacked?
+     *
+     */	
+    public  final boolean isAttacked(int side, int i) {
+      int eSide = side ^ 1;
+      return ((PawnAttackBoard[side][i] & pieceBits[eSide][Global.PIECE_PAWN] ) != 0L ||
+		(getMagicBishopMoves(i) & ( pieceBits[eSide][Global.PIECE_BISHOP] | pieceBits[eSide][Global.PIECE_QUEEN])) != 0L ||
+		(getMagicRookMoves(i) & ( pieceBits[eSide][Global.PIECE_ROOK] | pieceBits[eSide][Global.PIECE_QUEEN] )) != 0L ||
+		(KnightMoveBoard[i] & pieceBits[eSide][Global.PIECE_KNIGHT] ) != 0L ||
+		(kingMoveTable[i] & pieceBits[eSide][Global.PIECE_KING] ) != 0L);
+    }
+    
+    
+    
     /** 
      *  method isWhiteAttacked(int i)
      * 
@@ -1553,11 +1337,16 @@ public final class Board { //extends java.util.Observable{
      *
      */	
     public  final boolean isWhiteAttacked(int i) {
-      return ((WhitePawnAttackBoard[i] & blackpawns) != 0L ||
-		(getMagicBishopMoves(i) & (blackbishops | blackqueen)) != 0L ||
-		(getMagicRookMoves(i) & (blackrooks | blackqueen)) != 0L ||
-		(KnightMoveBoard[i] & blackknights) != 0L ||
-		(kingMoveTable[i] & blackking) != 0L);
+      return ((PawnAttackBoard[Global.COLOUR_WHITE][i] & pieceBits[Global.COLOUR_BLACK][Global.PIECE_PAWN] ) != 0L ||
+		(getMagicBishopMoves(i) & ( pieceBits[Global.COLOUR_BLACK][Global.PIECE_BISHOP] | pieceBits[Global.COLOUR_BLACK][Global.PIECE_QUEEN])) != 0L ||
+		(getMagicRookMoves(i) & ( pieceBits[Global.COLOUR_BLACK][Global.PIECE_ROOK] | pieceBits[Global.COLOUR_BLACK][Global.PIECE_QUEEN] )) != 0L ||
+		(KnightMoveBoard[i] & pieceBits[Global.COLOUR_BLACK][Global.PIECE_KNIGHT] ) != 0L ||
+		(kingMoveTable[i] & pieceBits[Global.COLOUR_BLACK][Global.PIECE_KING] ) != 0L);
+      /*  return ((WhitePawnAttackBoard[i] & pieceBits[Global.COLOUR_BLACK][Global.PIECE_PAWN] |
+		getMagicBishopMoves(i) & ( pieceBits[Global.COLOUR_BLACK][Global.PIECE_BISHOP] | pieceBits[Global.COLOUR_BLACK][Global.PIECE_QUEEN]) |
+		getMagicRookMoves(i) & ( pieceBits[Global.COLOUR_BLACK][Global.PIECE_ROOK] | pieceBits[Global.COLOUR_BLACK][Global.PIECE_QUEEN] ) |
+		KnightMoveBoard[i] & pieceBits[Global.COLOUR_BLACK][Global.PIECE_KNIGHT] |
+		kingMoveTable[i] & pieceBits[Global.COLOUR_BLACK][Global.PIECE_KING] ) != 0L);*/
     }
  
     /** 
@@ -1571,11 +1360,11 @@ public final class Board { //extends java.util.Observable{
      *
      */	
     public  final boolean isBlackAttacked(int i) {
-      return ((BlackPawnAttackBoard[i] & whitepawns) != 0L ||
-		(getMagicBishopMoves(i) & (whitebishops | whitequeen)) != 0L ||
-		(getMagicRookMoves(i) & (whiterooks | whitequeen)) != 0L ||
-		(KnightMoveBoard[i] & whiteknights) != 0L ||
-		(kingMoveTable[i] & whiteking) != 0L);
+      return ((PawnAttackBoard[Global.COLOUR_BLACK][i] & pieceBits[Global.COLOUR_WHITE][Global.PIECE_PAWN] ) != 0L ||
+		(getMagicBishopMoves(i) & ( pieceBits[Global.COLOUR_WHITE][Global.PIECE_BISHOP] | pieceBits[Global.COLOUR_WHITE][Global.PIECE_QUEEN])) != 0L ||
+		(getMagicRookMoves(i) & ( pieceBits[Global.COLOUR_WHITE][Global.PIECE_ROOK] | pieceBits[Global.COLOUR_WHITE][Global.PIECE_QUEEN] )) != 0L ||
+		(KnightMoveBoard[i] & pieceBits[Global.COLOUR_WHITE][Global.PIECE_KNIGHT] ) != 0L ||
+		(kingMoveTable[i] & pieceBits[Global.COLOUR_WHITE][Global.PIECE_KING] ) != 0L);
     }	
 
 	/***********************************************************************
@@ -1623,7 +1412,7 @@ public final class Board { //extends java.util.Observable{
      *
      */	
 	public final boolean whiteHasCastled() {
-       return(wCastle==Global.CASTLED);
+       return(castleFlag[Global.COLOUR_WHITE] == Global.CASTLED);
 	}
     
     /** 
@@ -1635,7 +1424,7 @@ public final class Board { //extends java.util.Observable{
      *
      */
 	public final boolean blackHasCastled() {
-       return(bCastle==Global.CASTLED);
+       return(castleFlag[Global.COLOUR_BLACK] == Global.CASTLED);
 	}
 
    /**
@@ -1649,7 +1438,7 @@ public final class Board { //extends java.util.Observable{
      *
      */
 	public  final long getWPawnAttack(int index) {
-		return WhitePawnAttackBoard[index];
+		return PawnAttackBoard[Global.COLOUR_WHITE][index];
 	}
 	
     /** 
@@ -1663,7 +1452,7 @@ public final class Board { //extends java.util.Observable{
      *
      */
 	public  final long getBPawnAttack(int index) {
-		return BlackPawnAttackBoard[index];
+		return PawnAttackBoard[Global.COLOUR_BLACK][index];
 	}
 	
     
@@ -1680,7 +1469,7 @@ public final class Board { //extends java.util.Observable{
          moves = 0;
       else if(index < 16 && (moves & bitboard) != 0)
          moves = Global.set_Mask[index + 8];
-		return moves | (WhitePawnAttackBoard[index] & (blackpieces | Global.set_Mask[passantB]));
+		return moves | (PawnAttackBoard[Global.COLOUR_WHITE][index] & (pieceBits[Global.COLOUR_BLACK][Global.PIECE_ALL] | Global.set_Mask[passantB]));
 	}
   
 	/***********************************************************************		
@@ -1696,7 +1485,7 @@ public final class Board { //extends java.util.Observable{
          moves = 0;
       else if(index > 47 && (moves & bitboard) != 0)
          moves = Global.set_Mask[index - 8];
-		return moves | (BlackPawnAttackBoard[index] & (whitepieces | Global.set_Mask[passantW]));
+		return moves | (PawnAttackBoard[Global.COLOUR_BLACK][index] & (pieceBits[Global.COLOUR_WHITE][Global.PIECE_ALL] | Global.set_Mask[passantW]));
 	}
 
 
@@ -1737,11 +1526,11 @@ public final class Board { //extends java.util.Observable{
 	public  final long getBKingCastle(int index) {
 		long Temp = kingCastleTable[(int)(bitboard>>>56)];
 		long castle = 0;
-		if(bCastle != Global.SHORT_CASTLE && ((Temp & Global.set_Mask[2])!=0) ) {		//if left castle available test for checks
+		if(castleFlag[Global.COLOUR_BLACK] != Global.SHORT_CASTLE && ((Temp & Global.set_Mask[2])!=0) ) {		//if left castle available test for checks
 			if( !isBlackAttacked(58) && !isBlackAttacked(59) )
 				castle |= Global.set_Mask[58];
 		}
-		if(bCastle != Global.LONG_CASTLE && ((Temp & Global.set_Mask[6])!=0) ) {		//if right castle available test for checks
+		if(castleFlag[Global.COLOUR_BLACK] != Global.LONG_CASTLE && ((Temp & Global.set_Mask[6])!=0) ) {		//if right castle available test for checks
 			if( !isBlackAttacked(61) && !isBlackAttacked(62) )
 				castle |= Global.set_Mask[62];
 		}
@@ -1761,11 +1550,11 @@ public final class Board { //extends java.util.Observable{
 	public  final long getWKingCastle(int index) {
 		long Temp = kingCastleTable[((int)bitboard&255)];
 		long castle = 0;
-		if((wCastle != Global.SHORT_CASTLE && (Temp & Global.set_Mask[2]) != 0) ) {		//if left castle available test for checks
+		if((castleFlag[Global.COLOUR_WHITE] != Global.SHORT_CASTLE && (Temp & Global.set_Mask[2]) != 0) ) {		//if left castle available test for checks
 			if(!isWhiteAttacked(2) && !isWhiteAttacked(3))
 				castle |= Global.set_Mask[2];
 		}
-		if((wCastle != Global.LONG_CASTLE && (Temp & Global.set_Mask[6]) != 0) ) {		//if right castle available test for checks
+		if((castleFlag[Global.COLOUR_WHITE] != Global.LONG_CASTLE && (Temp & Global.set_Mask[6]) != 0) ) {		//if right castle available test for checks
 			if(!isWhiteAttacked(5) && !isWhiteAttacked(6))
 				castle |= Global.set_Mask[6];
 		}
@@ -1820,8 +1609,8 @@ public final class Board { //extends java.util.Observable{
      * 
      */
  	public  final void SwitchTurn() {
- 		hashValue ^=bHashMove;
- 		turn = -turn;	
+ 		hashValue ^= bHashMove;
+ 		turn ^= 1;
  	
  	}
     
@@ -1834,10 +1623,7 @@ public final class Board { //extends java.util.Observable{
      *
      */
  	public  final int getMaxNumberOfPieces() {
- 		if(wPieceNo>bPieceNo)
- 			return wPieceNo;
- 		else
- 			return bPieceNo;
+ 		return Math.max(noPieces[0], noPieces[1]);
  	}
     
     /** 
@@ -1849,10 +1635,7 @@ public final class Board { //extends java.util.Observable{
      *
      */
  	public  final int getMinNumberOfPieces() {
- 		if(wPieceNo<bPieceNo)
- 			return wPieceNo;
- 		else
- 			return bPieceNo;
+ 		return Math.min(noPieces[0], noPieces[1]);
  	}
  	
     /** 
@@ -1865,10 +1648,11 @@ public final class Board { //extends java.util.Observable{
      *
      */
  	public  final int getNumberOfPieces(int side) {
- 		if(side==-1)
- 			return wPieceNo;
- 		else
- 			return bPieceNo;
+ 		return noPieces[side];
+      //if(side==-1)
+ 		//	return noPieces[0];
+ 		//else
+ 		//	return noPieces[1];
  	}		
    
    /**
@@ -2007,10 +1791,11 @@ public final class Board { //extends java.util.Observable{
 
 		hashHistory[moveCount] = hashValue;
 
-		flagHistory[moveCount] = (passantW) | (passantB) << 6 | wCastle << 12 | bCastle << 15;
+		flagHistory[moveCount] = (passantW) | (passantB) << 6 | castleFlag[Global.COLOUR_WHITE] << 12 | castleFlag[Global.COLOUR_BLACK] << 15 | turn << 18;
 
-		turn = -turn;
-		hashValue ^= bHashMove;
+		SwitchTurn();
+      //turn = -turn;
+		//hashValue ^= bHashMove;
 
 		moveCount++;
 
@@ -2043,17 +1828,17 @@ public final class Board { //extends java.util.Observable{
 			case(Global.SHORT_CASTLE):
 			{
 				reversable = false;
-				if(turn == 1) {
-					hashValue ^= wCastleHash[wCastle];
-					wCastle = Global.CASTLED;
-					hashValue ^= wCastleHash[wCastle];
+				if(turn == Global.COLOUR_BLACK) {
+					hashValue ^= CastleHash[Global.COLOUR_WHITE][castleFlag[Global.COLOUR_WHITE]];
+					castleFlag[Global.COLOUR_WHITE] = Global.CASTLED;
+					hashValue ^= CastleHash[Global.COLOUR_WHITE][castleFlag[Global.COLOUR_WHITE]];
 					updateBoard(5,7);
 					hashValue ^= pHash[5][0];
 					hashValue ^= pHash[7][0];
 				} else {
-					hashValue ^= bCastleHash[bCastle];
-					bCastle = Global.CASTLED;
-					hashValue ^= bCastleHash[bCastle];
+					hashValue ^= CastleHash[Global.COLOUR_BLACK][castleFlag[Global.COLOUR_BLACK]];
+					castleFlag[Global.COLOUR_BLACK] = Global.CASTLED;
+					hashValue ^= CastleHash[Global.COLOUR_BLACK][castleFlag[Global.COLOUR_BLACK]];
 					updateBoard(61,63);
 					hashValue ^= pHash[61][6];
 					hashValue ^= pHash[63][6];
@@ -2064,7 +1849,7 @@ public final class Board { //extends java.util.Observable{
 			case(Global.DOUBLE_PAWN):
 			{
 				reversable = false;
-				if(turn == 1)
+				if(turn == Global.COLOUR_BLACK)
 					passantW = to - 8;
 				else
 					passantB = to + 8;
@@ -2074,17 +1859,17 @@ public final class Board { //extends java.util.Observable{
 			case(Global.LONG_CASTLE):
 			{
 				reversable = false;
-				if(turn == 1) {
-					hashValue ^= wCastleHash[wCastle];
-					wCastle = Global.CASTLED;
-					hashValue ^= wCastleHash[wCastle];
+				if(turn == Global.COLOUR_BLACK) {
+					hashValue ^= CastleHash[Global.COLOUR_WHITE][castleFlag[Global.COLOUR_WHITE]];
+					castleFlag[Global.COLOUR_WHITE] = Global.CASTLED;
+					hashValue ^= CastleHash[Global.COLOUR_WHITE][castleFlag[Global.COLOUR_WHITE]];
 					updateBoard(3,0);
 					hashValue ^= pHash[3][0];
 					hashValue ^= pHash[0][0];
 				} else {
-					hashValue ^= bCastleHash[bCastle];
-					bCastle = Global.CASTLED;
-					hashValue ^= bCastleHash[bCastle];
+					hashValue ^= CastleHash[Global.COLOUR_BLACK][castleFlag[Global.COLOUR_BLACK]];
+					castleFlag[Global.COLOUR_BLACK] = Global.CASTLED;
+					hashValue ^= CastleHash[Global.COLOUR_BLACK][castleFlag[Global.COLOUR_BLACK]];
 					updateBoard(59,56);
 					hashValue ^= pHash[56][6];
 					hashValue ^= pHash[59][6];
@@ -2162,7 +1947,7 @@ public final class Board { //extends java.util.Observable{
 			case(Global.EN_PASSANT_CAP):
 			{
 				reversable = false;
-				if(turn == 1) {
+				if(turn == Global.COLOUR_BLACK) {
 					clearBoard(to - 8);
 					hashValue ^= pHash[to-8][11];
 				} else {
@@ -2175,16 +1960,16 @@ public final class Board { //extends java.util.Observable{
 			case(Global.MOVE_KING_LOSE_CASTLE):
 			{
 				reversable = false;
-				if( turn == 1) {
-					hashValue ^= wCastleHash[wCastle];
-					wCastle = Global.NO_CASTLE;
-					hashValue ^= wCastleHash[wCastle];
+				if( turn == Global.COLOUR_BLACK) {
+					hashValue ^= CastleHash[Global.COLOUR_WHITE][castleFlag[Global.COLOUR_WHITE]];
+					castleFlag[Global.COLOUR_WHITE] = Global.NO_CASTLE;
+					hashValue ^= CastleHash[Global.COLOUR_WHITE][castleFlag[Global.COLOUR_WHITE]];
 				}
 				else
 				{
-					hashValue ^= bCastleHash[bCastle];
-					bCastle &= Global.NO_CASTLE;
-					hashValue ^= bCastleHash[bCastle];
+					hashValue ^= CastleHash[Global.COLOUR_BLACK][Global.COLOUR_BLACK];
+					castleFlag[Global.COLOUR_BLACK] &= Global.NO_CASTLE;
+					hashValue ^= CastleHash[Global.COLOUR_BLACK][Global.COLOUR_BLACK];
 				}
 				int cP = ((move>>16) & 15) - 1;
 				if(cP != -1)
@@ -2249,27 +2034,27 @@ public final class Board { //extends java.util.Observable{
 
    public final void UpdateCastleFlags(int thePiece, int to, int from) {
 
-		if(wCastle > Global.CASTLED) {
+		if(castleFlag[Global.COLOUR_WHITE] > Global.CASTLED) {
 			if(to == 7 || from == 7) {
-				hashValue ^= wCastleHash[wCastle];
-				wCastle &= Global.LONG_CASTLE;
-				hashValue ^= wCastleHash[wCastle];
+				hashValue ^= CastleHash[Global.COLOUR_WHITE][castleFlag[Global.COLOUR_WHITE]];
+				castleFlag[Global.COLOUR_WHITE] &= Global.LONG_CASTLE;
+				hashValue ^= CastleHash[Global.COLOUR_WHITE][castleFlag[Global.COLOUR_WHITE]];
 			} else if(to == 0 || from == 0) {
-				hashValue ^= wCastleHash[wCastle];
-				wCastle &= Global.SHORT_CASTLE;
-				hashValue ^= wCastleHash[wCastle];
+				hashValue ^= CastleHash[Global.COLOUR_WHITE][castleFlag[Global.COLOUR_WHITE]];
+				castleFlag[Global.COLOUR_WHITE] &= Global.SHORT_CASTLE;
+				hashValue ^= CastleHash[Global.COLOUR_WHITE][castleFlag[Global.COLOUR_WHITE]];
 			}
 		}
 
-		if(bCastle > Global.CASTLED) {
+		if(castleFlag[Global.COLOUR_BLACK] > Global.CASTLED) {
 			if(to == 63 || from == 63) {
-				hashValue ^= bCastleHash[bCastle];
-				bCastle &= Global.LONG_CASTLE;
-				hashValue ^= bCastleHash[bCastle];
+				hashValue ^= CastleHash[Global.COLOUR_BLACK][castleFlag[Global.COLOUR_BLACK]];
+				castleFlag[Global.COLOUR_BLACK] &= Global.LONG_CASTLE;
+				hashValue ^= CastleHash[Global.COLOUR_BLACK][castleFlag[Global.COLOUR_BLACK]];
 			} else if(to == 56 || from == 56) {
-				hashValue ^= bCastleHash[bCastle];
-				bCastle &= Global.SHORT_CASTLE;
-				hashValue ^= bCastleHash[bCastle];
+				hashValue ^= CastleHash[Global.COLOUR_BLACK][castleFlag[Global.COLOUR_BLACK]];
+				castleFlag[Global.COLOUR_BLACK] &= Global.SHORT_CASTLE;
+				hashValue ^= CastleHash[Global.COLOUR_BLACK][castleFlag[Global.COLOUR_BLACK]];
 			}
 		}
 	}
@@ -2327,10 +2112,11 @@ public final class Board { //extends java.util.Observable{
 	public final void UnMake(int move, boolean board) {
 		if(board)
 			zorbistDepth--;
-		turn = -turn;	
+		//turn = -turn;	
 		moveCount--;
-		wCastle = (flagHistory[moveCount] >> 12) & 7;
-		bCastle = (flagHistory[moveCount] >> 15) & 7;
+		turn = (flagHistory[moveCount] >> 18);
+      castleFlag[Global.COLOUR_WHITE] = (flagHistory[moveCount] >> 12) & 7;
+		castleFlag[Global.COLOUR_BLACK] = (flagHistory[moveCount] >> 15) & 7;
 		iCurrentMovesDepth--;
 		int to = (move >> 6) & 63;
 		int from = move & 63;
@@ -2348,7 +2134,7 @@ public final class Board { //extends java.util.Observable{
 			case(Global.SHORT_CASTLE):
 			{
 				updateBoard(from, to);
-				if(turn == -1) {
+				if(turn == Global.COLOUR_WHITE) {
 					updateBoard(7,5);
 				} else {
 					updateBoard(63, 61);
@@ -2377,7 +2163,7 @@ public final class Board { //extends java.util.Observable{
 			case(Global.LONG_CASTLE):
 			{
 				updateBoard(from, to);
-				if(turn == -1) {
+				if(turn == Global.COLOUR_WHITE) {
 					updateBoard(0, 3);
 				} else {
 					updateBoard(56, 59);
@@ -2421,7 +2207,7 @@ public final class Board { //extends java.util.Observable{
 			case(Global.EN_PASSANT_CAP):
 			{
 				updateBoard(from, to);
-				if(turn == -1)
+				if(turn == Global.COLOUR_WHITE)
 					setBoard(to-8, 11);
 				else
 					setBoard(to+8, 5);

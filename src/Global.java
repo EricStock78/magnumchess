@@ -38,7 +38,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 abstract class Global {
 
-	public static final int COLOUR_WHITE = 0;
+    public static final int COLOUR_WHITE = 0;
     public static final int COLOUR_BLACK = 1;
 
     public static final int PIECE_ROOK = 0;
@@ -47,6 +47,7 @@ abstract class Global {
     public static final int PIECE_QUEEN = 3;
     public static final int PIECE_KING = 4;
     public static final int PIECE_PAWN = 5;
+    public static final int PIECE_ALL = 6;
 
     /** string representation of all pieces */
     public static final String pieces[]= new String[] {"wRook","wKnight","wBishop","wQueen","wKing","wPawn",
@@ -110,7 +111,11 @@ abstract class Global {
 	public static final long[] neighbour_files = new long[8];
 	public static final long[][] passed_masks = new long[2][64];
 
-	public static final long[] set_Mask = new long[64];
+	public static final int[] behindRank = {-8, 8};
+   public static final int[] pieceAdd = {0, 6};
+   public static final int[][] longCastleMasks = { {2,3}, {58, 58} };
+   
+   public static final long[] set_Mask = new long[64];
 	public static final long[] plus9 = new long[64];
 	public static final long[] plus7 = new long[64];
 	public static final long[] plus8 = new long[64];
@@ -123,8 +128,8 @@ abstract class Global {
 	public static final long[] diag2Masks = new long[15];
 	public static final long[] fileMasks = new long[8];		//used to isolate all pieces on a rank
 	public static final long[] rankMasks = new long[8];
-	public static final long[] whitePassedPawnMasks = new long[64];          //passed pawn masks for white
-	public static final long[] blackPassedPawnMasks = new long[64];          //passed pawn masks for black
+	//public static final long[][] passedPawnMasks = new long[2][64];          //passed pawn masks for white
+	//public static final long[] blackPassedPawnMasks = new long[64];          //passed pawn masks for black
 
 	public static final long[] wRookTrap = new long[] {0x303L, 0xC0C0L};
 	public static final long[] bRookTrap = new long[] {wRookTrap[0]<<48, wRookTrap[1]<<48};
