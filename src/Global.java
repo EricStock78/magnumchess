@@ -112,6 +112,7 @@ abstract class Global {
 	public static final long[][] passed_masks = new long[2][64];
 
 	public static final int[] behindRank = {-8, 8};
+        public static final int[] forwardRank = {8, -8};
    public static final int[] pieceAdd = {0, 6};
    public static final int[][] longCastleMasks = { {2,3}, {58, 58} };
    
