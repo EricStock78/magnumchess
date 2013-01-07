@@ -80,9 +80,8 @@ public final class Board {
     /** knight moves for each square */
     private static final long[] KnightMoveBoard = new long[64];
     /** white pawn moves for each square */
-    private static final long[] WhitePawnMoveBoard	= new long[64];
-    /** black pawn attack moves for each square */
-    private static long[] BlackPawnMoveBoard = new long[64];
+    private static final long[][] PawnMoveBoard	= new long[2][64];
+    
     /** pawn attack moves for each sqaure */
     private static final long[][] PawnAttackBoard = new long[2][64];
 	
@@ -125,8 +124,9 @@ public final class Board {
     private int flagHistory[] = new int[2048];
 	
     /** enPassant capture squares for each side */
-    private int passantW, passantB;			
-	
+    //private int passantW, passantB;			
+    private int[] passant = new int[2];
+    
     /** 50 move draw count variable */
     private int drawCount;						
 	
@@ -156,7 +156,7 @@ public final class Board {
 	
     /*
      * These two constants are the values for the passant squares when there is no actual passant square
-     * There is a clever/idiot trick I thought of using the passant square % 9 to index the has for the passant square
+     * There is a clever/idiot trick I thought of using the passant square % 9 to index the hash for the passant square
      * Plus, these values will never cause a false attack...ex/  black pawns never attack sq 51 and white pawns never attack 3
      */
     private static final int NO_PASSANT_WHITE = 51;
@@ -271,9 +271,9 @@ public final class Board {
             for(int i=0; i<64; i++)
             {
                 KnightMoveBoard[i] = dataInputStream.readLong();
-                WhitePawnMoveBoard[i] = dataInputStream.readLong();
+                PawnMoveBoard[Global.COLOUR_WHITE][i] = dataInputStream.readLong();
                 PawnAttackBoard[Global.COLOUR_WHITE][i] = dataInputStream.readLong();
-                BlackPawnMoveBoard[i] = dataInputStream.readLong();
+                PawnMoveBoard[Global.COLOUR_BLACK][i] = dataInputStream.readLong();
                 PawnAttackBoard[Global.COLOUR_BLACK][i] = dataInputStream.readLong();
             }
 
@@ -503,8 +503,8 @@ public final class Board {
         }
         hashValue ^= CastleHash[Global.COLOUR_BLACK][castleFlag[Global.COLOUR_BLACK]];
         hashValue ^= CastleHash[Global.COLOUR_WHITE][castleFlag[Global.COLOUR_WHITE]];
-        hashValue ^= passantHashW[passantW%9];
-        hashValue ^= passantHashB[passantB%9];
+        hashValue ^= passantHashW[passant[Global.COLOUR_WHITE]%9];
+        hashValue ^= passantHashB[passant[Global.COLOUR_BLACK]%9];
         Engine.resetHash();
         Evaluation2.clearEvalHash();
         Evaluation2.clearPawnHash();
@@ -675,9 +675,9 @@ public final class Board {
             token = fen.substring(0,fen.indexOf(" "));
             int pSq = HistoryWriter.getNumericPosition(token);
             if(turn == Global.COLOUR_WHITE)                  
-                passantB = pSq;
+                passant[Global.COLOUR_BLACK] = pSq;
             else
-                passantW = pSq;
+                passant[Global.COLOUR_WHITE] = pSq;
         }
         fen = fen.substring(fen.indexOf(" "));
 
@@ -699,8 +699,8 @@ public final class Board {
         noMoves = new Integer(token);
         moveCount = noMoves.intValue()-1;
 
-        hashValue ^= passantHashW[passantW%9];
-        hashValue ^= passantHashB[passantB%9];
+        hashValue ^= passantHashW[passant[Global.COLOUR_WHITE]%9];
+        hashValue ^= passantHashB[passant[Global.COLOUR_BLACK]%9];
 
         /** set the has values for the recently set castling rights */
         hashValue ^= CastleHash[Global.COLOUR_BLACK][castleFlag[Global.COLOUR_BLACK]];
@@ -730,8 +730,8 @@ public final class Board {
         Arrays.fill( pieceTotals, 0);
         castleFlag[Global.COLOUR_BLACK] = Global.BOTH_CASTLE;
         castleFlag[Global.COLOUR_WHITE] = Global.BOTH_CASTLE;
-        passantW = NO_PASSANT_WHITE;
-        passantB = NO_PASSANT_BLACK;
+        passant[Global.COLOUR_WHITE] = NO_PASSANT_WHITE;
+        passant[Global.COLOUR_BLACK] = NO_PASSANT_BLACK;
         hashValue = 0;
         pawnHash = 0;
     }
@@ -751,23 +751,23 @@ public final class Board {
         }
         noPieces[0] = noPieces[1] = 0;
 
-        int tempPassantB = passantB;
-        if(passantW != NO_PASSANT_WHITE) {
-            int flipRank = 7 - passantW/8;
-            int flipPos = flipRank * 8 + passantW%8;
-            passantB = flipPos;
+        int tempPassantB = passant[Global.COLOUR_BLACK];
+        if(passant[Global.COLOUR_WHITE] != NO_PASSANT_WHITE) {
+            int flipRank = 7 - passant[Global.COLOUR_WHITE]/8;
+            int flipPos = flipRank * 8 + passant[Global.COLOUR_WHITE]%8;
+            passant[Global.COLOUR_BLACK] = flipPos;
         } else
-            passantB = NO_PASSANT_BLACK;
+            passant[Global.COLOUR_BLACK] = NO_PASSANT_BLACK;
 
         if(tempPassantB != NO_PASSANT_BLACK) {
             int flipRank = 7 - tempPassantB/8;
             int flipPos = flipRank * 8 +tempPassantB%8;
-            passantW = flipPos;
+            passant[Global.COLOUR_WHITE] = flipPos;
         } else
-            passantW = NO_PASSANT_WHITE;
+            passant[Global.COLOUR_WHITE] = NO_PASSANT_WHITE;
 
-        hashValue ^= passantHashB[passantB%9];
-        hashValue ^= passantHashW[passantW%9];
+        hashValue ^= passantHashB[passant[Global.COLOUR_BLACK]%9];
+        hashValue ^= passantHashW[passant[Global.COLOUR_WHITE]%9];
 
         pawnHash = 0;
 
@@ -1013,8 +1013,8 @@ public final class Board {
 
             hash ^=pHash[pos][piece_in_square[pos]];
         }			
-        hash ^= passantHashW[passantW%9];
-        hash ^= passantHashB[passantB%9];
+        hash ^= passantHashW[passant[Global.COLOUR_WHITE]%9];
+        hash ^= passantHashB[passant[Global.COLOUR_BLACK]%9];
 
         hash ^= CastleHash[Global.COLOUR_BLACK][castleFlag[Global.COLOUR_BLACK]];
         hash ^= CastleHash[Global.COLOUR_WHITE][castleFlag[Global.COLOUR_WHITE]];
@@ -1291,42 +1291,6 @@ public final class Board {
 		(getMagicRookMoves(i) & ( pieceBits[eSide][Global.PIECE_ROOK] | pieceBits[eSide][Global.PIECE_QUEEN] )) != 0L ||
 		(KnightMoveBoard[i] & pieceBits[eSide][Global.PIECE_KNIGHT] ) != 0L ||
 		(kingMoveTable[i] & pieceBits[eSide][Global.PIECE_KING] ) != 0L);
-    }
-    
-    /** 
-     *  method isWhiteAttacked(int i)
-     * 
-     * This method determine if a given square occupied by a white piece is attacked
-     * 
-     * @param int i - the position of the square with the white piece
-     * 
-     * @return boolean - is the square attacked?
-     *
-     */	
-    public  final boolean isWhiteAttacked(int i) {
-      return ((PawnAttackBoard[Global.COLOUR_WHITE][i] & pieceBits[Global.COLOUR_BLACK][Global.PIECE_PAWN] ) != 0L ||
-		(getMagicBishopMoves(i) & ( pieceBits[Global.COLOUR_BLACK][Global.PIECE_BISHOP] | pieceBits[Global.COLOUR_BLACK][Global.PIECE_QUEEN])) != 0L ||
-		(getMagicRookMoves(i) & ( pieceBits[Global.COLOUR_BLACK][Global.PIECE_ROOK] | pieceBits[Global.COLOUR_BLACK][Global.PIECE_QUEEN] )) != 0L ||
-		(KnightMoveBoard[i] & pieceBits[Global.COLOUR_BLACK][Global.PIECE_KNIGHT] ) != 0L ||
-		(kingMoveTable[i] & pieceBits[Global.COLOUR_BLACK][Global.PIECE_KING] ) != 0L);
-    }
- 
-    /** 
-     *  method isBlackAttacked(int i)
-     * 
-     * This method determines if a given square occupied by a black piece is attacked
-     * 
-     * @param int i - the position of the square with the black piece
-     * 
-     * @return boolean - is the square attacked?
-     *
-     */	
-    public  final boolean isBlackAttacked(int i) {
-        return ((PawnAttackBoard[Global.COLOUR_BLACK][i] & pieceBits[Global.COLOUR_WHITE][Global.PIECE_PAWN] ) != 0L ||
-		(getMagicBishopMoves(i) & ( pieceBits[Global.COLOUR_WHITE][Global.PIECE_BISHOP] | pieceBits[Global.COLOUR_WHITE][Global.PIECE_QUEEN])) != 0L ||
-		(getMagicRookMoves(i) & ( pieceBits[Global.COLOUR_WHITE][Global.PIECE_ROOK] | pieceBits[Global.COLOUR_WHITE][Global.PIECE_QUEEN] )) != 0L ||
-		(KnightMoveBoard[i] & pieceBits[Global.COLOUR_WHITE][Global.PIECE_KNIGHT] ) != 0L ||
-		(kingMoveTable[i] & pieceBits[Global.COLOUR_WHITE][Global.PIECE_KING] ) != 0L);
     }	
 
     /***********************************************************************
@@ -1342,113 +1306,46 @@ public final class Board {
     }
 
     /** 
-     *  method getPassantW()
+     *  method getPassant()
      * 
      * This accessor method returns white's passant square
      * 
      * @return int - passant sqaure position
      *
      */	
-    public  final int getPassantW() {			//this method gets whtie passant square
-        return passantW;
-    }
-	
-    /** 
-     *  method getPassantB()
-     * 
-     * This accessor method returns black's passant square
-     * 
-     * @return int - passant sqaure position
-     *
-     */	
-    public  final int getPassantB() {			//this method gets black passant square
-        return passantB;
-    }	
-	
-    /** 
-     *  method whiteHasCastled()
-     * 
-     * This method returns whether or not white has castled
-     * 
-     * @return boolean - has white castled?
-     *
-     */	
-    public final boolean whiteHasCastled() {
-        return(castleFlag[Global.COLOUR_WHITE] == Global.CASTLED);
+    public  final int getPassant(int side) {			//this method gets whtie passant square
+        return passant[side];
     }
     
-    /** 
-     *  method blackHasCastled()
+    /**
+     *  method getPawnAttack(int side, int index)
      * 
-     * This method returns whether or not black has castled
+     * This method returns a bitset representing all the squares attacked by a pawn
      * 
-     * @return boolean - has black castled?
-     *
-     */
-    public final boolean blackHasCastled() {
-        return(castleFlag[Global.COLOUR_BLACK] == Global.CASTLED);
-    }
-
-   /**
-     *  method getWPawnAttack(int index)
-     * 
-     * This method returns a bitset representing all the squares attacked by a white pawn
-     * 
+     * @param int - side of attacking pawns
      * @param int - position of pawn
-     * 
      * @return long - bitset of attacks for pawn
      *
      */
-    public  final long getWPawnAttack(int index) {
-        return PawnAttackBoard[Global.COLOUR_WHITE][index];
+    public  final long getPawnAttack(int side, int index) {
+        return PawnAttackBoard[side][index];
     }
-	
-    /** 
-     *  method getBPawnAttack(int index)
-     * 
-     * This method returns a bitset representing all the squares attacked by a black pawn
-     * 
-     * @param int - position of pawn
-     * 
-     * @return long - bitset of attacks for pawn
-     *
-     */
-    public  final long getBPawnAttack(int index) {
-        return PawnAttackBoard[Global.COLOUR_BLACK][index];
-    }
-	
+    
     /***********************************************************************		
-            Name:		getWPawnMoves
+            Name:		getPawnMoves
             Parameters:	int
             Returns:	BitSet
             Description:This method returns a BitSet representing all of the 
                                     white pawn moves
     ***********************************************************************/		
-    public  final long getWPawnMoves(int index) {   //get White Pawn Moves Based on index of pawn
-        long moves = WhitePawnMoveBoard[index];
-        if((bitboard & Global.set_Mask[index + 8]) != 0)
+    public  final long getPawnMoves(int side, int index) {   //get White Pawn Moves Based on index of pawn
+        long moves = PawnMoveBoard[side][index];
+        if( piece_in_square[index + Global.forwardRank[side]] != -1 )//bitboard & Global.set_Mask[index + Global.forwardRank[side]]) != 0)
             moves = 0;
-        else if(index < 16 && (moves & bitboard) != 0)
-            moves = Global.set_Mask[index + 8];
-        return moves | (PawnAttackBoard[Global.COLOUR_WHITE][index] & (pieceBits[Global.COLOUR_BLACK][Global.PIECE_ALL] | Global.set_Mask[passantB]));
+        else if( Global.RelativeRanks[side][index/8] == 1 && piece_in_square[index + 2 * Global.forwardRank[side]] != -1)
+            moves = Global.set_Mask[index + Global.forwardRank[side]];
+        return moves | (PawnAttackBoard[side][index] & (pieceBits[side ^ 1][Global.PIECE_ALL] | Global.set_Mask[passant[side ^ 1]]));
     }
-  
-    /***********************************************************************		
-            Name:		getWBawnMoves
-            Parameters:	int
-            Returns:	BitSet
-            Description:This method returns a BitSet representing all of the 
-                                    black pawn moves
-    ***********************************************************************/		
-    public  final long getBPawnMoves(int index) {	//get Black Pawn Moves Based on index of pawn
-        long moves = BlackPawnMoveBoard[index];
-        if((bitboard & Global.set_Mask[index - 8]) != 0)
-            moves = 0;
-        else if(index > 47 && (moves & bitboard) != 0)
-            moves = Global.set_Mask[index - 8];
-        return moves | (PawnAttackBoard[Global.COLOUR_BLACK][index] & (pieceBits[Global.COLOUR_WHITE][Global.PIECE_ALL] | Global.set_Mask[passantW]));
-    }
-
 
     /** 
      *  method getKnightMoves(int index)
@@ -1472,54 +1369,6 @@ public final class Board {
     public final long getKingCastle(int rank)
     {
         return kingCastleTable[rank];
-    }
-
-    /**
-     *  method getBKingCastle(int index)
-     * 
-     * This method returns a bitset representing all castle moves for a black king
-     * 
-     * @param int - position of king
-     * 
-     * @return long - bitset of castle moves for king
-     *
-     */
-    public  final long getBKingCastle(int index) {
-        long Temp = kingCastleTable[(int)(bitboard>>>56)];
-        long castle = 0;
-        if(castleFlag[Global.COLOUR_BLACK] != Global.SHORT_CASTLE && ((Temp & Global.set_Mask[2])!=0) ) {		//if left castle available test for checks
-            if( !isBlackAttacked(58) && !isBlackAttacked(59) )
-                castle |= Global.set_Mask[58];
-        }
-        if(castleFlag[Global.COLOUR_BLACK] != Global.LONG_CASTLE && ((Temp & Global.set_Mask[6])!=0) ) {		//if right castle available test for checks
-            if( !isBlackAttacked(61) && !isBlackAttacked(62) )
-                castle |= Global.set_Mask[62];
-        }
-        return castle;
-    }
-	
-    /** 
-     *  method getWKingCastle(int index)
-     * 
-     * This method returns a bitset representing all castle moves for a white king
-     * 
-     * @param int - position of king
-     * 
-     * @return long - bitset of castle moves for king
-     *
-     */
-    public  final long getWKingCastle(int index) {
-        long Temp = kingCastleTable[((int)bitboard&255)];
-        long castle = 0;
-        if((castleFlag[Global.COLOUR_WHITE] != Global.SHORT_CASTLE && (Temp & Global.set_Mask[2]) != 0) ) {		//if left castle available test for checks
-            if(!isWhiteAttacked(2) && !isWhiteAttacked(3))
-                castle |= Global.set_Mask[2];
-        }
-        if((castleFlag[Global.COLOUR_WHITE] != Global.LONG_CASTLE && (Temp & Global.set_Mask[6]) != 0) ) {		//if right castle available test for checks
-            if(!isWhiteAttacked(5) && !isWhiteAttacked(6))
-                castle |= Global.set_Mask[6];
-        }
-        return castle;
     }
    
     /***********************************************************************		
@@ -1746,17 +1595,15 @@ public final class Board {
 
         hashHistory[moveCount] = hashValue;
 
-        flagHistory[moveCount] = (passantW) | (passantB) << 6 | castleFlag[Global.COLOUR_WHITE] << 12 | castleFlag[Global.COLOUR_BLACK] << 15 | turn << 18;
-
-        SwitchTurn();
+        flagHistory[moveCount] = (passant[Global.COLOUR_WHITE]) | (passant[Global.COLOUR_BLACK]) << 6 | castleFlag[Global.COLOUR_WHITE] << 12 | castleFlag[Global.COLOUR_BLACK] << 15 | turn << 18;
 
         moveCount++;
 
-        int oldPassantW = passantW;
-        int oldPassantB = passantB;
+        int oldPassantW = passant[Global.COLOUR_WHITE];
+        int oldPassantB = passant[Global.COLOUR_BLACK];
       
-        passantW = NO_PASSANT_WHITE;
-        passantB = NO_PASSANT_BLACK;
+        passant[Global.COLOUR_WHITE] = NO_PASSANT_WHITE;
+        passant[Global.COLOUR_BLACK] = NO_PASSANT_BLACK;
 
         switch(type) {
 
@@ -1781,52 +1628,31 @@ public final class Board {
             case(Global.SHORT_CASTLE):
             {
                 reversable = false;
-                if(turn == Global.COLOUR_BLACK) {
-                    hashValue ^= CastleHash[Global.COLOUR_WHITE][castleFlag[Global.COLOUR_WHITE]];
-                    castleFlag[Global.COLOUR_WHITE] = Global.CASTLED;
-                    hashValue ^= CastleHash[Global.COLOUR_WHITE][castleFlag[Global.COLOUR_WHITE]];
-                    updateBoard(5,7);
-                    hashValue ^= pHash[5][0];
-                    hashValue ^= pHash[7][0];
-                } else {
-                    hashValue ^= CastleHash[Global.COLOUR_BLACK][castleFlag[Global.COLOUR_BLACK]];
-                    castleFlag[Global.COLOUR_BLACK] = Global.CASTLED;
-                    hashValue ^= CastleHash[Global.COLOUR_BLACK][castleFlag[Global.COLOUR_BLACK]];
-                    updateBoard(61,63);
-                    hashValue ^= pHash[61][6];
-                    hashValue ^= pHash[63][6];
-                }
+                hashValue ^= CastleHash[turn][castleFlag[turn]];
+                castleFlag[turn] = Global.CASTLED;
+                hashValue ^= CastleHash[turn][castleFlag[turn]];
+                updateBoard(5 + turn * 56, 7 + turn * 56);
+                hashValue ^= pHash[5 + turn * 56][Global.pieceAdd[turn]];
+                hashValue ^= pHash[7 + turn * 56][Global.pieceAdd[turn]];
             }
             break;
 
             case(Global.DOUBLE_PAWN):
             {
                 reversable = false;
-                if(turn == Global.COLOUR_BLACK)
-                    passantW = to - 8;
-                else
-                    passantB = to + 8;
+                passant[turn] = to + Global.behindRank[turn];
             }
             break;
 
             case(Global.LONG_CASTLE):
             {
                 reversable = false;
-                if(turn == Global.COLOUR_BLACK) {
-                    hashValue ^= CastleHash[Global.COLOUR_WHITE][castleFlag[Global.COLOUR_WHITE]];
-                    castleFlag[Global.COLOUR_WHITE] = Global.CASTLED;
-                    hashValue ^= CastleHash[Global.COLOUR_WHITE][castleFlag[Global.COLOUR_WHITE]];
-                    updateBoard(3,0);
-                    hashValue ^= pHash[3][0];
-                    hashValue ^= pHash[0][0];
-                } else {
-                    hashValue ^= CastleHash[Global.COLOUR_BLACK][castleFlag[Global.COLOUR_BLACK]];
-                    castleFlag[Global.COLOUR_BLACK] = Global.CASTLED;
-                    hashValue ^= CastleHash[Global.COLOUR_BLACK][castleFlag[Global.COLOUR_BLACK]];
-                    updateBoard(59,56);
-                    hashValue ^= pHash[56][6];
-                    hashValue ^= pHash[59][6];
-                }
+                hashValue ^= CastleHash[turn][castleFlag[turn]];
+                castleFlag[turn] = Global.CASTLED;
+                hashValue ^= CastleHash[turn][castleFlag[turn]];
+                updateBoard(3 + turn * 56, 0 + turn * 56);
+                hashValue ^= pHash[3 + turn * 56][Global.pieceAdd[turn]];
+                hashValue ^= pHash[0 + turn * 56][Global.pieceAdd[turn]];
             }
             break;
 
@@ -1900,35 +1726,24 @@ public final class Board {
             case(Global.EN_PASSANT_CAP):
             {
                 reversable = false;
-                if(turn == Global.COLOUR_BLACK) {
-                    clearBoard(to - 8);
-                    hashValue ^= pHash[to-8][11];
-                } else {
-                    clearBoard(to+8);
-                    hashValue ^= pHash[to+8][5];
-                }
+                clearBoard(to + Global.behindRank[turn]);
+                hashValue ^= pHash[to + Global.behindRank[turn]][11 - turn * 6];
             }
             break;
 
             case(Global.MOVE_KING_LOSE_CASTLE):
             {
                 reversable = false;
-                if( turn == Global.COLOUR_BLACK) {
-                        hashValue ^= CastleHash[Global.COLOUR_WHITE][castleFlag[Global.COLOUR_WHITE]];
-                        castleFlag[Global.COLOUR_WHITE] = Global.NO_CASTLE;
-                        hashValue ^= CastleHash[Global.COLOUR_WHITE][castleFlag[Global.COLOUR_WHITE]];
-                }
-                else
-                {
-                        hashValue ^= CastleHash[Global.COLOUR_BLACK][Global.COLOUR_BLACK];
-                        castleFlag[Global.COLOUR_BLACK] &= Global.NO_CASTLE;
-                        hashValue ^= CastleHash[Global.COLOUR_BLACK][Global.COLOUR_BLACK];
-                }
+                
+                hashValue ^= CastleHash[turn][castleFlag[turn]];
+                castleFlag[turn] = Global.NO_CASTLE;
+                hashValue ^= CastleHash[turn][castleFlag[turn]];
+               
                 int cP = ((move>>16) & 15) - 1;
                 if(cP != -1)
                 {
-                        clearBoard(to);
-                        hashValue ^= pHash[to][cP];
+                    clearBoard(to);
+                    hashValue ^= pHash[to][cP];
                 }
             }
             break;
@@ -1962,17 +1777,19 @@ public final class Board {
         hashValue ^= pHash[to][piece_in_square[from]];
         updateBoard(to,from);
 
-        if(oldPassantW != passantW)
+        if(oldPassantW != passant[Global.COLOUR_WHITE])
         {
             hashValue ^= passantHashW[oldPassantW%9];
-            hashValue ^= passantHashW[passantW%9];
+            hashValue ^= passantHashW[passant[Global.COLOUR_WHITE]%9];
         }
 
-        if(oldPassantB != passantB)
+        if(oldPassantB != passant[Global.COLOUR_BLACK])
         {
             hashValue ^= passantHashB[oldPassantB%9];
-            hashValue ^= passantHashB[passantB%9];
+            hashValue ^= passantHashB[passant[Global.COLOUR_BLACK]%9];
         }
+
+        SwitchTurn();
 
         //if(hashValue != generateHash()) {
         //	System.out.println("info string generatehash is +"+generateHash());
@@ -2085,11 +1902,7 @@ public final class Board {
             case(Global.SHORT_CASTLE):
             {
                 updateBoard(from, to);
-                if(turn == Global.COLOUR_WHITE) {
-                    updateBoard(7,5);
-                } else {
-                    updateBoard(63, 61);
-                }
+                updateBoard(7 + turn * 56, 5 + turn * 56);
             }
             break;
 
@@ -2114,11 +1927,7 @@ public final class Board {
             case(Global.LONG_CASTLE):
             {
                 updateBoard(from, to);
-                if(turn == Global.COLOUR_WHITE) {
-                    updateBoard(0, 3);
-                } else {
-                    updateBoard(56, 59);
-                }
+                updateBoard(0 + turn * 56, 3 + turn * 56);
             }
             break;
 
@@ -2158,10 +1967,7 @@ public final class Board {
             case(Global.EN_PASSANT_CAP):
             {
                 updateBoard(from, to);
-                if(turn == Global.COLOUR_WHITE)
-                    setBoard(to-8, 11);
-                else
-                    setBoard(to+8, 5);
+                setBoard(to + Global.behindRank[turn], 11 - turn * 6);
             }
             break;
 
@@ -2191,8 +1997,8 @@ public final class Board {
             break;
         }
         hashValue = hashHistory[moveCount];
-        passantW = (flagHistory[moveCount] & 63);
-        passantB = ((flagHistory[moveCount] >> 6) & 63);
+        passant[Global.COLOUR_WHITE] = (flagHistory[moveCount] & 63);
+        passant[Global.COLOUR_BLACK] = ((flagHistory[moveCount] >> 6) & 63);
 
         // if(hashValue != generateHash()) {
         //    System.out.println("info string generatehash is +"+generateHash());

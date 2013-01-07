@@ -145,7 +145,7 @@ public class TransTable {
 		int index = key*4;
 		/** if empty slot, add entry */
 		long word = (long)move
-			| ((value + 21000) << 32)
+			| ((long)(value + 21000) << 32)
 			| ((long)type << 48)
 			| ((long)depth << 51)
 			| ((long)nullFail << 56)
