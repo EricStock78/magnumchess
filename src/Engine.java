@@ -43,7 +43,7 @@ public final class Engine {
    
     /** used similar to a C preprocessor define to instruct perft to use the transposition table */
     /** useful for testing transposition table */
-    private static final boolean PERFT_TRANSTABLE = false;
+    private static final boolean PERFT_TRANSTABLE = true;
 
    /** chessBoard object from singleton class Board represents chess board and associated datastructures */
    private Board chessBoard;
@@ -624,15 +624,8 @@ public final class Engine {
    This method tests whether a side is in check
    parameters - int side ....the side possibly in check
     **********************************************************************/
-   private boolean inCheck(int side) {
-
-      if (side == Global.COLOUR_BLACK) //black
-      {
-         return chessBoard.isBlackAttacked(Long.numberOfTrailingZeros(chessBoard.pieceBits[Global.COLOUR_BLACK][Global.PIECE_KING]));
-      } else //white
-      {
-         return chessBoard.isWhiteAttacked(Long.numberOfTrailingZeros(chessBoard.pieceBits[Global.COLOUR_WHITE][Global.PIECE_KING]));
-      }
+   private boolean inCheck(int side) { 
+        return chessBoard.isAttacked(side, Long.numberOfTrailingZeros(chessBoard.pieceBits[side][Global.PIECE_KING]));  
    }
 
    /************************************************************************
@@ -950,11 +943,11 @@ public final class Engine {
       int passant;
       if(side == Global.COLOUR_WHITE)
       {
-         passant = chessBoard.getPassantB();
+         passant = chessBoard.getPassant(Global.COLOUR_BLACK);
          enemies ^=  Global.set_Mask[passant];
          lAttack = (pieces << 7) & enemies & ~Global.fileMasks[7];
          rAttack = (pieces << 9) & enemies & ~Global.fileMasks[0];
-         enemies ^=  Global.set_Mask[chessBoard.getPassantB()];
+         enemies ^=  Global.set_Mask[chessBoard.getPassant(Global.COLOUR_BLACK)];
          promo = pieces & Global.rankMasks[6];
          if (promo != 0) {
             promo <<= 8;
@@ -963,11 +956,11 @@ public final class Engine {
       }
       else
       {
-         passant = chessBoard.getPassantW();
+            passant = chessBoard.getPassant(Global.COLOUR_WHITE);
          enemies ^=  Global.set_Mask[passant];
          lAttack = pieces >> 9 & enemies & ~Global.fileMasks[7];
 			rAttack = pieces >> 7 & enemies & ~Global.fileMasks[0];
-         enemies ^=  Global.set_Mask[chessBoard.getPassantW()];
+         enemies ^=  Global.set_Mask[chessBoard.getPassant(Global.COLOUR_WHITE)];
          promo = pieces & Global.rankMasks[1];
          if (promo != 0) {
             promo >>= 8;
@@ -1134,15 +1127,10 @@ public final class Engine {
 			long bit = toSquares & -toSquares;
          toSquares ^= bit;
          int to = Long.numberOfTrailingZeros(bit);
-         if (side == Global.COLOUR_WHITE) {		//white moving
-            if (chessBoard.isWhiteAttacked(to)) {
-               continue;
-            }
-         } else {
-            if (chessBoard.isBlackAttacked(to)) {
-              continue;
-            }
+         if (chessBoard.isAttacked(side, to)) {
+             continue;
          }
+         
          int cP = chessBoard.piece_in_square[to];
          int value;
          if (cP != -1) {
@@ -1165,12 +1153,12 @@ public final class Engine {
 		attacks += Long.bitCount(temp);
 		attackBits |= temp;
       if (side == Global.COLOUR_WHITE) {			//white moving
-         temp = chessBoard.getWPawnAttack(kingPos);
+         temp = chessBoard.getPawnAttack(Global.COLOUR_WHITE, kingPos);
          temp &= chessBoard.pieceBits[Global.COLOUR_BLACK][Global.PIECE_PAWN];
          attacks += Long.bitCount(temp);
 			attackBits |= temp;
       } else {					//black moving
-         temp = chessBoard.getBPawnAttack(kingPos);
+         temp = chessBoard.getPawnAttack(Global.COLOUR_BLACK, kingPos);
          temp &= chessBoard.pieceBits[Global.COLOUR_WHITE][Global.PIECE_PAWN];
          attacks += Long.bitCount(temp);
 			attackBits |= temp;
@@ -1224,8 +1212,8 @@ public final class Engine {
       }
 
       if (chessBoard.piece_in_square[attackFrom] == 5) {
-         if ((attackFrom - 8) == chessBoard.getPassantW()) {
-            temp = chessBoard.getWPawnAttack(attackFrom - 8) & chessBoard.pieceBits[Global.COLOUR_BLACK][Global.PIECE_PAWN];
+         if ((attackFrom - 8) == chessBoard.getPassant(Global.COLOUR_WHITE)) {
+            temp = chessBoard.getPawnAttack(Global.COLOUR_WHITE, attackFrom - 8) & chessBoard.pieceBits[Global.COLOUR_BLACK][Global.PIECE_PAWN];
             while (temp != 0) {
                fromBit = temp & -temp;
                temp ^= fromBit;
@@ -1241,8 +1229,8 @@ public final class Engine {
       }
       //if attacking piece is a black pawn ( white moving )
       if (chessBoard.piece_in_square[attackFrom] == 11) {
-         if ((attackFrom + 8) == chessBoard.getPassantB()) {
-            temp = chessBoard.getBPawnAttack(attackFrom + 8) & chessBoard.pieceBits[Global.COLOUR_WHITE][Global.PIECE_PAWN];
+         if ((attackFrom + 8) == chessBoard.getPassant(Global.COLOUR_BLACK)) {
+            temp = chessBoard.getPawnAttack(Global.COLOUR_BLACK, attackFrom + 8) & chessBoard.pieceBits[Global.COLOUR_WHITE][Global.PIECE_PAWN];
             while (temp != 0) {
                fromBit = temp & -temp;
                temp ^= fromBit;
@@ -1410,9 +1398,9 @@ public final class Engine {
       long temp;
       if (piece == 5) //wPawn
       {
-         temp = chessBoard.getWPawnMoves(from);//, chessBoard.getPassantB());
+         temp = chessBoard.getPawnMoves(side, from);//, chessBoard.getPassantB());
       } else if (piece == 11) {
-         temp = chessBoard.getBPawnMoves(from);
+         temp = chessBoard.getPawnMoves(side, from);
       } else {
          temp = chessBoard.getAttackBoard(from);
       }
@@ -1468,9 +1456,9 @@ public final class Engine {
       long temp;
       if (piece == 5) //wPawn
       { 
-         temp = chessBoard.getWPawnMoves(from);
+         temp = chessBoard.getPawnMoves(side, from);
       } else if (piece == 11) {  //bpawn
-         temp = chessBoard.getBPawnMoves(from);
+         temp = chessBoard.getPawnMoves(side, from);
       } else {
          temp = chessBoard.getAttackBoard(from);
       }

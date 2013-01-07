@@ -121,7 +121,7 @@ public class MoveFunctions {
 
 				if(to/8 == 7)
 					type = Global.PROMO_Q;
-				else if(to == chessBoard.getPassantB())
+				else if(to == chessBoard.getPassant(Global.COLOUR_BLACK))
 					type = Global.EN_PASSANT_CAP;
 			}
 			else if(piece == 11) {			//bPawn
@@ -130,7 +130,7 @@ public class MoveFunctions {
 
 				if(to/8 == 0)
 					type = Global.PROMO_Q;
-				else if(to == chessBoard.getPassantW())
+				else if(to == chessBoard.getPassant(Global.COLOUR_WHITE))
 					type = Global.EN_PASSANT_CAP;
 			}
 			else if(piece % 6 == 0) {

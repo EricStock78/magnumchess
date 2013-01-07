@@ -43,8 +43,6 @@ public class Evaluation2 {
 
     private static long[][] boardAttacks = new long[2][7];
 
-    private static int[][] RelativeRanks = { {0, 1, 2, 3, 4, 5, 6, 7} , {7, 6, 5, 4, 3, 2, 1, 0} };
-
     /** indices of boards for specific pieces in boardAttacks */
     private static final int PAWN_BOARD = 0;
     private static final int KNIGHT_BOARD = 1;
@@ -738,7 +736,7 @@ public class Evaluation2 {
             int position = Long.numberOfTrailingZeros(piece);
             int rank = position >> 3;
             int file = position & 7;
-            int relativeRank = RelativeRanks[side][rank];//Board.GetRelativeRank(side, position);
+            int relativeRank = Global.RelativeRanks[side][rank];//Board.GetRelativeRank(side, position);
             int relativePosition = (relativeRank << 3) + file;// Board.GetRelativePosition(side, position);
             int rankBehind = rank + behindValue;
             int rankForward = rank + forwardValue;
@@ -898,7 +896,7 @@ public class Evaluation2 {
             int position = Long.numberOfTrailingZeros(piece);
             int blockPos = position + Global.forwardRank[side];
             int rank = position>>3;
-            int relativeRank = RelativeRanks[side][rank];
+            int relativeRank = Global.RelativeRanks[side][rank];
             int endScore = PassedPawnBonus[END_GAME][relativeRank];
             int endBonus = 0;
             int kingEndBonus = 0;
@@ -959,7 +957,7 @@ public class Evaluation2 {
             int blockPos = position + Global.forwardRank[side];
             int rank = position>>3;
             int file = position&7;
-            int relativeRank = RelativeRanks[side][rank];//Board.GetRelativeRank(side, position);
+            int relativeRank = Global.RelativeRanks[side][rank];//Board.GetRelativeRank(side, position);
             int middleScore = PassedPawnBonus[MIDDLE_GAME][relativeRank];
             int endScore = PassedPawnBonus[END_GAME][relativeRank];
             int kingEndBonus = 0;
@@ -1032,7 +1030,7 @@ public class Evaluation2 {
         for(int i=0; i < chessBoard.pieceTotals[1 + side*6]; i++)
         {
             int position = chessBoard.pieceList[1 + side*6][i];
-            int relativeRank = RelativeRanks[side][position>>3] ;
+            int relativeRank = Global.RelativeRanks[side][position>>3] ;
             int relativePosition = (relativeRank << 3) + (position & 7);
             if(relativeRank == 0) {
                 develop -= BACKRANK_MINOR *  (-1 + side * 2);
@@ -1099,9 +1097,9 @@ public class Evaluation2 {
         for(int i=0; i < chessBoard.pieceTotals[2 + side*6]; i++)
         {
             int position = chessBoard.pieceList[2 + side*6][i];
-            int relativeRank = RelativeRanks[side][position>>3] ;
+            int relativeRank = Global.RelativeRanks[side][position>>3] ;
             int relativePosition = (relativeRank << 3) + (position & 7);
-            if(RelativeRanks[side][position>>3] == 0) {
+            if(Global.RelativeRanks[side][position>>3] == 0) {
                 develop -= BACKRANK_MINOR *  (-1 + side * 2);
             }
             long attacks = chessBoard.getMagicBishopMoves(position);
@@ -1158,7 +1156,7 @@ public class Evaluation2 {
     */
     private static void GetRookEval(int side, long mobilityArea)
     {
-        int enemyKingRelativeRank = RelativeRanks[side][enemyKingPos[side]>>3];//Board.GetRelativeRank(side, enemyKingPos);
+        int enemyKingRelativeRank = Global.RelativeRanks[side][enemyKingPos[side]>>3];//Board.GetRelativeRank(side, enemyKingPos);
         int oldFile = -1;
         int oldRank = -1;
 
@@ -1167,7 +1165,7 @@ public class Evaluation2 {
             int position = chessBoard.pieceList[side*6][i];
             int file = position & 7;
             int rank = position >> 3;
-            int relativeRank = RelativeRanks[side][rank];//Board.GetRelativeRank(side, position);
+            int relativeRank = Global.RelativeRanks[side][rank];//Board.GetRelativeRank(side, position);
             int nearEnemyKing = 1;
             if(enemyKingRelativeRank == 7 && relativeRank == 6 )
             {
@@ -1290,7 +1288,7 @@ public class Evaluation2 {
                 if(zonePawns != 0)
                 {
                     int position = side == Global.COLOUR_WHITE ? Long.numberOfTrailingZeros(zonePawns) : (63 - Long.numberOfLeadingZeros(zonePawns));
-                    score += PawnProtection[RelativeRanks[side][position>>3]];
+                    score += PawnProtection[Global.RelativeRanks[side][position>>3]];
                 }
             }
             else
@@ -1333,7 +1331,7 @@ public class Evaluation2 {
             count += TABLE[mask];
         }
 
-        return kingSafetyEval[count + KingAttackVal[ (RelativeRanks[side][kingPos[side]>>3] << 3 ) + ( kingPos[side] & 7 ) ]];
+        return kingSafetyEval[count + KingAttackVal[ (Global.RelativeRanks[side][kingPos[side]>>3] << 3 ) + ( kingPos[side] & 7 ) ]];
     }
 
     private static int HungPieces(int side, long piecesNoKing)

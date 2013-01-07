@@ -49,6 +49,8 @@ abstract class Global {
     public static final int PIECE_PAWN = 5;
     public static final int PIECE_ALL = 6;
 
+    public static int[][] RelativeRanks = { {0, 1, 2, 3, 4, 5, 6, 7} , {7, 6, 5, 4, 3, 2, 1, 0} };
+    
     /** string representation of all pieces */
     public static final String pieces[]= new String[] {"wRook","wKnight","wBishop","wQueen","wKing","wPawn",
 													"bRook","bKnight","bBishop","bQueen","bKing","bPawn"};

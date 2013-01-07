@@ -818,12 +818,12 @@ public final class HistoryWriter {
 					moveSt = moveSt.concat(boardString[from].substring(0,1));
 				moveSt = moveSt.concat("x");
 			}
-			else if(chessBoard.piece_in_square[from] == 5 && Board.getInstance().getPassantB() == to)
+			else if(chessBoard.piece_in_square[from] == 5 && Board.getInstance().getPassant(Global.COLOUR_BLACK) == to)
 			{
 				moveSt = moveSt.concat(boardString[from].substring(0,1));
 				moveSt = moveSt.concat("x");
 			}
-			else if(chessBoard.piece_in_square[from] == 11 && Board.getInstance().getPassantW() == to)
+			else if(chessBoard.piece_in_square[from] == 11 && Board.getInstance().getPassant(Global.COLOUR_WHITE) == to)
 			{
 				moveSt = moveSt.concat(boardString[from].substring(0,1));
 				moveSt = moveSt.concat("x");
