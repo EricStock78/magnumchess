@@ -3,7 +3,7 @@
  *
  * Version 4.0
  * 
- * Copyright (c) 2012 Eric Stock
+ * Copyright (c) 2013 Eric Stock
  
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
@@ -294,8 +294,8 @@ public final class Board {
             bHashMove = dataInputStream.readLong();
 
             for(int i=0;i<8;i++) {
-                CastleHash[Global.COLOUR_WHITE][i] = dataInputStream.readLong();
                 CastleHash[Global.COLOUR_BLACK][i] = dataInputStream.readLong();
+                CastleHash[Global.COLOUR_WHITE][i] = dataInputStream.readLong();
             }
 
             dataInputStream.close();
@@ -1136,7 +1136,7 @@ public final class Board {
         }
         else
         {
-            return (-1 + side) * (materialValues[materialKey] + materialAdjust);
+            return (-1 + side * 2) * (materialValues[materialKey] + materialAdjust);  
         }
     }
     
