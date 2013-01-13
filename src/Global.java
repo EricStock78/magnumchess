@@ -3,7 +3,7 @@
  *
  * Version 4.0
  * 
- * Copyright (c) 2012 Eric Stock
+ * Copyright (c) 2013 Eric Stock
  
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
@@ -116,7 +116,6 @@ abstract class Global {
 	public static final int[] behindRank = {-8, 8};
         public static final int[] forwardRank = {8, -8};
    public static final int[] pieceAdd = {0, 6};
-   public static final int[][] longCastleMasks = { {2,3}, {58, 58} };
    
    public static final long[] set_Mask = new long[64];
 	public static final long[] plus9 = new long[64];

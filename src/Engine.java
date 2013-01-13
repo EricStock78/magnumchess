@@ -1,3 +1,6 @@
+//import java.io.BufferedWriter;
+//import java.io.File;
+//import java.io.FileWriter;
 import java.util.Random;
 
 /**
@@ -5,7 +8,7 @@ import java.util.Random;
  *
  * Version 4.0
  * 
- * Copyright (c) 2012 Eric Stock
+ * Copyright (c) 2013 Eric Stock
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
@@ -130,6 +133,7 @@ public final class Engine {
 
    private static Random rand = new Random(9L);
 
+   //public BufferedWriter buffWriter;
    /**
     * Constructor Engine
     *
@@ -138,8 +142,17 @@ public final class Engine {
     */
    public Engine() {
       chessBoard = Board.getInstance();
+      
+       /*File f = new File("debug");
+        
+        try {
+            f.createNewFile();
+            FileWriter fileWriter;
+            fileWriter= new FileWriter(f);
+            buffWriter = new BufferedWriter(fileWriter);  
+        }
+        catch (Exception ex2){};*/
    }
-
     /**
     * Method GotoTimeState
     *
@@ -610,7 +623,9 @@ public final class Engine {
 	   
 	    sortMoves(0, numberOfMoves, moveArr, compareArray);
       }
-      
+      /*try {
+         buffWriter.close();
+      } catch (Exception e) {};*/
       //make the best move
       chessBoard.AddMove(bestMove);
       chessBoard.MakeMove(bestMove, false);
@@ -1503,7 +1518,12 @@ public final class Engine {
     *
     */
    private int Max(int side, int depth, int alpha, int beta, boolean nMove, boolean isInCheck, boolean wasExtended, boolean iid) {
-
+        
+       /*try {
+            buffWriter.write("max "+chessBoard.hashValue+" "+"alpha "+alpha+" beta "+beta+" isInCheck "+isInCheck+" null "+nMove);
+       } catch (Exception ex2) {};
+       */
+      
       thisDepth++;
       //int sideReplace = side == -1 ? Global.COLOUR_WHITE : Global.COLOUR_BLACK;
       /** time management code */
@@ -1779,7 +1799,17 @@ public final class Engine {
             case (GOOD_CAPTURES):
                testCheck = !isInCheck;
 					index = getCaptures(side, moveArr);
-               capIndex = index;
+              /*try {    
+                for(int i=0; i<index; i++)
+                 {
+                          buffWriter.write(moveArr[i] +" ");
+                 }
+                buffWriter.write("\n");
+               } catch (Exception ex2) {};*/
+                                         
+                                        
+                                        
+              capIndex = index;
                badCapIndex = index - 1; 
                break;
             case (KILLER_MOVES):
@@ -1814,7 +1844,17 @@ public final class Engine {
                break;
             case (NON_CAPS):
                testCheck = !isInCheck;
-					index = getMoves(side, moveArr, capIndex);
+              
+                index = getMoves(side, moveArr, capIndex);
+               /*try {    
+                for(int i=0; i<index; i++)
+                 {
+                          buffWriter.write(moveArr[i] +" ");
+                 }
+                buffWriter.write("\n");
+               } catch (Exception ex2) {};*/
+                                        
+                  
                endIndex = capIndex;
                break;
             case (BAD_CAPS):
@@ -2082,6 +2122,10 @@ public final class Engine {
     *
     */
     private int Quies(int side, int depth, int alpha, int beta) {
+        /* try {
+            buffWriter.write("quies "+chessBoard.hashValue+" "+"alpha "+alpha+" beta "+beta);
+       } catch (Exception ex2) {};*/
+       
         thisDepth++;
         nodes++;
         int[] capArr = new int[60];
