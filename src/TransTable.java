@@ -3,7 +3,7 @@
  *
  * Version 4.0   
  * 
- * Copyright (c) 2012 Eric Stock
+ * Copyright (c) 2013 Eric Stock
  
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
@@ -43,7 +43,7 @@ public class TransTable {
    private long[] Table3;
    private int hashCount;
    private Board chessBoard;
-   private static final long mask3 = ~((long)1 << 57 | (long)1 << 58 | (long)1 << 59);
+   private static final long mask3 = ~((long)1 << 58 | (long)1 << 59 | (long)1 << 60);
 	public static final long LAZY_BIT = ( (long)1 << 31);
    private static final int PAWN_TABLE_SIZE = 6;
 	 private static final int EVAL_TABLE_SIZE = 2;
@@ -87,14 +87,21 @@ public class TransTable {
      *
      */ 
 	public final void addPawnHash(int key, long lock, int value_mg, int value_eg, int center, int passPhase1Mid, int passPhase1End, int pawnShield, long passedBits, long whiteAttacks, long blackAttacks, long outposts) {
-		int index = key * PAWN_TABLE_SIZE;
+           
+            assert(value_mg >= -4000 && value_mg <= 4000);
+            assert(value_eg >= -4000 && value_eg <= 4000);
+            assert(center >= -64 && center < 64);
+            assert(passPhase1Mid >= -512 && passPhase1Mid < 512);
+            assert(passPhase1End >= -1024 && passPhase1End < 1024);
+            assert(pawnShield >= -128 && pawnShield < 128);
+            int index = key * PAWN_TABLE_SIZE;
 		Table[index] = lock;
 		Table[index+1] = (long)(value_mg + 4000)
 		| (long)(value_eg + 4000) << 13
 		| (long)(center + 64) << 26
 		| (long)(passPhase1Mid + 512) << 33
 	   | (long)(passPhase1End + 1024) << 43
-		| (long)(pawnShield + 64) << 54;
+		| (long)(pawnShield + 128) << 54;
 		Table[index+2] = passedBits;
 		Table[index+3] = whiteAttacks;
 		Table[index+4] = blackAttacks;
@@ -141,22 +148,26 @@ public class TransTable {
      *
      */ 
     public final void addHash(int key,int move,long value,int depth,int type,int nullFail,int ancient) {
-
+                assert( value > -21000 && value < 21000);
+                assert( type >= 0 && type < 8);
+                assert( depth >= 0 && depth < 64 );
+                assert( nullFail >= 0 && nullFail < 2);
+                assert( ancient >= 0 && ancient < 8);
 		int index = key*4;
 		/** if empty slot, add entry */
 		long word = (long)move
 			| ((long)(value + 21000) << 32)
 			| ((long)type << 48)
 			| ((long)depth << 51)
-			| ((long)nullFail << 56)
-			| ((long)ancient << 57);
+			| ((long)nullFail << 57)
+			| ((long)ancient << 58);
 
 		if(Table2[index]==0)  {
 			hashCount++;
 			Table2[index] = chessBoard.hashValue;
 			Table2[index+1] = word;
 		}/** replace if depth greater */
-		else if(depth >= (int)((Table2[index+1]>>51)&31L) || (int)((Table2[index+1] >> 57) & 7L) != ancient) {
+		else if(depth >= (int)((Table2[index+1]>>51)&63L) || (int)((Table2[index+1] >> 58) & 7L) != ancient) {
 			Table2[index] = chessBoard.hashValue;
 			Table2[index+1] = word;
 		}
@@ -208,7 +219,7 @@ public class TransTable {
 	}
 
 	public final int GetPawnShield(int key) {
-		return (int)((Table[key*PAWN_TABLE_SIZE + 1] >> 54 & 127L) - 64);
+		return (int)((Table[key*PAWN_TABLE_SIZE + 1] >> 54 & 255L) - 128);
 	}
 	public final long GetPawnOutposts(int key) {
 		return Table[key*PAWN_TABLE_SIZE + 5];
@@ -261,7 +272,7 @@ public class TransTable {
      */ 
     public final int getDepth(int key,int probe ) {
 		long temp = Table2[key*4+1+probe];
-		return (int)((temp>>51)&31L);
+		return (int)((temp>>51)&63L);
 	}
 	
     /*
@@ -290,7 +301,7 @@ public class TransTable {
      * @return int - 0 use null, 1 don't
      */ 
     public final int getNullFail(int key,int probe) {
-		return (int)(Table2[key*4+1+probe]>>56)&1;
+		return (int)(Table2[key*4+1+probe]>>57)&1;
 			
 	}	
 	
@@ -393,11 +404,11 @@ public class TransTable {
 	public void setNew(int key,int probe,int ancient) {
 		if(probe == 0)   {
          Table2[key*4+1] &= mask3;
-         Table2[key*4+1] |= ((long)ancient << 57);
+         Table2[key*4+1] |= ((long)ancient << 58);
       }
-      else if(probe == 2 && ((Table2[key*4 + 3] >> 57)&7)!=ancient)  {
+      else if(probe == 2 && ((Table2[key*4 + 3] >> 58)&7)!=ancient)  {
          Table2[key*4 + 3] &= mask3;
-         Table2[key*4 + 3] |= ((long)ancient << 57);
+         Table2[key*4 + 3] |= ((long)ancient << 58);
          Table2[key*4] = Table2[key*4 + 2];
          Table2[key*4 + 1] = Table2[key*4 + 3];
       }
