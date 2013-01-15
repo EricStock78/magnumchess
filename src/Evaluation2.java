@@ -6,7 +6,7 @@ import java.util.Arrays;
  *
  * Version 4.0
  *
- * Copyright (c) 2012 Eric Stock
+ * Copyright (c) 2013 Eric Stock
 
 Permission is hereby granted, free of charge, to any person obtaining
 a copy of this software and associated documentation files (the
@@ -534,8 +534,8 @@ public class Evaluation2 {
             centre = CenterScoreArray[centre];
         }
         int midScores = pawnScore[MIDDLE_GAME] + passScore[MIDDLE_GAME] + centre + mobility[MIDDLE_GAME] + develop + castle + kingSafety + pawnShield + rookEval[MIDDLE_GAME];
-        int endScores = pawnScore[END_GAME] + queenEval + passScore[END_GAME] + endKingSafety + rookEval[END_GAME] + mobility[END_GAME];
-        int allScores = bishopEval + knightEval + tempo + hungPenalty + material + trapped;
+        int endScores = pawnScore[END_GAME] + passScore[END_GAME] + endKingSafety + rookEval[END_GAME] + mobility[END_GAME];
+        int allScores = bishopEval + knightEval + + queenEval + tempo + hungPenalty + material + trapped;
 
         finalScore = sideMult * (int)((float)midScores * midGameCoefficient + (float)endScores * (float)endGameCoefficient + (float)allScores);
 
