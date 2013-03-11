@@ -5,26 +5,20 @@ package magnumdatawriter;
  *
  * Version 4.0
  * 
- * Copyright (c) 2012 Eric Stock
+ * Copyright (c) 2013 Eric Stock
  
-Permission is hereby granted, free of charge, to any person obtaining
-a copy of this software and associated documentation files (the
-"Software"), to deal in the Software without restriction, including
-without limitation the rights to use, copy, modify, merge, publish,
-distribute, sublicense, and/or sell copies of the Software, and to
-permit persons to whom the Software is furnished to do so, subject to
-the following conditions:
- 
-The above copyright notice and this permission notice shall be
-included in all copies or substantial portions of the Software.
- 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
-LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
-OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
-WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 
@@ -129,7 +123,9 @@ public final class Board {
     /** call to private constructor - a la singleton pattern */
     private static final Board INSTANCE = new Board();
 
-	 /**
+
+    private Bitbase bitbase;
+    /**
      * Constructor Board
      * 
      * is private so only 1 instance is created
@@ -226,7 +222,10 @@ public final class Board {
 			}
 			
 			setHash();
-
+                        bitbase = new Bitbase(this);
+                        bitbase.InitBitbase();
+                        bitbase.ToFile(dataOutputStream);
+                        
 			dataOutputStream.close();
 		}
 		catch( IOException iox )
@@ -252,10 +251,7 @@ public final class Board {
 	private  final void initQueenDist() {
 		for(int i=0;i<64;i++) {
 			for(int j=0;j<64;j++) {
-				if((i%8<j%8)||(i%8==j%8)||(i/8==j/8))	{
-					queenDist[i][j] = getQueenDistance(i,j);
-					queenDist[j][i] = queenDist[i][j];
-				}					
+                            queenDist[i][j] = Math.max( Math.abs(i/8 - j/8), Math.abs(i%8 - j%8) );					
 			}		
 		}						 
 	}
@@ -268,56 +264,8 @@ public final class Board {
      * @param kPos 
      * 
      */
-	private  final int getQueenDistance(int qPos,int kPos) {
-		int qRank = qPos/8;
-		int kRank = kPos/8;
-		int qFile = qPos%8;
-		int kFile = kPos%8;
-		int fileDiff = Math.abs(qFile-kFile);
-		int rankDiff = Math.abs(qRank-kRank);
-		int Distance=0;
-		if(qRank == kRank) 
-			Distance = fileDiff;
-		else if(qFile == kFile) 
-			Distance = rankDiff;
-		else if(kFile>qFile) {
-			if(kRank>qRank)				{			//traverse D2
-				if(fileDiff<rankDiff)   	{		//we go until we hit king's file
-					int pos = qPos;
-					while(pos%8!=kFile) {
-						pos+=9;
-						Distance++;
-					}
-					Distance+= Math.abs(pos/8-kRank);
-				}
-				else {							//we go until we hit the king's rank
-					int pos = qPos;
-					while(pos/8!=kRank) {
-						pos+=9;
-						Distance++;
-					}
-					Distance += Math.abs(pos-kPos);
-				}
-			} else {								//king Rank less than queen rank	//traverse D1
-				if(fileDiff<rankDiff) {				//we go until we hit Kings file
-					int pos = qPos;
-					while(pos%8!=kFile) {
-						pos-=7;
-						Distance++;
-					}
-					Distance += Math.abs(pos/8-kRank);
-				}
-				else {							//we go until we hit king's rank
-					int pos = qPos;		
-					while(pos/8!=kRank) 	{
-						pos-=7;
-						Distance++;
-					}
-					Distance += Math.abs(pos-kPos);
-				}
-			}	
-		}	
-		return Distance;
+	public  final int getQueenDistance(int qPos,int kPos) {
+            return queenDist[qPos][kPos];
 	}
 	
     /** 
@@ -969,4 +917,16 @@ public final class Board {
 		return tempD;
 		
 	}
+       
+   long getKingMoves(int kingPos ) {
+       return Helper.getKingPosition( kingPos );
+   }
+   
+   long getPawnAttack( int side, int square ) {
+       if(side == Global.COLOUR_WHITE)
+           return WhitePawnAttackBoard[square];
+       else
+           return BlackPawnAttackBoard[square];
+   }
+   
 }
