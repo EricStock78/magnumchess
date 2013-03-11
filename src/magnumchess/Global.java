@@ -1,3 +1,4 @@
+package magnumchess;
 /**
  * Global.java
  *
@@ -5,24 +6,18 @@
  * 
  * Copyright (c) 2013 Eric Stock
  
-Permission is hereby granted, free of charge, to any person obtaining
-a copy of this software and associated documentation files (the
-"Software"), to deal in the Software without restriction, including
-without limitation the rights to use, copy, modify, merge, publish,
-distribute, sublicense, and/or sell copies of the Software, and to
-permit persons to whom the Software is furnished to do so, subject to
-the following conditions:
- 
-The above copyright notice and this permission notice shall be
-included in all copies or substantial portions of the Software.
- 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
-LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
-OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
-WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -41,6 +36,15 @@ abstract class Global {
     public static final int COLOUR_WHITE = 0;
     public static final int COLOUR_BLACK = 1;
 
+    public static final int LIGHT_SQUARE = 1;
+    public static final int DARK_SQUARE = 0;
+    
+    public static final int MAX_DEPTH = 40;
+    
+    public static final int MATE_SCORE = 20000;
+    public static final int KNOWN_WIN = 10000;
+    public static final int KNOWN_WIN_KPK = 400;    //keep this small to still encourage promotion
+    
     public static final int PIECE_ROOK = 0;
     public static final int PIECE_KNIGHT = 1;
     public static final int PIECE_BISHOP = 2;
@@ -49,6 +53,17 @@ abstract class Global {
     public static final int PIECE_PAWN = 5;
     public static final int PIECE_ALL = 6;
 
+    public static final int whiteKBNK = 90;
+    public static final int blackKBNK = 270;
+    public static final int whiteKRKB = 28;
+    public static final int blackKRKB = 12;
+    public static final int whiteKRKN = 244;
+    public static final int blackKRKN = 84;
+    public static final int whiteKRKP = 26245;
+    public static final int blackKRKP = 2919;
+    public static final int blackKPK = 26244;
+    public static final int whiteKPK = 2916;
+    
     public static int[][] RelativeRanks = { {0, 1, 2, 3, 4, 5, 6, 7} , {7, 6, 5, 4, 3, 2, 1, 0} };
     
     /** string representation of all pieces */
@@ -106,7 +121,9 @@ abstract class Global {
 	public static int EvalHASHSIZE = 131072 * 8;		//8 mb initial eval hash size
 
 	/** various masks needed for evaluation and move generation */
-	public static final long[][] mask_behind = new long[2][64];
+	public static final long[][] mask_between = new long[64][64];
+    
+    public static final long[][] mask_behind = new long[2][64];
 	public static final long[][] mask_in_front = new long[2][64];
 	public static final long[][] mask_forward = new long[2][64];
 

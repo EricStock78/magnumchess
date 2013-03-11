@@ -1,3 +1,8 @@
+package magnumchess;
+
+
+import magnumchess.Board;
+
 /**
  * SEE.java
  *
@@ -5,24 +10,18 @@
  * 
  * Copyright (c) 2013 Eric Stock
  
-Permission is hereby granted, free of charge, to any person obtaining
-a copy of this software and associated documentation files (the
-"Software"), to deal in the Software without restriction, including
-without limitation the rights to use, copy, modify, merge, publish,
-distribute, sublicense, and/or sell copies of the Software, and to
-permit persons to whom the Software is furnished to do so, subject to
-the following conditions:
- 
-The above copyright notice and this permission notice shall be
-included in all copies or substantial portions of the Software.
- 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
-LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
-OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
-WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -181,19 +180,19 @@ public class SEE {
 		//System.out.println("to is "+to);
  		//System.out.println("from is "+from);
 
-		int friendSide = Board.piece_in_square[from] /6;
-		int enemySide = (friendSide + 1) & 1;
+		//int friendSide = Board.piece_in_square[from] /6;
+		int enemySide = side^1;
 		int[][] arrPieces = new int[2][10];
  		int arrPieceCount[] = new int[2];
 		int tempVal;
-		long removedBits = (long)1 << from;
+		long removedBits = 1L << from;
 
 		switch(moveType)
 		{
 			case(Global.EN_PASSANT_CAP):
 				tempVal = Global.values[Global.PIECE_PAWN];
 				removedBits |= side == Global.COLOUR_WHITE ? Global.set_Mask[to-8] : Global.set_Mask[to+8];
-				arrPieces[friendSide][arrPieceCount[friendSide]++] = (Global.values[Global.PIECE_PAWN] << 6 | from );
+				arrPieces[side][arrPieceCount[side]++] = (Global.values[Global.PIECE_PAWN] << 6 | from );
 			break;
 
 			case(Global.PROMO_Q):
@@ -201,11 +200,11 @@ public class SEE {
 					tempVal = (Global.values[Board.piece_in_square[to]] + Global.values[Global.PIECE_QUEEN] - Global.values[Global.PIECE_PAWN]);
 				else
 					tempVal = Global.values[Global.PIECE_QUEEN] - Global.values[Global.PIECE_PAWN];
-				arrPieces[friendSide][arrPieceCount[friendSide]++] = (Global.values[Global.PIECE_QUEEN] << 6 | from );
+				arrPieces[side][arrPieceCount[side]++] = (Global.values[Global.PIECE_QUEEN] << 6 | from );
 			break;
 
 			default:
-				arrPieces[friendSide][arrPieceCount[friendSide]++] = (Global.values[Board.piece_in_square[from]] << 6 | from );
+				arrPieces[side][arrPieceCount[side]++] = (Global.values[Board.piece_in_square[from]] << 6 | from );
 				tempVal = Global.values[Board.piece_in_square[to]];
 			break;
 		}
@@ -233,7 +232,7 @@ public class SEE {
 		while (true) {
 			
 			if(arrPieceCount[enemySide] > moveNumber ) {
-				tempVal -= arrPieces[friendSide][moveNumber] >> 6;
+				tempVal -= arrPieces[side][moveNumber] >> 6;
 				if(tempVal >= test) {
 					//System.out.println("value is "+tempVal);
 					Board.bitboard ^= removedBits;
@@ -282,7 +281,7 @@ public class SEE {
 				arrPieces[piece/6][arrPieceCount[piece/6]++] = (Global.values[piece] << 6 | position);
 			}
 
-			if(arrPieceCount[friendSide] > moveNumber + 1) {
+			if(arrPieceCount[side] > moveNumber + 1) {
 				tempVal += arrPieces[enemySide][moveNumber] >> 6;
 				if(tempVal < test) {
 					//System.out.println("value is "+tempVal);
@@ -309,18 +308,18 @@ public class SEE {
 			}
 
 			//place lowest piece at correct pos in array
-			lowestValue = arrPieces[friendSide][moveNumber+1];
-			for(int i = moveNumber+2; i < arrPieceCount[friendSide]; i++)
+			lowestValue = arrPieces[side][moveNumber+1];
+			for(int i = moveNumber+2; i < arrPieceCount[side]; i++)
 			{
-				if( arrPieces[friendSide][i] < lowestValue)
+				if( arrPieces[side][i] < lowestValue)
 				{
-					lowestValue = arrPieces[friendSide][i];
-					arrPieces[friendSide][i] = arrPieces[friendSide][moveNumber+1];
-					arrPieces[friendSide][moveNumber+1] = lowestValue;
+					lowestValue = arrPieces[side][i];
+					arrPieces[side][i] = arrPieces[side][moveNumber+1];
+					arrPieces[side][moveNumber+1] = lowestValue;
 				}
 			}
 
-			removedPosition = arrPieces[friendSide][moveNumber+1] & 63;
+			removedPosition = arrPieces[side][moveNumber+1] & 63;
 			Board.bitboard ^= Global.set_Mask[removedPosition];
 			removedBits |= Global.set_Mask[removedPosition];
 			newAttack = Board.GetSlideAttacks2SEE(to) & Board.bitboard;
