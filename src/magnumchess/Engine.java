@@ -1,7 +1,9 @@
-//import java.io.BufferedWriter;
-//import java.io.File;
-//import java.io.FileWriter;
+package magnumchess;
+
+
+import magnumchess.Board;
 import java.util.Random;
+
 
 /**
  * Engine.java
@@ -10,24 +12,18 @@ import java.util.Random;
  * 
  * Copyright (c) 2013 Eric Stock
 
-Permission is hereby granted, free of charge, to any person obtaining
-a copy of this software and associated documentation files (the
-"Software"), to deal in the Software without restriction, including
-without limitation the rights to use, copy, modify, merge, publish,
-distribute, sublicense, and/or sell copies of the Software, and to
-permit persons to whom the Software is furnished to do so, subject to
-the following conditions:
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
 
-The above copyright notice and this permission notice shall be
-included in all copies or substantial portions of the Software.
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
-LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
-OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
-WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
  * Engine.java
  * This class contains all the search functionality
@@ -36,7 +32,7 @@ WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  * -move generation functions - which uses chessBoard.java's individual piece move functions
  * -divide and perft functions for move generation testing and verification
  *
- * @version 	4.00 March 2012
+ * @version 	4.00 March 2013
  * @author 	Eric Stock
  */
 public final class Engine {
@@ -57,7 +53,7 @@ public final class Engine {
     private static long nps;         //nodes per second
 
     /** 2D 64X64 arrays for history heuristic move ordering enhancement */
-    private static final short[][][] Hist = new short[2][64][64];
+    private static final short[][][] Hist = new short[2][6][64];
     private static TransTable HashTable = new TransTable(Global.HASHSIZE, 0);       //transposition table variable used in the search
 
     /** array for storing moves from the root position */
@@ -105,6 +101,11 @@ public final class Engine {
     private static final int NON_CAPS = 5;
     private static final int BAD_CAPS = 6;
     private static final int SEARCH_END = 7;
+    private static final int QUIES_CAPS = 2;
+    private static final int QUIES_CHECKING = 5;
+    private static final int QUIES_IN_CHECK = 3;
+    private static final int QUIES_END = 4;
+    
     private static final int TT_PV = 1 << 12;
     private static final int STANDPAT_PV = 2 << 12;
     private static final int ROOTDRAW_PV = 3 << 12;
@@ -115,9 +116,9 @@ public final class Engine {
     private static final int HASH_ALPHA = 0;
     private static final int HASH_BETA = 2;
     /** constants for starting values of search */
-    private static final int ALPHA_START = -21000;
-    private static final int BETA_START = 21000;
-    private static final int VALUE_START = -21000;
+    private static final int ALPHA_START = -Global.MATE_SCORE;
+    private static final int BETA_START = Global.MATE_SCORE;
+    private static final int VALUE_START = -Global.MATE_SCORE;
     /** variable used to track how deep in the search we are */
     private static byte thisDepth;
     /** boolean which represents if we are using infinite time control */
@@ -368,14 +369,14 @@ public final class Engine {
 
         /** here we prepare the history arrays for the next search */
         if ((chessBoard.getCount() / 2 >> 3) == 7) {
-           for (int i = 0; i < 64; i++) {
+           for (int i = 0; i < 6; i++) {
               for (int j = 0; j < 64; j++) {
                  Hist[Global.COLOUR_WHITE][i][j] = 0;
                  Hist[Global.COLOUR_BLACK][i][j] = 0;
               }
            }
         } else {
-           for (int i = 0; i < 64; i++) {
+           for (int i = 0; i < 6; i++) {
               for (int j = 0; j < 64; j++) {
                  Hist[Global.COLOUR_WHITE][i][j] /= 10;
                  Hist[Global.COLOUR_BLACK][i][j] /= 10;
@@ -397,7 +398,9 @@ public final class Engine {
         if (!inCheck(theSide)) {
             numberOfMoves = GetAllMoves(theSide, moveArr);
         } else {
-            numberOfMoves = getCheckEscapes(theSide, moveArr);
+            numberOfMoves = getCheckEscapes(theSide, moveArr); 
+            if( numberOfMoves == 0)
+                return "info string no legal move";
         }
 
         thisDepth = 0;
@@ -491,12 +494,12 @@ public final class Engine {
                     } else {
                         //System.out.println("inserting move to is "+MoveFunctions.getTo(mv)+" from is "+MoveFunctions.getFrom(mv));
                         int key = (int) (chessBoard.hashValue % Global.HASHSIZE);
-                        HashTable.addHash(key, mv, -20000, insertDepth++, HASH_BETA, 0, ancient);
+                        HashTable.addHash(key, mv, -Global.MATE_SCORE, insertDepth++, HASH_BETA, 0, ancient);
                         chessBoard.MakeMove(mv, false);
                     }
                 }
             }
-            value = VALUE_START;
+            
             alpha = ALPHA_START;
             beta = BETA_START;
 
@@ -599,11 +602,11 @@ public final class Engine {
                 nps = (int)(((double)nodes) / (((double)(elapsedTime))/(1000.0f)));
             }
 
-            if (bestValue > 10000L) {			//this is a winning mate score
-                long mate = (20000L - bestValue) / 2;
+            if (bestValue >= (Global.MATE_SCORE - Global.MAX_DEPTH)) {			//this is a winning mate score
+                long mate = (Global.MATE_SCORE - bestValue) / 2;
                 System.out.println("info depth " + depth + " score mate " + mate + " nodes " + nodes + " nps " + nps + " pv " + pv);
-            } else if (bestValue < -10000) {  //losing mate score
-                long mate = (-20000L - bestValue) / 2;
+            } else if (bestValue <= -(Global.MATE_SCORE - Global.MAX_DEPTH)) {  //losing mate score
+                long mate = (-Global.MATE_SCORE - bestValue) / 2;
                 System.out.println("info depth " + depth + " score mate " + mate + " nodes " + nodes + " nps " + nps + " pv " + pv);
             } else {
                 System.out.println("info depth " + depth + " score cp " + bestValue + " nodes " + nodes + " nps " + nps + " pv " + pv);
@@ -655,6 +658,118 @@ public final class Engine {
         return false;
     }
 
+    /**
+     * Method getChecingMoves
+     *
+     * collects all of the non capture, non pawn promotion moves
+     *
+     * @param int side - the side to move
+     * @param int[] Moves - the array to fill with moves
+     * @param int start - index to start placing move into as capture moves may
+     * already occupy first spaces in array
+     *
+     * @return int - the number of moves added
+     *
+     */
+    public int getCheckingMoves(int side, int[] Moves, int start) 
+    {
+        long moves, doubleMoves;
+        int index = start;
+        long pieces = chessBoard.pieceBits[side][Global.PIECE_PAWN];
+        long enemyKing = chessBoard.pieceBits[side^1][Global.PIECE_KING];
+        if( side == Global.COLOUR_WHITE)
+        {
+            moves = pieces << 8 & ~chessBoard.bitboard & ~Global.rankMasks[7];
+            doubleMoves = moves << 8 & Global.rankMasks[3] & ~chessBoard.bitboard;
+        }
+        else
+        {
+            moves = pieces >> 8 & ~chessBoard.bitboard & ~Global.rankMasks[0];
+            doubleMoves = moves >> 8 & Global.rankMasks[4] & ~chessBoard.bitboard;
+        }
+
+        while (moves != 0) 
+        {
+            long toBit = moves & -moves;
+            moves ^= toBit;
+            int to = Long.numberOfTrailingZeros(toBit);
+            if( (chessBoard.getPawnAttack(side, to) & enemyKing ) != 0 )
+            {
+                 int from = to + Global.behindRank[side];
+                 moveOrder[index] = Hist[side][5][to];
+                 Moves[index++] = MoveFunctions.makeMove(to, from, Global.pieceAdd[side] + Global.PIECE_PAWN, -1, Global.ORDINARY_MOVE);
+            }
+        }
+        while (doubleMoves != 0) 
+        {
+            long toBit = doubleMoves & -doubleMoves;
+            doubleMoves ^= toBit;
+            int to = Long.numberOfTrailingZeros(toBit);
+            if( (chessBoard.getPawnAttack(side, to) & enemyKing ) != 0 )
+            {
+                int from = to + Global.behindRank[side] * 2;
+                moveOrder[index] = Hist[side][5][to];
+                Moves[index++] = MoveFunctions.makeMove(to, from, Global.pieceAdd[side] + Global.PIECE_PAWN , -1, Global.DOUBLE_PAWN);
+            }
+        }
+
+        for(int j=0; j < chessBoard.pieceTotals[Global.pieceAdd[side]]; j++)
+        {
+            int from = chessBoard.pieceList[Global.pieceAdd[side]][j];
+            long toSquares = chessBoard.getAttackBoard(from);
+            toSquares &= ~chessBoard.bitboard;
+            while (toSquares != 0) {
+                long toBit = toSquares & -toSquares;
+                toSquares ^= toBit;
+                int to = Long.numberOfTrailingZeros(toBit);
+                if( (chessBoard.getMagicRookMoves(to) & enemyKing ) != 0 )
+                {
+                    moveOrder[index] = Hist[side][0][to];
+                    if((from == (side * 56)) && (chessBoard.castleFlag[side] & Global.LONG_CASTLE) != 0)
+                        Moves[index++] = MoveFunctions.makeMove(to, from, Global.pieceAdd[side], -1, Global.MOVE_ROOK_LOSE_CASTLE);
+                    else if(from == (7 + (side * 56)) && (chessBoard.castleFlag[side] & Global.SHORT_CASTLE) != 0)
+                        Moves[index++] = MoveFunctions.makeMove(to, from, Global.pieceAdd[side], -1, Global.MOVE_ROOK_LOSE_CASTLE);
+                    else
+                        Moves[index++] = MoveFunctions.makeMove(to, from, Global.pieceAdd[side], -1, Global.ORDINARY_MOVE);
+                }
+            }
+        }
+
+        for(int i=2; i<4; i++)
+        {
+            int pType = i + Global.pieceAdd[side];
+            for(int j=0; j < chessBoard.pieceTotals[pType]; j++)
+            {
+                int from = chessBoard.pieceList[pType][j];
+                long toSquares = chessBoard.getAttackBoard(from);
+                toSquares &= ~chessBoard.bitboard;
+                while (toSquares != 0) {
+                    long toBit = toSquares & -toSquares;
+                    toSquares ^= toBit;
+                    int to = Long.numberOfTrailingZeros(toBit);
+                    if( i == 2)
+                    {
+                        if( (chessBoard.getMagicBishopMoves(to) & enemyKing ) != 0 )
+                        {
+                            moveOrder[index] = Hist[side][i][to];
+                            Moves[index++] = MoveFunctions.makeMove(to, from, pType, -1, Global.ORDINARY_MOVE);
+                        }
+                    }
+                    else
+                    {
+                        if( (chessBoard.getQueenMoves(to) & enemyKing ) != 0 )
+                        {
+                            moveOrder[index] = Hist[side][i][to];
+                            Moves[index++] = MoveFunctions.makeMove(to, from, pType, -1, Global.ORDINARY_MOVE);
+                        }
+                    }
+                }
+            }
+        }
+        sortMoves(start, index, Moves);
+        return index;
+   }
+
    
     /**
      * Method getMoves
@@ -691,7 +806,7 @@ public final class Engine {
             moves ^= toBit;
             int to = Long.numberOfTrailingZeros(toBit);
             int from = to + Global.behindRank[side];
-            moveOrder[index] = Hist[side][from][to];
+            moveOrder[index] = Hist[side][5][to];
             Moves[index++] = MoveFunctions.makeMove(to, from, Global.pieceAdd[side] + Global.PIECE_PAWN, -1, Global.ORDINARY_MOVE);
         }
 
@@ -701,7 +816,7 @@ public final class Engine {
             doubleMoves ^= toBit;
             int to = Long.numberOfTrailingZeros(toBit);
             int from = to + Global.behindRank[side] * 2;
-            moveOrder[index] = Hist[side][from][to];
+            moveOrder[index] = Hist[side][5][to];
             Moves[index++] = MoveFunctions.makeMove(to, from, Global.pieceAdd[side] + Global.PIECE_PAWN , -1, Global.DOUBLE_PAWN);
         }
 
@@ -711,15 +826,15 @@ public final class Engine {
         if (chessBoard.castleFlag[side] > Global.CASTLED) 
         {
             long Temp = chessBoard.getKingCastle(((int)(chessBoard.bitboard >>> (56 * side)) & 255));
-            if(chessBoard.castleFlag[side] != Global.SHORT_CASTLE && ((Temp & Global.set_Mask[ 2 ]) !=0 ) ) {
+            if(chessBoard.castleFlag[side] != Global.SHORT_CASTLE && ((Temp & Global.set_Mask[ 2 ]) != 0 ) ) {
                 if( !chessBoard.isAttacked(side, 2 + (56 * side)) && !chessBoard.isAttacked(side, 3 + (56 * side)) ) {
-                   moveOrder[index] = Hist[side][from][2 + (56 * side)];
+                   moveOrder[index] = Hist[side][4][2 + (56 * side)];
                    Moves[index++] = MoveFunctions.makeMove(2 + (56 * side), from, piece, -1, Global.LONG_CASTLE);
                 }
             }
             if(chessBoard.castleFlag[side] != Global.LONG_CASTLE && ((Temp & Global.set_Mask[ 6 ])!=0 ) ) {		
                 if( !chessBoard.isAttacked(side, 5 + (56 * side)) && !chessBoard.isAttacked(side, 6 + (56 * side)) ) {
-                   moveOrder[index] = Hist[side][from][6 + (56 * side)];
+                   moveOrder[index] = Hist[side][4][6 + (56 * side)];
                    Moves[index++] = MoveFunctions.makeMove(6 + (56 * side), from, piece, -1, Global.SHORT_CASTLE);
                 }
             }
@@ -732,7 +847,7 @@ public final class Engine {
             long toBit = toSquares & -toSquares;
             toSquares ^= toBit;
             int to = Long.numberOfTrailingZeros(toBit);
-            moveOrder[index] = Hist[side][from][to];
+            moveOrder[index] = Hist[side][4][to];
             Moves[index++] = MoveFunctions.makeMove(to, from, piece, -1, kingType);
         }
 
@@ -745,7 +860,7 @@ public final class Engine {
                 long toBit = toSquares & -toSquares;
                 toSquares ^= toBit;
                 int to = Long.numberOfTrailingZeros(toBit);
-                moveOrder[index] = Hist[side][from][to];
+                moveOrder[index] = Hist[side][0][to];
                 if((from == (side * 56)) && (chessBoard.castleFlag[side] & Global.LONG_CASTLE) != 0)
                     Moves[index++] = MoveFunctions.makeMove(to, from, Global.pieceAdd[side], -1, Global.MOVE_ROOK_LOSE_CASTLE);
                 else if(from == (7 + (side * 56)) && (chessBoard.castleFlag[side] & Global.SHORT_CASTLE) != 0)
@@ -767,7 +882,7 @@ public final class Engine {
                     long toBit = toSquares & -toSquares;
                     toSquares ^= toBit;
                     int to = Long.numberOfTrailingZeros(toBit);
-                    moveOrder[index] = Hist[side][from][to];
+                    moveOrder[index] = Hist[side][i][to];
                     Moves[index++] = MoveFunctions.makeMove(to, from, pType, -1, Global.ORDINARY_MOVE);
                 }
             }
@@ -1476,6 +1591,7 @@ public final class Engine {
         lengthPV[thisDepth-1] = thisDepth;
     }
 
+    
     /**
      * Method Max
      *
@@ -1499,9 +1615,9 @@ public final class Engine {
              buffWriter.write("max "+chessBoard.hashValue+" "+"alpha "+alpha+" beta "+beta+" isInCheck "+isInCheck+" null "+nMove);
         } catch (Exception ex2) {};
         */
-
+       
         thisDepth++;
-        //int sideReplace = side == -1 ? Global.COLOUR_WHITE : Global.COLOUR_BLACK;
+        
         /** time management code */
         if (++nodes >= nextTimeCheck) {
           if (!timeLeft()) {
@@ -1512,12 +1628,23 @@ public final class Engine {
         if (stop) {
            return 0;
         }
-
+        
         int key = (int) (chessBoard.hashValue % Global.HASHSIZE);
-                  //long oldHash = chessBoard.hashValue;
+       
+        //mate distance pruning
+        int nalpha = Math.max( -Global.MATE_SCORE + thisDepth, alpha );
+        int nbeta = Math.min( Global.MATE_SCORE - (thisDepth + 1), beta );
+        if( nalpha >= nbeta ) {
+            if (nalpha > alpha && nalpha < nbeta) {
+                SavePV(TT_PV);
+            }
+            return nalpha;
+        }
+       
         /** score that a move must exceed to be searched during futility pruning */
         int scoreThreshold = chessBoard.GetMaterialScore(side);
-
+       // int scoreThreshold = Evaluation2.getEval(side, -99999, 99999, thisDepth);
+                        
         /** razoring code */
         boolean razored = false;
         if (!wasExtended && !isInCheck && depth == 3) {
@@ -1529,9 +1656,6 @@ public final class Engine {
 
         /** flag indicates it is worthless to try a null move search here */
         int nullFail = 0;
-
-        int hashCount = 0;
-        int[] hashArr = new int[8];
         int theMove = 0;
 
 
@@ -1587,7 +1711,7 @@ public final class Engine {
                 break;
                 case (4):
                     int hVal = HashTable.getValue(key, index);
-                    if (hVal == -20000)
+                    if (hVal == -Global.MATE_SCORE)
                         hVal += thisDepth;
                     if (hVal > alpha && hVal < beta) {
                         SavePV(TT_PV);
@@ -1642,14 +1766,10 @@ public final class Engine {
                 }
                 return value;
             }
-            if (value <= -19000) {
+            if (value <= (-Global.MATE_SCORE + Global.MAX_DEPTH )) {
                 nullFail = 1;
             }
         }
-        //boolean isRootFirstMove = false;
-        //if(alpha == -BETA_START) {
-        //   isRootFirstMove = true;
-        // }
 
         /** the number of positions skipped due to futility pruning */
         int numberOfSkippedNodesFP = 0;
@@ -1674,67 +1794,56 @@ public final class Engine {
 
         int bestFullMove = 0;
         int[] moveArr = new int[128];
-
         int badCapIndex = 0;
         int moveCount = 0;
-
+        int[] hashArr = new int[4];
+        int noHash = 0;
         boolean drawPV = false;
    
         boolean testCheck = !isInCheck;
+        
         while (state != SEARCH_END) {
 
             switch (state) {
                 case (SEARCH_HASH):
+                    index = 0;
                     testCheck = false;
-                    index = HashTable.hasHash(key);
-                    if (index != 1) {
-                        theMove = HashTable.getMove(key, index);
-                        bestFullMove = theMove;
-                        if (theMove != 0) {// && verifyHash(side, theMove)) {
-                            hashArr[hashCount++] = theMove;
+                    int hashIndex = HashTable.hasHash(key);
+                    if (hashIndex == 1 && depth > 3 && !isInCheck) {
+                        thisDepth--;
+                        Max(side, depth - 2, alpha, beta, true, false, false, true);
+                        hashIndex = HashTable.hasHash(key);
+                    }  
+                    
+                    if (hashIndex != 1) {
+                        theMove = HashTable.getMove(key, hashIndex);
+                        if (theMove != 0) {
+                            moveArr[index++] = theMove;
+                            bestFullMove = theMove;
+                            hashArr[noHash++] = theMove;
                         }
-                        if (index == 0) {
-                            index = HashTable.hasSecondHash(key);
-                            if (index != 1) {
-                                theMove = HashTable.getMove(key, index);
-                                if (theMove != 0) { // && verifyHash(side, theMove)) {
-                                    hashArr[hashCount++] = theMove;
-                                    if (hashCount == 2) {
-                                        if (hashArr[0] == hashArr[1]) {
-                                            hashCount--;
+                        if (hashIndex == 0) {
+                            hashIndex = HashTable.hasSecondHash(key);
+                            if (hashIndex != 1) {
+                                theMove = HashTable.getMove(key, hashIndex);
+                                if (theMove != 0) {
+                                    moveArr[index++] = theMove;
+                                    if (index == 2) {
+                                        if (moveArr[0] == moveArr[1]) {
+                                            index--;
+                                        }
+                                        else {
+                                            hashArr[noHash++] = theMove;
                                         }
                                     }
                                 }
                             }
                         }
                     }
-
-                    /** internal iterative deepening **/
-                    if (hashCount == 0 && depth > 3 && !isInCheck) {
-                        thisDepth--;
-                        Max(side, depth - 2, alpha, beta, true, false, false, true);
-                        index = HashTable.hasHash(key);
-                        if (index != 1) {
-                            hashArr[0] = HashTable.getMove(key, index);
-                            if (hashArr[0] != 0 ) { // && verifyHash(side, hashArr[0])) {
-                                bestFullMove = hashArr[0];
-                                hashCount++;
-                            }
-                        }
-                        if (hashCount == 0 && index == 0) {
-                            index = HashTable.hasSecondHash(key);
-                            if (index != 1) {
-                                hashArr[0] = HashTable.getMove(key, index);
-                                if (hashArr[0] != 0 ) { //&& verifyHash(side, hashArr[0])) {
-                                    bestFullMove = hashArr[0];
-                                    hashCount++;
-                                }
-                            }
-                        }
-                    }
+                   
+                    
+                    endIndex = 0;
                     nMove = false;       
-                    System.arraycopy(hashArr, 0, moveArr, 0, hashCount);
-                    index = hashCount;
                     break;
                 case (MATE_KILLER):
                     testCheck = !isInCheck;
@@ -1743,86 +1852,51 @@ public final class Engine {
                         index = getCheckEscapes(side, moveArr);
                     } else {
                         index = 0;
-                        if (MoveFunctions.getValue(killerMoves[thisDepth][1]) >= 200) {
-                            if (verifyKiller(side, killerMoves[thisDepth][1])) {
-                                moveArr[index++] = killerMoves[thisDepth][1] & 16777215;
-                                hashArr[hashCount++] = moveArr[index];
-                                for (int i = 0; i < hashCount - 1; i++) {
-                                    if (moveArr[index] == hashArr[i]) {
-                                        index--;
-                                        hashCount--;
-                                    }
-                                }
-                            }
-                        }
+                        endIndex = 0;
 
-                        if (MoveFunctions.getValue(killerMoves[thisDepth][0]) >= 200) {
-                            if (verifyKiller(side, killerMoves[thisDepth][0])) {
+                        if (MoveFunctions.getValue(killerMoves[thisDepth][1]) >= 1 && verifyKiller(side, killerMoves[thisDepth][1])) {
+                           if( hashArr[0] != (killerMoves[thisDepth][1] & 16777215) && hashArr[1] != (killerMoves[thisDepth][1] & 16777215)) {
+                                moveArr[index++] = killerMoves[thisDepth][1] & 16777215;
+                                hashArr[noHash++] = killerMoves[thisDepth][1] & 16777215;
+                           }
+                        }
+                        if (MoveFunctions.getValue(killerMoves[thisDepth][0]) >= 1 && verifyKiller(side, killerMoves[thisDepth][0]) 
+                                && (killerMoves[thisDepth][0] & 16777215) != (killerMoves[thisDepth][1]  & 16777215)) {
+                            if (hashArr[0] != (killerMoves[thisDepth][0] & 16777215) && hashArr[1] != (killerMoves[thisDepth][0] & 16777215)) {
                                 moveArr[index++] = killerMoves[thisDepth][0] & 16777215;
-                                hashArr[hashCount++] = moveArr[index];
-                                for (int i = 0; i < hashCount - 1; i++) {
-                                    if (moveArr[index] == hashArr[i]) {
-                                        index--;
-                                        hashCount--;
-                                    }
-                                }
-                            }
+                                hashArr[noHash++] = killerMoves[thisDepth][0] & 16777215;
+                           }
                         }
                     }
                     break;
                 case (GOOD_CAPTURES):
                     testCheck = !isInCheck;
-                    index = getCaptures(side, moveArr);
-                    /*try {    
-                      for(int i=0; i<index; i++)
-                       {
-                                buffWriter.write(moveArr[i] +" ");
-                       }
-                      buffWriter.write("\n");
-                     } catch (Exception ex2) {};*/                   
+                    index = getCaptures(side, moveArr);                 
                     capIndex = index;
                     badCapIndex = index - 1; 
                     break;
                 case (KILLER_MOVES):
                     testCheck = !isInCheck;
                     index = 0;
-                    if (verifyKiller(side, killerMoves[thisDepth][1])) {
-                       moveArr[127] = killerMoves[thisDepth][1] & 16777215;
-                       hashArr[hashCount++] = moveArr[127];
-                       index++;
-                       for (int i = 0; i < hashCount - 1; i++) {
-                          if (moveArr[127] == hashArr[i]) {
-                             index--;
-                             hashCount--;
-                          }
+                    endIndex = 0;
+                    
+                    if (MoveFunctions.getValue(killerMoves[thisDepth][1]) == 0 && verifyKiller(side, killerMoves[thisDepth][1])) {
+                       if( (hashArr[0] & 16777215) != (killerMoves[thisDepth][1] & 16777215) && (hashArr[1] & 16777215) != (killerMoves[thisDepth][1] & 16777215 )) {
+                            moveArr[index++] = killerMoves[thisDepth][1];
+                            hashArr[noHash++] = killerMoves[thisDepth][1];
                        }
                     }
-                    if (verifyKiller(side, killerMoves[thisDepth][0])) {
-                        int position = 127 - index;
-                        moveArr[position] = killerMoves[thisDepth][0] & 16777215;
-                        hashArr[hashCount++] = moveArr[position];
-                        index++;
-                        for (int i = 0; i < hashCount - 1; i++) {
-                            if (moveArr[position] == hashArr[i]) {
-                                index--;
-                                hashCount--;
-                            }
-                        }
+                    if (MoveFunctions.getValue(killerMoves[thisDepth][0]) == 0 && verifyKiller(side, killerMoves[thisDepth][0]) 
+                            && (killerMoves[thisDepth][0] & 16777215) != (killerMoves[thisDepth][1] & 16777215 )) {
+                        if( (hashArr[0] & 16777215) != (killerMoves[thisDepth][0] & 16777215) && (hashArr[1] & 16777215) != (killerMoves[thisDepth][0] & 16777215)) {
+                            moveArr[index++] = killerMoves[thisDepth][0];
+                            hashArr[noHash++] = killerMoves[thisDepth][0];
+                       }
                     }
-                    endIndex = 128 - index;
-                    index = 128;
                     break;
                 case (NON_CAPS):
                     testCheck = !isInCheck;
-              
                     index = getMoves(side, moveArr, capIndex);
-                    /*try {    
-                     for(int i=0; i<index; i++)
-                      {
-                               buffWriter.write(moveArr[i] +" ");
-                      }
-                     buffWriter.write("\n");
-                    } catch (Exception ex2) {};*/
                     endIndex = capIndex;
                     break;
                 case (BAD_CAPS):
@@ -1841,20 +1915,20 @@ public final class Engine {
                 }*/
 
                 theMove = moveArr[i];
-
-                if (state == GOOD_CAPTURES || state == NON_CAPS || state == BAD_CAPS) {
-                    boolean duplicate = false;
-                    for (int j = 0; j < hashCount; j++) {
-                        if (theMove == hashArr[j]) {
-                            duplicate = true;
+                
+                
+                if( state == BAD_CAPS || state == NON_CAPS || state == GOOD_CAPTURES) {
+                    boolean bDuplicate = false;
+                    for( int m=0; m<noHash; m++)
+                    {
+                        if( hashArr[m] == theMove) {
+                            bDuplicate = true;
                             break;
                         }
                     }
-                    if (duplicate) {
-                        continue;
-                    }
-                }
-
+                    if( bDuplicate ) continue;
+                } 
+               
                 to = MoveFunctions.getTo(theMove);
                 from = MoveFunctions.getFrom(theMove);
                 piece = MoveFunctions.getPiece(theMove);
@@ -1872,52 +1946,58 @@ public final class Engine {
                             continue;
                         }
                     }
-                    else if(type != Global.EN_PASSANT_CAP && (SEE.GetSEE2(side, to, from, type, 0)) < 0)
+                    else if( SEE.GetSEE2(side, to, from, type, 0) < 0)
                     {
                         moveArr[badCapIndex--] = theMove;
                         continue;
                     }
                 }
+   
                 extendAmount = 0;
 
+                /* for(int m=0; m< playedMoveNo; m++) {
+                    if( (theMove & 16777215) == (playedMoves[m] & 16777215))
+                    {
+                       int blaa = 5/0;
+                    }
+                }*/
+                //playedMoves[playedMoveNo++] = theMove;
+                
                 /** make the move */
                 boolean draw = false;
-
+                
                 int reps = chessBoard.MakeMove(theMove, true);
-
-                if(testCheck && inCheck(side))
+                
+                if( reps >= 2)
                 {
-                    chessBoard.UnMake(theMove, true);			//avoid leaving king in check
-                    continue;
-                }
-                else if( reps >= 2)
-                {
+                    if(testCheck && inCheck(side))
+                    {
+                        chessBoard.UnMake(theMove, true);
+                        continue;
+                    }
                     draw = true;
                     oneLegal = true;
                     value = 0;
                 }
                 else
                 {
-                    /*if(!testCheck && inCheck(side))
+                    if(testCheck && inCheck(side))
                     {
-                            System.out.println("probs");
-                            for(int j=0; j<64; j++)
-                            {
-                                    System.out.print(chessBoard.piece_in_square[j]+" ");
-                                    if((j & 7) == 7)
-                                            System.out.println();
-                            }
-                    }*/
+                        chessBoard.UnMake(theMove, true);
+                        continue;
+                    }
+                    
+                    //extend if this is a checking move
+                    boolean checkingMove = false;
+
+                    if(inCheck( side^1) )
+                    {
+                        checkingMove = true;
+                        extendAmount++;
+                    }
 
                     /** we have a legal move */
                     oneLegal = true;
-
-                    //extend if this is a checking move
-                    boolean checkingMove = false;
-                    if (inCheck(SwitchSide(side))) {
-                       checkingMove = true;
-                       extendAmount++;
-                    }
 
                     //passed pawn push extension
                     boolean pawnExtension = false;
@@ -1936,6 +2016,9 @@ public final class Engine {
                     // futility pruning code
                     if (bFutilityPrune && extendAmount == 0 && !checkingMove && !passedPawnMove) {
                         scoreThreshold = chessBoard.GetMaterialScore(side);
+                        //int neededValue = alpha - futilityMargin;
+                        //scoreThreshold = -Evaluation2.getEval(side^1, neededValue, neededValue+1, thisDepth);
+         
                         if (scoreThreshold + futilityMargin <= alpha) {
                             numberOfSkippedNodesFP++;
                             chessBoard.UnMake(theMove, true);
@@ -1946,7 +2029,7 @@ public final class Engine {
                     //late move reduction code
                     boolean lmr = false;
                     if (state == NON_CAPS && ((alpha == beta - 1 && moveCount >= 4) || moveCount >= 15) && depth >= 2 && !passedPawnMove
-                           && !isInCheck && !checkingMove) {// (MoveFunctions.moveType(theMove) == Global.ORDINARY_MOVE || MoveFunctions.moveType(theMove) > Global.DOUBLE_PAWN_WHITE)) {
+                           && !isInCheck && !checkingMove) {
                         extendAmount = -1;
                         lmr = true;
                     }
@@ -1968,9 +2051,10 @@ public final class Engine {
                         if (value > alpha && value < beta) {
                             if (lmr == true) {
                                 extendAmount = 0;
+                                nextDepth = depth - 1 + extendAmount;
                             }
-                            if (depth - 1 > 0) {
-                                value = -Max(SwitchSide(side), depth - 1 + extendAmount, -beta, -alpha, nMove, checkingMove, isInCheck | pawnExtension, false);
+                            if (nextDepth > 0) {
+                                value = -Max(SwitchSide(side), nextDepth, -beta, -alpha, nMove, checkingMove, isInCheck | pawnExtension, false);
                             } else {
                                 value = -Quies(SwitchSide(side), 0, -beta, -alpha);
                             }
@@ -1991,21 +2075,20 @@ public final class Engine {
                 }
 
                 if (value > bMove) {
-                    // if(isRootFirstMove && moveCount > 4) {
-                    //    levelOneValue = -value;
-                    // }
-
+                    
                     if (value > alpha) {
                         if (value >= beta) {
                             HashTable.addHash(key, theMove, value, depth, HASH_BETA, nullFail, ancient);
-                            Hist[side][from][to]++;
-                            if (state == NON_CAPS) {									//if state is a non capture or a bad capture
-                                if (value >= 19000) {
-                                    theMove = MoveFunctions.setValue(theMove, 200);          //mark this move as a mate killer
-                                }
+                            Hist[side][piece%6][to] += depth * depth;
+                            if (state == NON_CAPS) {								
                                 if (theMove != killerMoves[thisDepth][0]) {
                                     int temp1 = killerMoves[thisDepth][0];
-                                    killerMoves[thisDepth][0] = theMove;
+                                    if (value >= (Global.MATE_SCORE - Global.MAX_DEPTH)) {  //mark this move as a mate killer
+                                        killerMoves[thisDepth][0] = MoveFunctions.setValue(theMove, 1);
+                                    }
+                                    else {
+                                        killerMoves[thisDepth][0] = theMove;
+                                    }
                                     killerMoves[thisDepth][1] = temp1;
                                 }
                             }
@@ -2039,12 +2122,12 @@ public final class Engine {
             }
             hType = 4;
         } else if (isInCheck && !oneLegal) {     //checkmate detection
-            bMove = -20000 + thisDepth;
+            bMove = -(Global.MATE_SCORE - thisDepth);
             if (bMove > alpha && bMove < beta) {
                 SavePV(MATE_PV);
             }
             hType = 4;
-            HashTable.addHash(key, bestFullMove, -20000, depth, hType, nullFail, ancient);
+            HashTable.addHash(key, bestFullMove, -Global.MATE_SCORE, depth, hType, nullFail, ancient);
             return bMove;
         }
 
@@ -2062,7 +2145,7 @@ public final class Engine {
         HashTable.addHash(key, bestFullMove, bMove, depth, hType, nullFail, ancient);
 
         if (oneLegal && hType == HASH_EXACT) {             //update history tables
-            Hist[side][MoveFunctions.getFrom(bestFullMove)][MoveFunctions.getTo(bestFullMove)]++;
+            Hist[side][MoveFunctions.getPiece(bestFullMove)%6][MoveFunctions.getTo(bestFullMove)]+= depth * depth;
         }
         if(alpha != oldAlpha && !drawPV)   {
             PV[thisDepth - 1][thisDepth - 1] = chessBoard.GetMoveAtDepth(thisDepth - 1);
@@ -2072,6 +2155,11 @@ public final class Engine {
         return bMove;
    }
 
+    public boolean IsCheckDangerous( int move, int side )
+    {
+        return false;
+    }
+    
     /**
      * Method Quies
      *
@@ -2092,53 +2180,24 @@ public final class Engine {
         /* try {
             buffWriter.write("quies "+chessBoard.hashValue+" "+"alpha "+alpha+" beta "+beta);
         } catch (Exception ex2) {};*/
-
+ 
         thisDepth++;
         nodes++;
+        
         int[] capArr = new int[60];
         int value;
         int index = 0;
-        int bValue;
+        int bValue = -Global.MATE_SCORE + thisDepth;
+        int state = QUIES_CAPS;
         int testValue = 0;
-        boolean isInCheck = false;
-        if (depth > 0 && inCheck(side)) {
-            isInCheck = true;
-            index = getCheckEscapes(side, capArr);
-            bValue = -20000 + thisDepth;
-            if (index == 0) {
-                if (bValue > alpha && bValue < beta) {
-                    SavePV(MATE_PV);
-                }
-                return -20000 + thisDepth;
-            }
-         //bValue = -20000 + thisDepth;
-        } else {
-            /*value = Evaluation2.getEval(side, -1000, 1000);
-            int material = chessBoard.GetRawMaterialScore();
-            Board.getInstance().FlipPosition();
-            int value2 = Evaluation2.getEval(side^1, -1000, 1000);
-            int material2 = chessBoard.GetRawMaterialScore();
-            if(material == -material2 && value != value2)
-            {
-                System.out.println("info string here");
-                System.out.println("value is "+value);
-                System.out.println("value2 is "+value2);
-                //System.out.println("material2 is "+material2);
-                //Evaluation2.printEvalTerms();
-                //System.out.println("value is "+value);
-                //System.out.println("material is "+material);
-                value2 = Evaluation2.getEval(side^1, -1000, 1000);
-                Evaluation2.printEvalTerms();
-
-                Board.getInstance().FlipPosition();
-                value2 = Evaluation2.getEval(side, -1000, 1000);
-                Evaluation2.printEvalTerms();
-            }
-            else
-            {
-                Board.getInstance().FlipPosition();
-            }*/
-            value = Evaluation2.getEval(side, alpha, beta);
+       
+        if( depth > 0 && inCheck(side)) {
+            state = QUIES_IN_CHECK;
+        }
+        else
+        {
+            value = Evaluation2.getEval(side, alpha, beta, thisDepth);
+            //value = Evaluation2.getEval(side, -Global.MATE_SCORE, Global.MATE_SCORE, thisDepth);
 
             if (value > alpha) {
                 if (value >= beta) {
@@ -2147,57 +2206,87 @@ public final class Engine {
                 SavePV(STANDPAT_PV);
                 alpha = value;
             }
-        
-            index = getCaptures(side, capArr);
-
-            if (index == 0) {
-                return value;
-            }
-            bValue = value;
-            testValue = value;
+            bValue = testValue = value;
         }
+         
         int oldAlpha = alpha;
-        for (int i = index - 1; i >= 0; i--) {
-            int to = MoveFunctions.getTo(capArr[i]);
-            int from = MoveFunctions.getFrom(capArr[i]);
-            int neededScore = (int)Math.max(0, (alpha - testValue));
-            if (!isInCheck) {
-                int type = MoveFunctions.moveType(capArr[i]);
-				
-                if( type < Global.PROMO_Q)
-                {
-                    if ((chessBoard.piece_in_square[to] - Global.values[chessBoard.piece_in_square[from]]) < neededScore
-                    && (SEE.GetSEE2(side, to, from, MoveFunctions.moveType(capArr[i]), neededScore)) < neededScore) {
+        
+        while( state != QUIES_END )
+        {
+            switch( state )
+            {
+                case( QUIES_CAPS ):
+                    index = getCaptures(side, capArr);
+                 break;
+                    
+                case( QUIES_CHECKING ):
+                    index = getCheckingMoves(side, capArr, 0);
+                break;
+                    
+                case( QUIES_IN_CHECK ): 
+                    index = getCheckEscapes(side, capArr);
+                    bValue = -(Global.MATE_SCORE - thisDepth);
+                    if (index == 0) {
+                        if (bValue > alpha && bValue < beta) {
+                            SavePV(MATE_PV);
+                        }
+                        return -Global.MATE_SCORE + thisDepth;
+                    }
+                break;
+            }
+            
+            for (int i = index - 1; i >= 0; i--) {
+                int to = MoveFunctions.getTo(capArr[i]);
+                int from = MoveFunctions.getFrom(capArr[i]);
+               
+                
+                if (state == QUIES_CAPS ) {
+                    int type = MoveFunctions.moveType(capArr[i]);
+                    int neededScore = (int)Math.max(0, (alpha - testValue));
+                    int initialGain = 0;
+                    if( type < Global.PROMO_Q) {
+                        initialGain = Global.values[chessBoard.piece_in_square[to]]- Global.values[chessBoard.piece_in_square[from]];
+                    } else if( type < Global.EN_PASSANT_CAP) {
+                        initialGain = Global.values[3] - Global.values[5];
+                    }
+                    
+                    if( initialGain < neededScore && (SEE.GetSEE2(side, to, from, type, neededScore)) < neededScore)
+                    {
                         bValue = alpha;
                         continue;
                     }
+                    
                 }
-                else if( (SEE.GetSEE2(side, to, from, MoveFunctions.moveType(capArr[i]), neededScore)) < neededScore)
+                else if( state == QUIES_CHECKING )
                 {
-                    bValue = alpha;
+                    if( IsCheckDangerous( capArr[i], side )) continue;
+                }
+                
+                chessBoard.MakeMove(capArr[i], false);	
+                
+                if( state != QUIES_IN_CHECK && inCheck(side)) {
+                    chessBoard.UnMake(capArr[i], false);
                     continue;
                 }
-            }	
-            chessBoard.MakeMove(capArr[i], false);	
-            if (!isInCheck && inCheck(side)) {
+                
+                value = -Quies(SwitchSide(side), depth + 1, -beta, -alpha);
+                thisDepth--;
                 chessBoard.UnMake(capArr[i], false);
-                continue;
-            }
-       
-            value = -Quies(SwitchSide(side), depth + 1, -beta, -alpha);
-            thisDepth--;
-            chessBoard.UnMake(capArr[i], false);
-            if (value > bValue) {
-                if (value >= beta) {
-                    return value;
-                }
-                bValue = value;
-                if (value > alpha) {
-                    alpha = value;
+                if (value > bValue) {
+                    if (value >= beta) {
+                        return value;
+                    }
+                    bValue = value;
+                    if (value > alpha) {
+                        alpha = value;
+                    }
                 }
             }
+            state++;
+            if( state == QUIES_IN_CHECK ) break;
+            //if( state == QUIES_CHECKING && depth >= 2) break;
         }
-
+        
         if(alpha != oldAlpha)   {
             PV[thisDepth - 1][thisDepth - 1] = chessBoard.GetMoveAtDepth(thisDepth - 1);
             lengthPV[thisDepth-1] = lengthPV[thisDepth];
@@ -2297,9 +2386,9 @@ public final class Engine {
         }
         int key = (int) (chessBoard.hashValue % Global.HASHSIZE);
 
-        int value = Evaluation2.getEval(side, -2000, 2000);
+        int value = Evaluation2.getEval(side, -2000, 2000, 0);
         Board.getInstance().FlipPosition();
-        int value2 = Evaluation2.getEval(SwitchSide(side), -2000, 2000);
+        int value2 = Evaluation2.getEval(SwitchSide(side), -2000, 2000, 0);
 
         if(value != value2)
         {
@@ -2307,7 +2396,7 @@ public final class Engine {
             Evaluation2.printEvalTerms();
             System.out.println("value is "+value);
             Board.getInstance().FlipPosition();
-            value2 = Evaluation2.getEval(side, -2000, 2000);
+            value2 = Evaluation2.getEval(side, -2000, 2000, 0);
             Evaluation2.printEvalTerms();
         }
         else

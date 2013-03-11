@@ -1,3 +1,8 @@
+package magnumchess;
+
+
+import magnumchess.Board;
+
 /**
  * Transtable.java
  *
@@ -5,24 +10,18 @@
  * 
  * Copyright (c) 2013 Eric Stock
  
-Permission is hereby granted, free of charge, to any person obtaining
-a copy of this software and associated documentation files (the
-"Software"), to deal in the Software without restriction, including
-without limitation the rights to use, copy, modify, merge, publish,
-distribute, sublicense, and/or sell copies of the Software, and to
-permit persons to whom the Software is furnished to do so, subject to
-the following conditions:
- 
-The above copyright notice and this permission notice shall be
-included in all copies or substantial portions of the Software.
- 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
-LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
-OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
-WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 /*
@@ -44,9 +43,9 @@ public class TransTable {
    private int hashCount;
    private Board chessBoard;
    private static final long mask3 = ~((long)1 << 58 | (long)1 << 59 | (long)1 << 60);
-	public static final long LAZY_BIT = ( (long)1 << 31);
+    public static final long LAZY_BIT = ( (long)1 << 31);
    private static final int PAWN_TABLE_SIZE = 6;
-	 private static final int EVAL_TABLE_SIZE = 2;
+    private static final int EVAL_TABLE_SIZE = 2;
 
 
 	/**flag indicating what type of table...0 regular, 1 pawn, 2 eval **/
@@ -120,13 +119,22 @@ public class TransTable {
      *
      */ 
     public final void AddEvalHash(int key, long lock, int value) {
-		int index = key*EVAL_TABLE_SIZE;
+		/*if(value < 0 || value > Global.MATE_SCORE * 2 ) {
+            System.out.println("info string Here");
+            int j = 5/0;
+        }*/
+        int index = key*EVAL_TABLE_SIZE;
 		Table3[index] = lock;
       Table3[index+1] = (long)value;
 	}
 
 	 public final void AddEvalHashLazy(int key, long lock, int value) {
-		int index = key*EVAL_TABLE_SIZE;
+		/*if(value < 0 || value > Global.MATE_SCORE * 2 ) {
+            System.out.println("info string Here");
+            int j = 5/0;
+        }*/
+        
+         int index = key*EVAL_TABLE_SIZE;
 		Table3[index] = lock;
       Table3[index+1] = (long)value | LAZY_BIT;
 	}
@@ -147,16 +155,21 @@ public class TransTable {
      * @param int ancient - counter to represent "freshness" of entry
      *
      */ 
-    public final void addHash(int key,int move,long value,int depth,int type,int nullFail,int ancient) {
-                assert( value > -21000 && value < 21000);
+    public final void addHash(int key,int move,int value,int depth,int type,int nullFail,int ancient) {
+                assert( value >= -Global.MATE_SCORE && value <= Global.MATE_SCORE);
                 assert( type >= 0 && type < 8);
                 assert( depth >= 0 && depth < 64 );
                 assert( nullFail >= 0 && nullFail < 2);
                 assert( ancient >= 0 && ancient < 8);
-		int index = key*4;
+		/*if(value < -Global.MATE_SCORE || value > Global.MATE_SCORE ) {
+            System.out.println("info string Here");
+            int j = 5/0;
+        }*/
+              
+        int index = key*4;
 		/** if empty slot, add entry */
 		long word = (long)move
-			| ((long)(value + 21000) << 32)
+			| ((long)(value + Global.MATE_SCORE) << 32)
 			| ((long)type << 48)
 			| ((long)depth << 51)
 			| ((long)nullFail << 57)
@@ -257,7 +270,7 @@ public class TransTable {
      * @return int - the value
      */     
     public final int getValue(int key,int probe) {
-		return (int) (((Table2[key*4+1+probe] >>> 32)&65535L) - 21000);
+		return ((int)((Table2[key*4+1+probe] >>> 32)&65535L)) - Global.MATE_SCORE;
     }
 	
     /*

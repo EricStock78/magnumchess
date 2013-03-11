@@ -1,4 +1,8 @@
+package magnumchess;
 
+
+import magnumchess.Board;
+import magnumchess.Bitbase;
 import java.util.Arrays;
 
 /**
@@ -8,28 +12,24 @@ import java.util.Arrays;
  *
  * Copyright (c) 2013 Eric Stock
 
-Permission is hereby granted, free of charge, to any person obtaining
-a copy of this software and associated documentation files (the
-"Software"), to deal in the Software without restriction, including
-without limitation the rights to use, copy, modify, merge, publish,
-distribute, sublicense, and/or sell copies of the Software, and to
-permit persons to whom the Software is furnished to do so, subject to
-the following conditions:
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
 
-The above copyright notice and this permission notice shall be
-included in all copies or substantial portions of the Software.
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
-LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
-OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
-WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-public class Evaluation2 {
 
+
+public class Evaluation2 {
+    
     /** initialized instance of Board class */
     private static Board chessBoard;
 
@@ -44,12 +44,12 @@ public class Evaluation2 {
     private static long[][] boardAttacks = new long[2][7];
 
     /** indices of boards for specific pieces in boardAttacks */
-    private static final int PAWN_BOARD = 0;
+    private static final int PAWN_BOARD = 5;
     private static final int KNIGHT_BOARD = 1;
     private static final int BISHOP_BOARD = 2;
-    private static final int ROOK_BOARD = 3;
-    private static final int QUEEN_BOARD = 4;
-    private static final int KING_BOARD = 5;
+    private static final int ROOK_BOARD = 0;
+    private static final int QUEEN_BOARD = 3;
+    private static final int KING_BOARD = 4;
     private static final int ALL_BOARD = 6;
 
     private static final int MIDDLE_GAME = 0;
@@ -162,14 +162,14 @@ public class Evaluation2 {
                                                         -2,-2,-2,-2,-2,-2,-2,-2};
 
     /** endgame king piece square tables */
-    private static final int kingVals[] = new int[]     {-2,-2,-2,-2,-2,-2,-2,-2,
-                                                        -2,1,1,1,1,1,1,-2,
-                                                        -2,1,4,4,4,4,1,-2,
-                                                        -2,1,4,8,8,4,1,-2,
-                                                        -2,1,4,8,8,4,1,-2,
-                                                        -2,1,4,4,4,4,1,-2,
-                                                        -2,1,1,1,1,1,1,-2,
-                                                        -2,-2,-2,-2,-2,-2,-2,-2};
+    private static final int kingVals[] = new int[]     {-4,-2, 0, 2, 2, 0,-2,-4,
+                                                         -2, 0, 2, 4, 4, 2, 0,-2,
+                                                          0, 2, 4, 6, 6, 4, 2, 0,
+                                                          2, 4, 6, 8, 8, 6, 4, 2,
+                                                          2, 4, 6, 8, 8, 6, 4, 2,
+                                                         -2, 2, 4, 6, 6, 4, 2, 0,
+                                                         -2, 0, 2, 4, 4, 2, 0,-2,
+                                                         -4,-2, 0, 2, 2, 0,-2,-4};
 
     /** pawn piece square tables */
     private static final int PawnVals[][] =         {{0, 0, 0, 0, 0, 0, 0, 0,
@@ -280,6 +280,12 @@ public class Evaluation2 {
     private static long combinedOutposts;
     private static long[] arrOutposts = new long[2];
 
+    private static final short boardCorners[][] = {{0, 63} , {56, 7}};
+    
+    private static int scaleFactor;
+    private static final int scaleFactorNormal = 64;
+    
+    private static Bitbase bitbase;
     /**
      * Constructor Evaluation2
      *
@@ -288,6 +294,7 @@ public class Evaluation2 {
      */
     public Evaluation2() {
         chessBoard = Board.getInstance();
+        bitbase = chessBoard.GetBitbase();
     }
 
     /**
@@ -333,6 +340,112 @@ public class Evaluation2 {
         PawnTable = new TransTable(Global.PawnHASHSIZE,1);
     }
 
+    public static int EvaluateKPK( int side, int toMove, int depth )
+    {
+        int enemyKingSquare = chessBoard.pieceList[4 + (side^1)*6][0];
+        int friendKingSquare = chessBoard.pieceList[4 + side*6][0];
+        int pawnSquare = chessBoard.pieceList[5 + side*6][0];
+       
+        //need to mirror vertically to convert from a black to white position
+        if( side == Global.COLOUR_BLACK )
+        {
+            pawnSquare ^= 56;
+            friendKingSquare ^= 56;
+            enemyKingSquare ^= 56;
+        }
+        
+        boolean bWin = bitbase.Probe( toMove, enemyKingSquare, friendKingSquare, pawnSquare);
+        
+        if( bWin )
+        {
+            return Global.KNOWN_WIN_KPK + (pawnSquare / 8) * 10 - depth;
+        }
+        else
+        {
+            return 0;
+        }
+    }
+    
+    public static int EvaluateKBNK( int side )
+    {
+        int bishopSquare = chessBoard.pieceList[2 + side*6][0];
+        int enemyKingSquare = chessBoard.pieceList[4 + (side^1)*6][0];
+        int friendKingSquare = chessBoard.pieceList[4 + side*6][0];
+        int distToDarkSquare = bishopSquare/8 + bishopSquare%8;
+        int bishopSquareColour = (distToDarkSquare % 2) == 0 ? Global.DARK_SQUARE : Global.LIGHT_SQUARE;
+        
+        int iShortestEnemyKingDist = 8;
+        for( int i=0; i<2; i++)
+        {
+            int iDist = chessBoard.getRookDistance( enemyKingSquare, boardCorners[bishopSquareColour][i] );
+            iShortestEnemyKingDist = Math.min( iShortestEnemyKingDist, iDist);
+        }
+        
+        return Global.KNOWN_WIN - ( iShortestEnemyKingDist * 100 ) - chessBoard.getQueenDistance(enemyKingSquare, friendKingSquare) * 10;
+    }
+    
+    public static int EvaluateKRKB( int side )
+    {
+        int enemyKingSquare = chessBoard.pieceList[4 + (side^1)*6][0];
+        int score = 10 - kingVals[enemyKingSquare];
+        
+        return score;
+    }
+    
+    public static int EvaluateKRKN( int side )
+    {
+        int enemyKingSquare = chessBoard.pieceList[4 + (side^1)*6][0];
+        int enemyKnight = chessBoard.pieceList[1 + (side^1)*6][0];
+        
+        int weakSidePenalty = chessBoard.getRookDistance(enemyKingSquare, enemyKnight) * 15;
+        
+        int score = 10 - kingVals[enemyKingSquare] + weakSidePenalty;
+        
+        return score;
+    }
+    
+    public static int EvaluateKRKP( int side, int toMove )
+    {
+        int sideTempo = side == toMove ? 1 : 0;
+        
+        int strongKing = chessBoard.pieceList[4 + (side)*6][0];
+        int weakKing = chessBoard.pieceList[4 + (side^1)*6][0];
+        int strongRook = chessBoard.pieceList[(side)*6][0];
+        int weakPawn = chessBoard.pieceList[5 + (side^1)*6][0];
+        int weakQueenSquare = (weakPawn % 8);
+        
+        if( side == Global.COLOUR_BLACK )
+        {
+            strongKing ^= 56;
+            weakKing ^= 56;
+            strongRook ^= 56;
+            weakPawn ^= 56;
+        }
+        
+        if( strongKing < weakPawn && strongKing%8 == weakPawn%8)
+        {
+            return Global.values[0] - chessBoard.getQueenDistance(weakPawn, strongKing);
+        }
+        
+        else if( chessBoard.getQueenDistance(weakKing, weakPawn) - (sideTempo ^ 1) >= 3 &&
+                chessBoard.getQueenDistance(weakKing, strongRook) >= 3)
+        {
+            return Global.values[0] - chessBoard.getQueenDistance(weakPawn, strongKing);
+        }
+        
+        else if( weakKing / 8 <= 2 && chessBoard.getQueenDistance(weakKing, weakPawn) == 1 &&
+            strongKing / 8 >= 3 && chessBoard.getQueenDistance( strongKing, weakPawn) - tempo > 2)
+        {
+            return 100 - chessBoard.getQueenDistance( strongKing, weakPawn) * 5;
+        }
+        
+        else
+        {
+            return 200 - (chessBoard.getQueenDistance(strongKing, weakPawn - 8) * 8) 
+            + (chessBoard.getQueenDistance(weakKing, weakPawn - 8) * 8)
+            + (chessBoard.getQueenDistance(weakPawn, weakQueenSquare) * 8);
+        }
+    }
     /**
     * Method getEval
     *
@@ -344,7 +457,7 @@ public class Evaluation2 {
     * @return int - the evaluation score
     *
     */
-    public static int getEval(int side, int alpha, int beta)
+    public static int getEval(int side, int alpha, int beta, int depth)
     {
         /** see if there is a stored value in the eval hash table */
         int evalKey = (int)(chessBoard.hashValue % Global.EvalHASHSIZE);
@@ -355,20 +468,27 @@ public class Evaluation2 {
             int value = EvalTable.getEvalValue(evalKey);
             if((value & TransTable.LAZY_BIT) != 0)
             {
-                value ^= TransTable.LAZY_BIT;
-                value -= 21000;
-                if( value < alpha )
-                {
-                        return value;
+                int lazyMargin = LAZY_MARGIN +  chessBoard.GetLazyPieceTotals() * 3;
+
+                endGameCoefficient =  Math.max(0.0f, Math.min(1.0f,((float)Global.totalValue * 0.85f - (float)chessBoard.totalValue)/ ((float)Global.totalValue * 0.65f)) );
+                if( endGameCoefficient <=  0.70 && (chessBoard.GetPieceTotal(3) > 0 || chessBoard.GetPieceTotal(9) > 0)) {
+                    lazyMargin += 30;
                 }
-                else if( value >= beta )
+                
+                value ^= TransTable.LAZY_BIT;
+                value -= Global.MATE_SCORE;
+                if( (value + lazyMargin) <= alpha )
                 {
-                  return value;
+                    return value + lazyMargin;
+                }
+                else if( (value - lazyMargin) >= beta )
+                {
+                    return value - lazyMargin;
                 }
             }
             else
             {
-                return value - 21000;
+                return value - Global.MATE_SCORE;
             }
         }
         /** get the material score */
@@ -376,6 +496,72 @@ public class Evaluation2 {
         if( material > 100000) {
             return 0;
         }
+        
+        int sideMult = side == Global.COLOUR_WHITE ? -1 : 1;
+        switch( Board.materialKey )
+        {
+            case( Global.whiteKBNK ):
+            {
+                finalScore = sideMult * -EvaluateKBNK( Global.COLOUR_WHITE);
+                return finalScore;
+            }
+            
+            case( Global.blackKBNK ):
+            {
+                finalScore =  sideMult * EvaluateKBNK( Global.COLOUR_BLACK);
+                return finalScore;
+            }
+                
+            case( Global.whiteKRKB ):
+            {
+                finalScore =  sideMult * -EvaluateKRKB( Global.COLOUR_WHITE );
+                return finalScore;
+            }   
+            
+            case( Global.blackKRKB ):
+            {
+                finalScore =  sideMult * EvaluateKRKB( Global.COLOUR_BLACK );
+                return finalScore;
+            }
+                
+             case( Global.whiteKRKN ):
+            {
+                finalScore =  sideMult * -EvaluateKRKN( Global.COLOUR_WHITE );
+                return finalScore;
+            }   
+            
+            case( Global.blackKRKN ):
+            {
+                finalScore =  sideMult * EvaluateKRKN( Global.COLOUR_BLACK );
+                return finalScore;
+            }
+            
+            case( Global.whiteKRKP ):
+            {
+                finalScore =  sideMult * -EvaluateKRKP( Global.COLOUR_WHITE, side );
+                return finalScore;
+            }   
+            
+            case( Global.blackKRKP ):
+            {
+                finalScore =  sideMult * EvaluateKRKP( Global.COLOUR_BLACK, side );
+                return finalScore;
+            }
+            
+            case( Global.whiteKPK ):
+            {
+               finalScore = sideMult * -EvaluateKPK( Global.COLOUR_WHITE, side, depth );
+               return finalScore;
+            }
+                
+            case( Global.blackKPK ):
+            {
+                finalScore = sideMult * EvaluateKPK( Global.COLOUR_BLACK, side^1, depth );
+                return finalScore;
+            }
+        }
+        
+        
         int lazyMargin = LAZY_MARGIN +  chessBoard.GetLazyPieceTotals() * 3;
 
         /** initialize evaluation terms */
@@ -411,7 +597,12 @@ public class Evaluation2 {
         combinedOutposts = 0L;
         arrOutposts[0] = 0L;
         arrOutposts[1] = 0L;
+        
+        scaleFactor = scaleFactorNormal;
 
+       
+        
+        
         /** set the development and castle scores */
         setDevelopmentBonus();
 
@@ -466,7 +657,7 @@ public class Evaluation2 {
         setTrapPenalties();
 
         /** tempo */
-        int sideMult = side == Global.COLOUR_WHITE ? -1 : 1;
+        
         tempo = TEMPO_BONUS * sideMult;
 
         if( endGameCoefficient <  1.00)
@@ -477,14 +668,14 @@ public class Evaluation2 {
 
             int finalLazyScore = sideMult * (int)((float)midLazyScores * midGameCoefficient + (float)endLazyScores * (float)endGameCoefficient + (float)allLazyScores);
 
-            if( (finalLazyScore + lazyMargin) < alpha )
+            if( (finalLazyScore + lazyMargin) <= alpha )
             {
-                EvalTable.AddEvalHashLazy(evalKey, chessBoard.hashValue, finalLazyScore + lazyMargin + 21000);
+                EvalTable.AddEvalHashLazy(evalKey, chessBoard.hashValue, finalLazyScore + Global.MATE_SCORE);
                 return finalLazyScore + lazyMargin;
             }
             else if( finalLazyScore - lazyMargin >= beta )
             {
-                EvalTable.AddEvalHashLazy(evalKey, chessBoard.hashValue, finalLazyScore - lazyMargin + 21000);
+                EvalTable.AddEvalHashLazy(evalKey, chessBoard.hashValue, finalLazyScore + Global.MATE_SCORE);
                 return  finalLazyScore - lazyMargin;
             }
         }
@@ -498,17 +689,40 @@ public class Evaluation2 {
         long mobilityAreaWhite = ~(boardAttacks[Global.COLOUR_BLACK][PAWN_BOARD] | chessBoard.pieceBits[Global.COLOUR_WHITE][Global.PIECE_ALL]);
         long mobilityAreaBlack = ~(boardAttacks[Global.COLOUR_WHITE][PAWN_BOARD] | chessBoard.pieceBits[Global.COLOUR_BLACK][Global.PIECE_ALL]);
 		  
-        knightEval = -GetKnightEval(Global.COLOUR_WHITE, mobilityAreaWhite);
-        knightEval += GetKnightEval(Global.COLOUR_BLACK, mobilityAreaBlack);
-        queenEval = -GetQueenEval(Global.COLOUR_WHITE, mobilityAreaWhite);
-        queenEval += GetQueenEval(Global.COLOUR_BLACK, mobilityAreaBlack);
-        bishopEval = -GetBishopEval(Global.COLOUR_WHITE, mobilityAreaWhite);
-        bishopEval += GetBishopEval(Global.COLOUR_BLACK, mobilityAreaBlack);
-        GetRookEval(Global.COLOUR_WHITE, mobilityAreaWhite);
+        
+        /*knightEval = -GetEvalPieceType(knightType, Global.COLOUR_WHITE, mobilityAreaWhite);
+        bishopEval = -GetEvalPieceType(bishopType, Global.COLOUR_WHITE, mobilityAreaWhite);
+        queenEval = -GetEvalPieceType(queenType, Global.COLOUR_WHITE, mobilityAreaWhite);
+        int rookScore = -GetEvalPieceType(rookType, Global.COLOUR_WHITE, mobilityAreaWhite);
+        
         rookEval[MIDDLE_GAME] *= -1;
         rookEval[END_GAME] *= -1;
+        mobility[MIDDLE_GAME] *= -1;
+        mobility[END_GAME] *= -1;
+        centre *= -1;
+        develop *= -1;
+        knightEval += GetEvalPieceType(knightType, Global.COLOUR_BLACK, mobilityAreaBlack);
+        bishopEval += GetEvalPieceType(bishopType, Global.COLOUR_BLACK, mobilityAreaBlack);
+        queenEval += GetEvalPieceType(queenType, Global.COLOUR_BLACK, mobilityAreaBlack);
+        rookScore += GetEvalPieceType(rookType, Global.COLOUR_BLACK, mobilityAreaBlack);
+        */
+        knightEval = -GetKnightEval(Global.COLOUR_WHITE, mobilityAreaWhite);
+        queenEval = -GetQueenEval(Global.COLOUR_WHITE, mobilityAreaWhite);
+        bishopEval = -GetBishopEval(Global.COLOUR_WHITE, mobilityAreaWhite);
+        GetRookEval(Global.COLOUR_WHITE, mobilityAreaWhite);
+        
+        rookEval[MIDDLE_GAME] *= -1;
+        rookEval[END_GAME] *= -1;
+        mobility[MIDDLE_GAME] *= -1;
+        mobility[END_GAME] *= -1;
+        centre *= -1;
+        develop *= -1;
+        
+        knightEval += GetKnightEval(Global.COLOUR_BLACK, mobilityAreaBlack);
+        queenEval += GetQueenEval(Global.COLOUR_BLACK, mobilityAreaBlack);
+        bishopEval += GetBishopEval(Global.COLOUR_BLACK, mobilityAreaBlack);
         GetRookEval(Global.COLOUR_BLACK, mobilityAreaBlack);
-
+        
         endKingSafety = GetEndGameKing();
 
         if( endGameCoefficient <=  0.70)
@@ -540,7 +754,7 @@ public class Evaluation2 {
         finalScore = sideMult * (int)((float)midScores * midGameCoefficient + (float)endScores * (float)endGameCoefficient + (float)allScores);
 
         /** store the score in the eval hashtable */
-        EvalTable.AddEvalHash(evalKey, chessBoard.hashValue, finalScore + 21000);
+        EvalTable.AddEvalHash(evalKey, chessBoard.hashValue, finalScore + Global.MATE_SCORE);
 
         return finalScore;
     }
@@ -693,12 +907,12 @@ public class Evaluation2 {
         {
             int position = chessBoard.pieceList[piece][i];
             if(position % 8 > 0) {
-                boardAttacks[side][PAWN_BOARD] |= (long)1 << (position + leftOffset);
-                boardAttacks[side][ALL_BOARD] |= (long)1 << (position + leftOffset);   
+                boardAttacks[side][PAWN_BOARD] |= 1L << (position + leftOffset);
+                boardAttacks[side][ALL_BOARD] |= 1L << (position + leftOffset);   
             }
             if(position % 8 < 7) {
-                boardAttacks[side][PAWN_BOARD] |= (long)1 << (position + rightOffset);
-                boardAttacks[side][ALL_BOARD] |= (long)1 << (position + rightOffset);
+                boardAttacks[side][PAWN_BOARD] |= 1L << (position + rightOffset);
+                boardAttacks[side][ALL_BOARD] |= 1L << (position + rightOffset);
             }
         }
         centre += Long.bitCount(CENTER_BITS & boardAttacks[side][PAWN_BOARD]) * (-1 + side * 2);
@@ -813,7 +1027,7 @@ public class Evaluation2 {
             }
 
             if ( !( passed | isolated | chain)
-                    && ((boardAttacks[(side+1)%2][PAWN_BOARD] & ((long)1 << position)) == 0)
+                    && ((boardAttacks[(side+1)%2][PAWN_BOARD] & (1L << position)) == 0)
                     && ((chessBoard.pieceBits[side][Global.PIECE_PAWN] & Global.neighbour_files[file] & Global.mask_forward[(side+1) & 1][position]) == 0))
             {
                 long forwardAttacks = Global.rankMasks[rankForward] & Global.neighbour_files[file];// & Global.mask_forward[side][position];
@@ -927,8 +1141,8 @@ public class Evaluation2 {
                 endBonus /= 3;
             }
 
-            kingEndBonus = -chessBoard.getDistance(kingPos[side], blockPos) * endBonus / 20;
-            kingEndBonus += chessBoard.getDistance(enemyKingPos[side], blockPos) * endBonus / 20;
+            kingEndBonus = -chessBoard.getQueenDistance(kingPos[side], blockPos) * endBonus / 20;
+            kingEndBonus += chessBoard.getQueenDistance(enemyKingPos[side], blockPos) * endBonus / 20;
 
             passScore[END_GAME] += (kingEndBonus + endBonus) * (-1 + side * 2);
         }
@@ -991,8 +1205,8 @@ public class Evaluation2 {
                 endScore /= 3;
             }
             
-            kingEndBonus = -chessBoard.getDistance(kingPos[side ], blockPos) * endScore / 20;
-            kingEndBonus += chessBoard.getDistance(kingPos[side ^ 1], blockPos) * endScore / 20;
+            kingEndBonus = -chessBoard.getQueenDistance(kingPos[side ], blockPos) * endScore / 20;
+            kingEndBonus += chessBoard.getQueenDistance(kingPos[side ^ 1], blockPos) * endScore / 20;
 
             passScore[MIDDLE_GAME] += middleScore * (-1 + side * 2);
             passScore[END_GAME] += (endScore + kingEndBonus) * (-1 + side * 2);
@@ -1015,15 +1229,15 @@ public class Evaluation2 {
        return ((Global.passed_masks[side][position] & chessBoard.pieceBits[(side+1)&1][Global.PIECE_PAWN]) == 0);
     }
 
-     /**
+    /**
      * Method getWKnightEval
      *
      * calculates positional score for white knight
      * adds knight attack to WB array
      *
      * @return int - knight positional score
-     *
      */
+     
     private static int GetKnightEval(int side, long mobilityArea)
     {
         int score = 0;
@@ -1033,17 +1247,17 @@ public class Evaluation2 {
             int relativeRank = Global.RelativeRanks[side][position>>3] ;
             int relativePosition = (relativeRank << 3) + (position & 7);
             if(relativeRank == 0) {
-                develop -= BACKRANK_MINOR *  (-1 + side * 2);
+                develop -= BACKRANK_MINOR;
             }
             long attacks = chessBoard.getKnightMoves(position);
             boardAttacks[side][KNIGHT_BOARD] |= attacks;
             boardAttacks[side][ALL_BOARD] |= attacks;
             long mobilitySquares = mobilityArea & attacks;
             int mobilityNumber = Long.bitCount(mobilitySquares);
-            mobility[MIDDLE_GAME] += KNIGHT_MOBILITY[MIDDLE_GAME][mobilityNumber] * (-1 + side * 2);
-            mobility[END_GAME] += KNIGHT_MOBILITY[END_GAME][mobilityNumber] * (-1 + side * 2);
-            centre += Long.bitCount(CENTER_BITS & attacks) * (-1 + side * 2);
-            score -= chessBoard.getDistance(position, enemyKingPos[side]);
+            mobility[MIDDLE_GAME] += KNIGHT_MOBILITY[MIDDLE_GAME][mobilityNumber];
+            mobility[END_GAME] += KNIGHT_MOBILITY[END_GAME][mobilityNumber];
+            centre += Long.bitCount(CENTER_BITS & attacks);
+            score -= chessBoard.getQueenDistance(position, enemyKingPos[side]);
             score += KnightVals[ relativePosition ];
             score += GetOutpostScore(position, relativePosition, side, KNIGHT_OUTPOST);
         }
@@ -1055,11 +1269,11 @@ public class Evaluation2 {
         for(int i=16; i<=47; i++)
         {
             if( (Global.mask_in_front[Global.COLOUR_WHITE][i] & Global.neighbour_files[i & 7] & chessBoard.pieceBits[Global.COLOUR_BLACK][Global.PIECE_PAWN]) == 0) {
-                arrOutposts[Global.COLOUR_WHITE] |= (long)1 << (i);
+                arrOutposts[Global.COLOUR_WHITE] |= 1L << (i);
             }    
 
             if( (Global.mask_in_front[Global.COLOUR_BLACK][i] & Global.neighbour_files[i & 7] & chessBoard.pieceBits[Global.COLOUR_WHITE][Global.PIECE_PAWN]) == 0) {
-                arrOutposts[Global.COLOUR_BLACK] |= (long)1 << (i);
+                arrOutposts[Global.COLOUR_BLACK] |= 1L << (i);
             }    
         }
         combinedOutposts = (arrOutposts[Global.COLOUR_BLACK] >> 16) | (arrOutposts[Global.COLOUR_WHITE] << 16);
@@ -1067,7 +1281,7 @@ public class Evaluation2 {
 
     public static int GetOutpostScore(int position, int relativePosition, int side, int outpostType)
     {
-        if( (arrOutposts[side] & (long)1 << (position)) != 0)
+        if( (arrOutposts[side] & 1L << (position)) != 0)
         {
             int bonus = OutpostBonus[outpostType][relativePosition];
             long friendPawns = chessBoard.pieceBits[side][Global.PIECE_PAWN];
@@ -1089,8 +1303,8 @@ public class Evaluation2 {
      * adds bishop attack to WB array
      *
      * @return int - bishop positional score
-     *
      */
+     
     private static int GetBishopEval(int side, long mobilityArea)
     {
         int score = 0;
@@ -1100,17 +1314,17 @@ public class Evaluation2 {
             int relativeRank = Global.RelativeRanks[side][position>>3] ;
             int relativePosition = (relativeRank << 3) + (position & 7);
             if(Global.RelativeRanks[side][position>>3] == 0) {
-                develop -= BACKRANK_MINOR *  (-1 + side * 2);
+                develop -= BACKRANK_MINOR;
             }
             long attacks = chessBoard.getMagicBishopMoves(position);
             boardAttacks[side][BISHOP_BOARD] |= attacks;
             boardAttacks[side][ALL_BOARD] |= attacks;
             long mobilitySquares = mobilityArea & attacks;
             int mobilityNumber = Long.bitCount(mobilitySquares);
-            mobility[MIDDLE_GAME] += BISHOP_MOBILITY[MIDDLE_GAME][mobilityNumber] * (-1 + side * 2);
-            mobility[END_GAME] += BISHOP_MOBILITY[END_GAME][mobilityNumber] * (-1 + side * 2);
-            centre += Long.bitCount(CENTER_BITS & attacks) * (-1 + side * 2);
-            score -= chessBoard.getDistance(position, enemyKingPos[side]);
+            mobility[MIDDLE_GAME] += BISHOP_MOBILITY[MIDDLE_GAME][mobilityNumber];
+            mobility[END_GAME] += BISHOP_MOBILITY[END_GAME][mobilityNumber];
+            centre += Long.bitCount(CENTER_BITS & attacks);
+            score -= chessBoard.getQueenDistance(position, enemyKingPos[side]);
             score += GetOutpostScore(position, relativePosition, side, BISHOP_OUTPOST);
         }
         return score;
@@ -1123,8 +1337,8 @@ public class Evaluation2 {
      * adds queen attack to WB array
      *
      * @return int - queen positional score
-     *
      */
+     
     private static int GetQueenEval(int side, long mobilityArea)
     {
         int score = 0;
@@ -1136,10 +1350,10 @@ public class Evaluation2 {
             boardAttacks[side][ALL_BOARD] |= attacks;
             long mobilitySquares = mobilityArea & attacks;
             int mobilityNumber = Long.bitCount(mobilitySquares);
-            mobility[MIDDLE_GAME] += QUEEN_MOBILITY[MIDDLE_GAME][mobilityNumber] * (-1 + side * 2);
-            mobility[END_GAME] += QUEEN_MOBILITY[END_GAME][mobilityNumber] * (-1 + side * 2);
-            centre += Long.bitCount(CENTER_BITS & attacks) * (-1 + side * 2);
-            score -= 3 * chessBoard.getDistance(position, enemyKingPos[side]);
+            mobility[MIDDLE_GAME] += QUEEN_MOBILITY[MIDDLE_GAME][mobilityNumber];
+            mobility[END_GAME] += QUEEN_MOBILITY[END_GAME][mobilityNumber];
+            centre += Long.bitCount(CENTER_BITS & attacks);
+            score -= 3 * chessBoard.getQueenDistance(position, enemyKingPos[side]);
         }
         return score;
     }
@@ -1152,8 +1366,8 @@ public class Evaluation2 {
     * adds rook attack to WB array
     *
     * @return int - rook positional score
-    *
     */
+   
     private static void GetRookEval(int side, long mobilityArea)
     {
         int enemyKingRelativeRank = Global.RelativeRanks[side][enemyKingPos[side]>>3];//Board.GetRelativeRank(side, enemyKingPos);
@@ -1165,7 +1379,7 @@ public class Evaluation2 {
             int position = chessBoard.pieceList[side*6][i];
             int file = position & 7;
             int rank = position >> 3;
-            int relativeRank = Global.RelativeRanks[side][rank];//Board.GetRelativeRank(side, position);
+            int relativeRank = Global.RelativeRanks[side][rank];
             int nearEnemyKing = 1;
             if(enemyKingRelativeRank == 7 && relativeRank == 6 )
             {
@@ -1209,7 +1423,7 @@ public class Evaluation2 {
                 }
                 else
                 {
-                    rookEval[END_GAME] += ROOK_OPEN * nearEnemyKing;
+                    rookEval[END_GAME] += ROOK_SEMI * nearEnemyKing;
                     rookEval[MIDDLE_GAME] += ROOK_SEMI * nearEnemyKing;
                 }
             }
@@ -1219,11 +1433,11 @@ public class Evaluation2 {
             boardAttacks[side][ALL_BOARD] |= attacks;
             long mobilitySquares = mobilityArea & attacks;
             int mobilityNumber = Long.bitCount(mobilitySquares);
-            mobility[MIDDLE_GAME] += ROOK_MOBILITY[MIDDLE_GAME][mobilityNumber] * (-1 + side * 2);
-            mobility[END_GAME] += ROOK_MOBILITY[END_GAME][mobilityNumber] * (-1 + side * 2);
-            centre += Long.bitCount(CENTER_BITS & attacks) * (-1 + side * 2);
-            rookEval[MIDDLE_GAME] -= chessBoard.getDistance(position, enemyKingPos[side]);
-            rookEval[END_GAME] -= chessBoard.getDistance(position, enemyKingPos[side]);
+            mobility[MIDDLE_GAME] += ROOK_MOBILITY[MIDDLE_GAME][mobilityNumber];
+            mobility[END_GAME] += ROOK_MOBILITY[END_GAME][mobilityNumber];
+            centre += Long.bitCount(CENTER_BITS & attacks);
+            rookEval[MIDDLE_GAME] -= chessBoard.getQueenDistance(position, enemyKingPos[side]);
+            rookEval[END_GAME] -= chessBoard.getQueenDistance(position, enemyKingPos[side]);
             oldFile = file;
             oldRank = rank;
         }

@@ -1,3 +1,5 @@
+package magnumchess;
+
 /**
  * Board.java
  *
@@ -5,27 +7,22 @@
  * 
  * Copyright (c) 2013 Eric Stock
  
-Permission is hereby granted, free of charge, to any person obtaining
-a copy of this software and associated documentation files (the
-"Software"), to deal in the Software without restriction, including
-without limitation the rights to use, copy, modify, merge, publish,
-distribute, sublicense, and/or sell copies of the Software, and to
-permit persons to whom the Software is furnished to do so, subject to
-the following conditions:
- 
-The above copyright notice and this permission notice shall be
-included in all copies or substantial portions of the Software.
- 
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
-EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
-MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND
-NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE
-LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
-OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION
-WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 
+import magnumchess.Bitbase;
 import java.io.File;
 import java.util.Arrays;
 import java.io.InputStream;
@@ -47,6 +44,16 @@ import java.io.IOException;
 
 public final class Board {
 
+   public class CheckInfo {
+        public long[] checkSquares = new long[Global.PIECE_ALL];
+        public long dcCandidates;
+        public long pinned; 
+        public boolean pinnedReady;
+        public boolean checksReady;
+   }
+    
+    
+    
     InputStream inputStream;
     DataInputStream dataInputStream;
 
@@ -179,6 +186,11 @@ public final class Board {
      * between any two squares on the board
      */
     private static final int[][] queenDist = new int[64][64];
+    
+    /** Array of values representing the number of squares a rook would traverse
+     * between any two squares on the board
+     */
+    private static final int[][] rookDist = new int[64][64];
 	
     /** zorbist key history array -- used for repetition detection */
     private static final long[] zorbistHistory = new long[202];
@@ -196,6 +208,7 @@ public final class Board {
     private static final int[] arrCurrentMoves = new int[64];
     private int iCurrentMovesDepth;
 
+    private Bitbase bitbase;
     /** call to private constructor - a la singleton pattern */
     private static final Board INSTANCE = new Board();
 
@@ -214,8 +227,9 @@ public final class Board {
     private Board()
     {
         initQueenDist();
-        InitializeData();
+        initRookDist();
         InitializeDataFromFile();
+        InitializeData();
         zorbistDepth = 1;
         lastReversableMove[0] = 1;
         lastReversableMove[1] = 1;
@@ -226,7 +240,7 @@ public final class Board {
     {
         try
         {
-            final String inputfile = "resources/initialization.dat";
+            final String inputfile = "initialization.dat";
             inputStream = Board.class.getResourceAsStream(inputfile);
             dataInputStream = new DataInputStream(inputStream);
 
@@ -298,6 +312,9 @@ public final class Board {
                 CastleHash[Global.COLOUR_WHITE][i] = dataInputStream.readLong();
             }
 
+            bitbase = new Bitbase();
+            bitbase.LoadData( dataInputStream );
+            
             dataInputStream.close();
         }
         catch( IOException iox )
@@ -306,6 +323,9 @@ public final class Board {
         }
     }
 
+    Bitbase GetBitbase() {
+        return bitbase;
+    }
     private void InitializeData()
     {
         for(int j=0;j<64;j++) {
@@ -441,6 +461,22 @@ public final class Board {
             Global.neighbour_files[i] |= (i > 0) ? Global.fileMasks[i-1] : 0;
             Global.neighbour_files[i] |= (i < 7) ? Global.fileMasks[i+1] : 0;
         } 
+        
+        for(int i=0; i<64; i++) {
+            for(int j=0; j<64; j++) {
+                long queenAttacks = getMagicBishopMoves(i, 0) | getMagicRookMoves(i, 0);
+                queenAttacks &= 1L << j;
+                if( queenAttacks != 0 )
+                {
+                    int delta = (j - i) / Math.max( Math.abs(i/8 - j/8), Math.abs(i%8 - j%8));
+                    for( int k = i+delta; k!= j; k+= delta)
+                    {
+                        Global.mask_between[i][j] |= 1L << k;
+                    }
+                    
+                }
+            }
+        }
     }
 
     /**
@@ -646,6 +682,10 @@ public final class Board {
         for(int i=0;i<tokenSize;i++) {
         c = token.charAt(i);
         switch(c) {
+            case('-'):
+                castleFlag[Global.COLOUR_WHITE] = Global.NO_CASTLE;
+                castleFlag[Global.COLOUR_BLACK] = Global.NO_CASTLE;
+                break;
             case('K'):
                 castleFlag[Global.COLOUR_WHITE] = Global.SHORT_CASTLE;
                 break;
@@ -707,7 +747,7 @@ public final class Board {
         hashValue ^= CastleHash[Global.COLOUR_WHITE][castleFlag[Global.COLOUR_WHITE]];
     }
 
-    private void ClearBoard()
+    public void ClearBoard()
     {
         materialKey = 0;
         materialAdjust = 0;
@@ -860,12 +900,38 @@ public final class Board {
                                                                     wPawn   * 3 * 3 * 3 * 3 * 3 * 3 * 2 * 2 +
                                                                     bPawn   * 3 * 3 * 3 * 3 * 3 * 3 * 2 * 2 * 9;
 
+                                                // set global constants used to recognize special endgames
+                                                int test;
+                                                if( noBlackPieces == 0 && noWhitePieces == 2 && wBishop == 1 && wKnight == 1)
+                                                    test = index;//Global.whiteKBNK = index;
+                                                else if( noWhitePieces == 0 && noBlackPieces == 2 && bBishop == 1 && bKnight == 1)
+                                                    test = index;
+                                                else if( noWhitePieces == 1 && noBlackPieces == 1 && wRook == 1 && bBishop == 1 )
+                                                    test = index;
+                                                else if( noWhitePieces == 1 && noBlackPieces == 1 && bRook == 1 && wBishop == 1 )
+                                                    test = index;
+                                                else if( noWhitePieces == 1 && noBlackPieces == 1 && wRook == 1 && bKnight == 1 )
+                                                    test = index;
+                                                else if( noWhitePieces == 1 && noBlackPieces == 1 && bRook == 1 && wKnight == 1 )
+                                                    test = index;
+                                                else if( noWhitePieces == 1 && noBlackPieces == 1 && wRook == 1 && bPawn == 1 )
+                                                    test = index;
+                                                else if( noWhitePieces == 1 && noBlackPieces == 1 && bRook == 1 && wPawn == 1 )
+                                                    test = index;
+                                                else if( noWhitePieces == 1 && wPawn == 1 && noBlackPieces == 0)
+                                                    test = index;
+                                                else if( noBlackPieces == 1 && bPawn == 1 && noWhitePieces == 0)
+                                                    test = index;
+                                                //Global.blackKBNK = index;
+                                                
+                                                
+                                                
                                                 //+ values for back, -ve for white
                                                 /** recognize some draw situations */
                                                 int materialImbalence = 0;  
 
                                                 if(noWhitePieces <= 1 && noBlackPieces <= 1 && noWhiteMinors == noWhitePieces && noBlackMinors == noBlackPieces) //kings and 1 or less minors draw
-                                                        materialImbalence = Global.materialDraw;
+                                                    materialImbalence = Global.materialDraw;
                                                 else if(noWhitePieces <= 2 && noBlackPieces == 2 && noBlackPieces == bKnight && noWhitePieces == noWhiteMinors && wBishop != 2)  //2 black knights against 2 or less minors
                                                         materialImbalence = Global.materialDraw;
                                                 else if(noBlackPieces <= 2 && noWhitePieces == 2 && noWhitePieces == bKnight && noBlackPieces == noBlackMinors && bBishop != 2)  //2 white knights against 2 or less minors
@@ -913,6 +979,16 @@ public final class Board {
                                                    else if(((bQueen - wQueen) == 1) && ((wRook - bRook) == 1) && ((noWhiteMinors - noBlackMinors) == 1) && ((wPawn - bPawn) == 1))
                                                       materialImbalence += 75;
                                                 }
+                                                
+                                                if(wPawn == 0 && bPawn == 0 && materialImbalence < 0 && materialImbalence >= -(Global.values[1] + 50) )
+                                                {
+                                                   materialImbalence = (materialImbalence * (16 + (Math.min( wBishop, 2) * 10))) / 64; 
+                                                }
+                                                else if(wPawn == 0 && bPawn == 0 && materialImbalence <= (Global.values[1]+ 50) && materialImbalence > 0 )
+                                                {
+                                                   materialImbalence = (materialImbalence * (16 + (Math.min( bBishop, 2) * 10))) / 64; 
+                                                }
+                                                
                                                 materialValues[index] = materialImbalence;
                                             }
                                         }
@@ -940,16 +1016,43 @@ public final class Board {
         }						 
     }
     
-    /** 
-     *  method getDistance
+    /**
+     *  method initQueenDist
      * 
-     * Returns the distance between two squres
+     * initializes arrays containing distance between two squares 
+     */
+    private  final void initRookDist() {
+        for(int i=0;i<64;i++) {
+            for(int j=0;j<64;j++) {
+                     rookDist[i][j] = Math.abs(i/8 - j/8) + Math.abs(i%8 - j%8);
+            }		
+        }						 
+    }
+    
+    
+   
+    /** 
+     *  method getQueenDistance
+     * 
+     * Returns the queen distance between two squres
      * @param to 
      * @param from 
      * 
      */
-    public final  int getDistance(int to,int from) {
+    public final  int getQueenDistance(int to,int from) {
         return queenDist[to][from];
+    }		
+    
+    /** 
+     *  method getRookDistance
+     * 
+     * Returns the rook distance between two squres
+     * @param to 
+     * @param from 
+     * 
+     */
+    public final  int getRookDistance(int to,int from) {
+        return rookDist[to][from];
     }		
 	
     /** 
@@ -1069,7 +1172,7 @@ public final class Board {
     ***********************************************************************/	
     private  final void updateBoard(int i,int j) 
     {
-        long bit = (long)1 << i | (long)1 << j;
+        long bit = 1L << i | 1L << j;
         bitboard ^= bit;
         int piece = piece_in_square[j];
         int type = piece % 6;
@@ -1198,8 +1301,40 @@ public final class Board {
                 return kingMoveTable[i];
             case 11:
                 return PawnAttackBoard[Global.COLOUR_BLACK][i];
+            default:
+                return 0;
         } 
-        return 0;
+    }
+    
+    public  final long getAttackBoard(int i, long bits) {
+        switch(piece_in_square[i]) {
+            case 0:
+                return getMagicRookMoves(i, bits);
+            case 1:
+                return KnightMoveBoard[i];
+            case 2:
+                return getMagicBishopMoves(i, bits);	
+            case 3:
+                return getMagicBishopMoves(i, bits) | getMagicRookMoves(i, bits);
+            case 4:
+                return kingMoveTable[i];
+            case 5:
+                return PawnAttackBoard[Global.COLOUR_WHITE][i];
+            case 6:
+                return getMagicRookMoves(i, bits);
+            case 7:
+                return KnightMoveBoard[i];
+            case 8:
+                return getMagicBishopMoves(i, bits);
+            case 9:
+                return getMagicBishopMoves(i, bits) | getMagicRookMoves(i, bits);
+            case 10:
+                return kingMoveTable[i];
+            case 11:
+                return PawnAttackBoard[Global.COLOUR_BLACK][i];
+            default:
+                return 0;
+        } 
     }
 
     /** 
@@ -1291,8 +1426,146 @@ public final class Board {
 		(getMagicRookMoves(i) & ( pieceBits[eSide][Global.PIECE_ROOK] | pieceBits[eSide][Global.PIECE_QUEEN] )) != 0L ||
 		(KnightMoveBoard[i] & pieceBits[eSide][Global.PIECE_KNIGHT] ) != 0L ||
 		(kingMoveTable[i] & pieceBits[eSide][Global.PIECE_KING] ) != 0L);
-    }	
+    }
+    
+    public final CheckInfo GetEmptyCheckInfo() {
+        CheckInfo info = new CheckInfo();
+        info.checksReady = false;
+        info.pinnedReady = false;
+        return info;
+    }
+    
+    //the side on move
+    public final void GetCheckInfo(int side, CheckInfo info) {
+        info.pinnedReady = true;
+        info.pinned = GetPinnedPieces( side, false );
+    }
+    
+    public final void GetGivesCheckInfo(int side, CheckInfo info) {
+        info.checksReady = true;
+        int enemyKing = pieceList[4 + (side^1) * 6][0];
+        info.checkSquares[Global.PIECE_PAWN] = PawnAttackBoard[side^1][enemyKing];
+        info.checkSquares[Global.PIECE_BISHOP] = getMagicBishopMoves( enemyKing );
+        info.checkSquares[Global.PIECE_KNIGHT] = getKnightMoves( enemyKing );
+        info.checkSquares[Global.PIECE_ROOK] = getMagicRookMoves( enemyKing );
+        info.checkSquares[Global.PIECE_QUEEN] = getMagicBishopMoves( enemyKing ) | getMagicRookMoves( enemyKing );
+        info.checkSquares[Global.PIECE_KING] = 0L;
+        info.dcCandidates = GetPinnedPieces( side, true );
+    }
+    
+    public final boolean MoveGivesCheck(int side, int move, CheckInfo info ) {
+        if( !info.checksReady) {
+            GetGivesCheckInfo(side, info);
+        }
+        
+        int from = MoveFunctions.getFrom( move );
+        int to = MoveFunctions.getTo( move );
+        int type = MoveFunctions.moveType( move );
+        int piece = MoveFunctions.getPiece( move ) % 6;
+        int enemyKing = pieceList[Global.PIECE_KING + (side^1) * 6][0];
+        if( (info.checkSquares[piece] & 1L << to) != 0 ) {
+            return true;
+        }
+        
+        else if( (info.dcCandidates & (1L << from)) != 0  && ( piece < Global.PIECE_KING  ||
+                (((Global.mask_between[enemyKing][from] & (1L << to)) == 0 )
+                && (Global.mask_between[enemyKing][to] & (1L << from)) == 0) ))
+        {
+            return true;
+        }
+        
+        switch( type ) {
+            case( Global.PROMO_Q ):
+                return ( (getMagicBishopMoves( to, bitboard ^ (1L << from) ) & (1L << enemyKing)) != 0) || 
+                        ( (getMagicRookMoves( to, bitboard ^ (1L << from) ) & (1L << enemyKing)) != 0);
+           
+            case( Global.PROMO_R ):
+                return ( (getMagicRookMoves( to, bitboard ^ (1L << from) ) & (1L << enemyKing)) != 0 );
+                
+            case( Global.PROMO_B ):
+                return ( (getMagicBishopMoves( to, bitboard ^ (1L << from) ) & (1L << enemyKing)) != 0 );
+              
+            case( Global.PROMO_N ):
+                return ( (KnightMoveBoard[to] & (1L << enemyKing)) != 0 );
+                
+            case( Global.EN_PASSANT_CAP ):
+                int enemyPawnPush = side == Global.COLOUR_WHITE ? -8 : 8;
+                int capSquare = to + enemyPawnPush;
+                long occ = bitboard ^ (1L << capSquare) ^ (1L << from) ^ (1L << to);
 
+                return ( ((getMagicBishopMoves(enemyKing, occ) & ( pieceBits[side][Global.PIECE_BISHOP] | pieceBits[side][Global.PIECE_QUEEN] ))
+                        | ( getMagicRookMoves(enemyKing, occ) & ( pieceBits[side][Global.PIECE_ROOK] | pieceBits[side][Global.PIECE_QUEEN] ))) != 0 );
+
+            case( Global.SHORT_CASTLE ):
+                occ = bitboard ^ ( 1L << to ) ^ ( 1L << (to-1)) ^ ( 1L << (to+1)) ^ ( 1L << (from));
+                return ( getMagicRookMoves( enemyKing, occ) & (1L << (to-1))) != 0;
+                
+            case( Global.LONG_CASTLE ):
+                 occ = bitboard ^ ( 1L << to ) ^ ( 1L << (to-2)) ^ ( 1L << (to+1)) ^ ( 1L << (from));
+                return ( getMagicRookMoves( enemyKing, occ) & (1L << (to+1))) != 0;
+            default:
+                return false;
+        } 
+    }
+    
+    
+    public final boolean CheckMove(int side, int move, CheckInfo info) {
+        if( !info.pinnedReady ) {
+            GetCheckInfo(side, info);
+        }
+        int from = MoveFunctions.getFrom( move );
+        int to = MoveFunctions.getTo( move );
+        int type = MoveFunctions.moveType( move );
+        int king = pieceList[4 + side*6][0];
+        int piece = MoveFunctions.getPiece( move );
+        
+        if( type == Global.EN_PASSANT_CAP ) {
+            int enemyPawnPush = side == Global.COLOUR_WHITE ? -8 : 8;
+            int capSquare = to + enemyPawnPush;
+            long occ = bitboard ^ (1L << from) ^ (1L << to) ^ (1L << capSquare);
+            
+            return ( ((getMagicBishopMoves(king, occ) & ( pieceBits[side^1][Global.PIECE_BISHOP] | pieceBits[side^1][Global.PIECE_QUEEN] ))
+                    | ( getMagicRookMoves(king, occ) & ( pieceBits[side^1][Global.PIECE_ROOK] | pieceBits[side^1][Global.PIECE_QUEEN] ))) == 0 );
+        }
+        else if( piece % 6 == Global.PIECE_KING) {
+            return ( getAttack2( to ) & pieceBits[side^1][Global.PIECE_ALL]) == 0; 
+        }
+            
+        return( ( info.pinned == 0) || ((info.pinned & (1L << from)) == 0) || ((Global.mask_between[king][from] & (1L << to)) != 0 )
+                || (Global.mask_between[king][to] & (1L << from)) != 0);          
+    }
+    
+    private final boolean MoreThanOne(long bits) {
+        return( (bits & (bits-1)) != 0);
+    }
+    
+    private final long GetPinnedPieces(int side, boolean bDiscoverChecks) {
+        
+        long pinned = 0;
+        int sideToMove = side;
+        if( bDiscoverChecks) {
+            side ^= 1;
+        }
+        
+        long pinners = pieceBits[side^1][Global.PIECE_ALL];
+        int kingSquare = pieceList[4 + 6 * side][0];
+        
+        pinners &= (getMagicRookMoves(kingSquare, 0) & ( pieceBits[side^1][Global.PIECE_ROOK] | pieceBits[side^1][Global.PIECE_QUEEN]) )
+                | (getMagicBishopMoves(kingSquare, 0) & ( pieceBits[side^1][Global.PIECE_BISHOP] | pieceBits[side^1][Global.PIECE_QUEEN]) ); 
+    
+        while( pinners != 0 )
+        {
+            int pinPos = Long.numberOfTrailingZeros(pinners);
+            pinners ^= 1L << pinPos;
+            long pieces_between = Global.mask_between[kingSquare][pinPos] & bitboard;
+            if( pieces_between != 0 && !MoreThanOne(pieces_between) && (pieceBits[sideToMove][Global.PIECE_ALL] & pieces_between) != 0 ) {
+                pinned |= pieces_between;
+            }
+        }
+        
+        return pinned;
+    }
+    
     /***********************************************************************
             Name:		getPiecesInSquare
             Parameters:	None
@@ -1384,6 +1657,13 @@ public final class Board {
         occ >>>= (64-rookShift[index]);
         return rookTable[index][(int)(occ)];	
     }
+    
+     public  final long getMagicRookMoves(int index, long bits) {
+        long occ = bits & rMask[index];
+        occ *= rMagics[index];
+        occ >>>= (64-rookShift[index]);
+        return rookTable[index][(int)(occ)];	
+    }
 	
     /***********************************************************************		
             Name:		getMagicBishopMoves
@@ -1395,6 +1675,13 @@ public final class Board {
 
     public  final long getMagicBishopMoves(int index) {
         long occ = bitboard & bMask[index];
+        occ *= bMagics[index];
+        occ >>>= (64-bishopShift[index]);
+        return bishopTable[index][(int)(occ)];	
+    }
+    
+    public  final long getMagicBishopMoves(int index, long bits) {
+        long occ = bits & bMask[index];
         occ *= bMagics[index];
         occ >>>= (64-bishopShift[index]);
         return bishopTable[index][(int)(occ)];	
