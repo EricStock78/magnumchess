@@ -1,10 +1,6 @@
 package magnumchess;
-
-
-import magnumchess.Board;
 import java.util.Random;
-
-
+//import java.io.*;
 /**
  * Engine.java
  *
@@ -128,9 +124,9 @@ public final class Engine {
     /** count of moves generated when debugging move gen using perft command */
     private long perft = 0;
     /** "triangular array to store the PV **/
-    private static final int[][] PV = new int[64][64];
+    private static final int[][] PV = new int[128][128];
     /** array to store the length of the PV **/
-    private static final byte[] lengthPV = new byte[64];
+    private static final byte[] lengthPV = new byte[128];
 
     private static Random rand = new Random(9L);
 
@@ -632,7 +628,7 @@ public final class Engine {
     parameters - int side ....the side possibly in check
      **********************************************************************/
     private boolean inCheck(int side) { 
-        return chessBoard.isAttacked(side, Long.numberOfTrailingZeros(chessBoard.pieceBits[side][Global.PIECE_KING]));  
+        return chessBoard.isAttacked(side, chessBoard.pieceList[Global.PIECE_KING + side*6][0]);  
     }
 
     /************************************************************************
@@ -1156,7 +1152,7 @@ public final class Engine {
         return index;
     }
 
-   /**
+    /**
     * Method getCheckEscapes
     *
     * collects moves to escape from check
@@ -1169,300 +1165,169 @@ public final class Engine {
     *
     */
     private int getCheckEscapes(int side, int[] escapes) {
-        int attacks = 0;
-        long friends;
-        long bishops;
-        long queen;
-        long rooks;
-        long knights;
-        long king;
-        int kingPos;
-        long fromBit;
-        int attackFrom = -1;
+        
+        int kingPos = chessBoard.pieceList[4 + side * 6][0];
         int index = 0;
-        boolean kingLoseCastle;
-        boolean rookLoseCastle;
-        boolean attackRookCastle;
-
-        if (side == Global.COLOUR_WHITE) {			//white moving
-            friends = chessBoard.pieceBits[Global.COLOUR_WHITE][Global.PIECE_ALL];
-            king = chessBoard.pieceBits[Global.COLOUR_WHITE][Global.PIECE_KING];
-            bishops = chessBoard.pieceBits[Global.COLOUR_BLACK][Global.PIECE_BISHOP];
-            queen = chessBoard.pieceBits[Global.COLOUR_BLACK][Global.PIECE_QUEEN];
-            rooks = chessBoard.pieceBits[Global.COLOUR_BLACK][Global.PIECE_ROOK];
-            knights = chessBoard.pieceBits[Global.COLOUR_BLACK][Global.PIECE_KNIGHT];
-            kingLoseCastle = chessBoard.castleFlag[side] > Global.CASTLED ? true : false;
-            rookLoseCastle = kingLoseCastle;
-            attackRookCastle = chessBoard.castleFlag[side ^ 1] > Global.CASTLED ? true : false;
-        } else {					//black moving
-            friends = chessBoard.pieceBits[Global.COLOUR_BLACK][Global.PIECE_ALL];
-            king = chessBoard.pieceBits[Global.COLOUR_BLACK][Global.PIECE_KING];
-            bishops = chessBoard.pieceBits[Global.COLOUR_WHITE][Global.PIECE_BISHOP];
-            queen = chessBoard.pieceBits[Global.COLOUR_WHITE][Global.PIECE_QUEEN];
-            rooks = chessBoard.pieceBits[Global.COLOUR_WHITE][Global.PIECE_ROOK];
-            knights = chessBoard.pieceBits[Global.COLOUR_WHITE][Global.PIECE_KNIGHT];
-            kingLoseCastle = chessBoard.castleFlag[side] > Global.CASTLED ? true : false;
-            rookLoseCastle = kingLoseCastle;
-            attackRookCastle = chessBoard.castleFlag[side ^ 1] > Global.CASTLED ? true : false;
+        //get the king moves
+        long toSquares = chessBoard.getAttackBoard(kingPos) & ~chessBoard.pieceBits[side][Global.PIECE_ALL];
+        
+        //find all slide diagonal attackers
+        //use their position to mask off some of the kings moves as we know they would lead to check
+        long attackers = chessBoard.getMagicBishopMoves(kingPos) & ( chessBoard.pieceBits[side^1][Global.PIECE_BISHOP] | chessBoard.pieceBits[side^1][Global.PIECE_QUEEN] );
+        long attackBits = attackers;
+        int noAttacks = 0;
+        while (attackers != 0) {
+            int attackFrom = Long.numberOfTrailingZeros(attackers);
+            attackers ^= Global.set_Mask[attackFrom];
+            toSquares &= ~Global.bishopMasks[attackFrom];
+            noAttacks++;
         }
-        kingPos = Long.numberOfTrailingZeros(king);
-        long toSquares = chessBoard.getAttackBoard(kingPos) & ~friends;
-        long temp = chessBoard.getMagicBishopMoves(kingPos);
-        temp &= (bishops | queen);
-        long attackBits = temp;
-        while (temp != 0) {
-            fromBit = temp & -temp;
-            attackFrom = Long.numberOfTrailingZeros(fromBit);
-            if (Global.Diag1Groups[kingPos] == Global.Diag1Groups[attackFrom]) {
-                toSquares &= ((~Global.diag1Masks[Global.Diag1Groups[kingPos]]) ^ Global.set_Mask[attackFrom]);
-            } else {
-                toSquares &= ((~Global.diag2Masks[Global.Diag2Groups[kingPos]]) ^ Global.set_Mask[attackFrom]);
-            }
-            temp ^= fromBit;
-            attacks++;
-        }
-        temp = chessBoard.getMagicRookMoves(kingPos);
-        temp &= (rooks | queen);
-        attackBits |= temp;
-        while (temp != 0) {
-            fromBit = temp & -temp;
-            attackFrom = Long.numberOfTrailingZeros(fromBit);
-            if ((attackFrom >> 3) == (kingPos >> 3)) {
-                toSquares &= ((~Global.rankMasks[kingPos >> 3]) ^ Global.set_Mask[attackFrom]);
-            } else {
-                toSquares &= ((~Global.fileMasks[kingPos & 7]) ^ Global.set_Mask[attackFrom]);
-            }
-            temp ^= fromBit;
-            attacks++;
+        
+        //find all slide non diagonal attackers
+        //use their position to mask off some of the kings moves as we know they would lead to check
+        attackers = chessBoard.getMagicRookMoves(kingPos) & ( chessBoard.pieceBits[side^1][Global.PIECE_ROOK] | chessBoard.pieceBits[side^1][Global.PIECE_QUEEN] );
+        attackBits |= attackers;
+        while (attackers != 0) {
+            int attackFrom = Long.numberOfTrailingZeros(attackers);
+            attackers ^= Global.set_Mask[attackFrom];
+            toSquares &= ~Global.rookMasks[attackFrom];
+            noAttacks++;
         }
 
+        //generate the king's moves
         while (toSquares != 0) {
+            int attackTo = Long.numberOfTrailingZeros(toSquares);
+            toSquares ^= Global.set_Mask[attackTo];
+            
+            int capture = chessBoard.piece_in_square[attackTo];
+            int value = 100;
             int type = Global.ORDINARY_MOVE;
-            long bit = toSquares & -toSquares;
-            toSquares ^= bit;
-            int to = Long.numberOfTrailingZeros(bit);
-            if (chessBoard.isAttacked(side, to)) {
-                continue;
-            }
-            int cP = chessBoard.piece_in_square[to];
-            int value;
-            if (cP != -1) {
+            if (capture != -1) {
                 type = Global.ORDINARY_CAPTURE;
-                value = 1000;
-            } else {
-                value = 100;
+                value = 1000 + Global.values[chessBoard.piece_in_square[attackTo]];
             }
             moveOrder[index] = value;
-            if( kingLoseCastle )
-                type = Global.MOVE_KING_LOSE_CASTLE;
-            escapes[index++] = MoveFunctions.makeMove(to, kingPos, chessBoard.piece_in_square[kingPos], cP, type);    //generate king escape moves
-        }
-        if (attacks > 2) {
-            sortCaps(0, index, escapes);
-            return index;
-        }
-        temp = chessBoard.getKnightMoves(kingPos);
-        temp &= knights;
-        attacks += Long.bitCount(temp);
-        attackBits |= temp;
-        if (side == Global.COLOUR_WHITE) {			//white moving
-            temp = chessBoard.getPawnAttack(Global.COLOUR_WHITE, kingPos);
-            temp &= chessBoard.pieceBits[Global.COLOUR_BLACK][Global.PIECE_PAWN];
-            attacks += Long.bitCount(temp);
-            attackBits |= temp;
-        } else {					//black moving
-            temp = chessBoard.getPawnAttack(Global.COLOUR_BLACK, kingPos);
-            temp &= chessBoard.pieceBits[Global.COLOUR_WHITE][Global.PIECE_PAWN];
-            attacks += Long.bitCount(temp);
-            attackBits |= temp;
-        }
-        if (attacks == 2) {
-            sortCaps(0, index, escapes);
-            return index;
-        }
-        attackFrom = Long.numberOfTrailingZeros(attackBits);
-        temp = chessBoard.getAttack2(attackFrom);
-        temp &= (friends & ~king);
-        int type;
-        int value;
-        int cP = chessBoard.piece_in_square[attackFrom];
-
-        while (temp != 0) {
-            type = Global.ORDINARY_CAPTURE;
-            fromBit = temp & -temp;
-            temp ^= fromBit;
-            int from = Long.numberOfTrailingZeros(fromBit);
-            if (SEE.isPinned(side, attackFrom, from)) {
-                continue;
+            if( chessBoard.castleFlag[side] > Global.CASTLED ) {
+                escapes[index++] = MoveFunctions.makeMove(attackTo, kingPos, chessBoard.piece_in_square[kingPos], capture, Global.MOVE_KING_LOSE_CASTLE);
             }
+            else {
+                escapes[index++] = MoveFunctions.makeMove(attackTo, kingPos, chessBoard.piece_in_square[kingPos], capture, type); 
+            }     
+        }
+        
+        if (noAttacks > 1) {
+            sortCaps(0, index, escapes);
+            return index;
+        }
+        
+        //get the pawn and knight attackers
+        attackBits |= chessBoard.getKnightMoves(kingPos) & chessBoard.pieceBits[side^1][Global.PIECE_KNIGHT];
+        attackBits |= chessBoard.getPawnAttack(side, kingPos) & chessBoard.pieceBits[side^1][Global.PIECE_PAWN];
+        
+        if( Long.bitCount(attackBits) > 1 ) {
+            sortCaps(0, index, escapes);
+            return index;
+        }
+        
+        //generate moves attacking the lone enemy attacker
+        int attackTo = Long.numberOfTrailingZeros(attackBits);
+        long friendAttackers = chessBoard.getAttack2(attackTo) & chessBoard.pieceBits[side][Global.PIECE_ALL] & ~chessBoard.pieceBits[side][Global.PIECE_KING];
+        int capture = chessBoard.piece_in_square[attackTo];
+        
+        while (friendAttackers != 0) {
+            int from = Long.numberOfTrailingZeros(friendAttackers);
+            friendAttackers ^= Global.set_Mask[from];
+            
+            int type = Global.ORDINARY_CAPTURE;
             if (chessBoard.piece_in_square[from] % 6 == 5) {
-                if ((attackFrom >> 3) == 0 || (attackFrom >> 3) == 7) {
+                if ((attackTo >> 3) == 0 || (attackTo >> 3) == 7) {
                     if (PERFT_ENABLED) {
                         moveOrder[index] = 0;
-                        escapes[index++] = MoveFunctions.makeMove(attackFrom, from, chessBoard.piece_in_square[from], cP, Global.PROMO_N);
+                        escapes[index++] = MoveFunctions.makeMove(attackTo, from, chessBoard.piece_in_square[from], capture, Global.PROMO_N);
                         moveOrder[index] = 0;
-                        escapes[index++] = MoveFunctions.makeMove(attackFrom, from, chessBoard.piece_in_square[from], cP, Global.PROMO_R);
+                        escapes[index++] = MoveFunctions.makeMove(attackTo, from, chessBoard.piece_in_square[from], capture, Global.PROMO_R);
                         moveOrder[index] = 0;
-                        escapes[index++] = MoveFunctions.makeMove(attackFrom, from, chessBoard.piece_in_square[from], cP, Global.PROMO_B);
+                        escapes[index++] = MoveFunctions.makeMove(attackTo, from, chessBoard.piece_in_square[from], capture, Global.PROMO_B);
                     }
                     type = Global.PROMO_Q;
-                    value = 800 + Global.values[chessBoard.piece_in_square[attackFrom]];
+                     moveOrder[index] = 1000 + Global.values[Global.PIECE_QUEEN] + Global.values[chessBoard.piece_in_square[attackTo]];
                 }
-                else
-                    value = Global.values[chessBoard.piece_in_square[attackFrom]] - Global.values[Global.PIECE_PAWN];
+                else {
+                     moveOrder[index] = 1000 + Global.values[chessBoard.piece_in_square[attackTo]] - Global.values[Global.PIECE_PAWN];
+                }
             }
             else
             {
-                value = Global.values[chessBoard.piece_in_square[attackFrom]] - Global.values[chessBoard.piece_in_square[from]];
-                if(attackRookCastle && (cP % 6) == 0)
+                moveOrder[index] = Global.values[chessBoard.piece_in_square[attackTo]] - Global.values[chessBoard.piece_in_square[from]];
+                if(capture % 6 == 0 && chessBoard.castleFlag[side ^ 1] > Global.CASTLED ) {
                         type = Global.CAPTURE_ROOK_LOSE_CASTLE;
-                else if(rookLoseCastle && chessBoard.piece_in_square[from] % 6 == 0)
+                }
+                else if( chessBoard.piece_in_square[from] % 6 == 0 && chessBoard.castleFlag[side] > Global.CASTLED ) {
                         type = Global.MOVE_ROOK_LOSE_CASTLE;
+                }
             }
-            moveOrder[index] = value;
-            escapes[index++] = MoveFunctions.makeMove(attackFrom, from, chessBoard.piece_in_square[from], cP, type);            //these are attacks on the king's attacker
+            escapes[index++] = MoveFunctions.makeMove(attackTo, from, chessBoard.piece_in_square[from], capture, type);
         }
 
-        if (chessBoard.piece_in_square[attackFrom] == 5) {
-            if ((attackFrom - 8) == chessBoard.getPassant(Global.COLOUR_WHITE)) {
-                temp = chessBoard.getPawnAttack(Global.COLOUR_WHITE, attackFrom - 8) & chessBoard.pieceBits[Global.COLOUR_BLACK][Global.PIECE_PAWN];
-                while (temp != 0) {
-                    fromBit = temp & -temp;
-                    temp ^= fromBit;
-                    int from = Long.numberOfTrailingZeros(fromBit);
-                    if (SEE.isPinned(side, attackFrom - 8, from)) {
-                        continue;
-                    }
-                    value = 100;
-                    moveOrder[index] = value;
-                    escapes[index++] = MoveFunctions.makeMove(attackFrom - 8, from, chessBoard.piece_in_square[from], -1, Global.EN_PASSANT_CAP);
-                }
+        if (chessBoard.piece_in_square[attackTo] % 6 == 5 && (attackTo + Global.forwardRank[side]) == chessBoard.getPassant(side^1)) 
+        {
+            long temp = chessBoard.getPawnAttack(side^1, attackTo + Global.forwardRank[side]) & chessBoard.pieceBits[side][Global.PIECE_PAWN];
+            while (temp != 0) {
+                int from = Long.numberOfTrailingZeros(temp);
+                temp ^= Global.set_Mask[from];
+                
+                moveOrder[index] = 1000;
+                escapes[index++] = MoveFunctions.makeMove(attackTo + Global.forwardRank[side], from, chessBoard.piece_in_square[from], -1, Global.EN_PASSANT_CAP);
             }
         }
-        //if attacking piece is a black pawn ( white moving )
-        if (chessBoard.piece_in_square[attackFrom] == 11) {
-            if ((attackFrom + 8) == chessBoard.getPassant(Global.COLOUR_BLACK)) {
-                temp = chessBoard.getPawnAttack(Global.COLOUR_BLACK, attackFrom + 8) & chessBoard.pieceBits[Global.COLOUR_WHITE][Global.PIECE_PAWN];
-                while (temp != 0) {
-                    fromBit = temp & -temp;
-                    temp ^= fromBit;
-                    int from = Long.numberOfTrailingZeros(fromBit);
-                    if (SEE.isPinned(side, attackFrom + 8, from)) {
-                        continue;
-                    }
-                    value = 100;
-                    moveOrder[index] = value;
-                    escapes[index++] = MoveFunctions.makeMove(attackFrom + 8, from, chessBoard.piece_in_square[from], -1, Global.EN_PASSANT_CAP);
-                }
-            }
-        }
-        //if one attacker is a slide piece, generate moves to block the sliding attack
-        if (!Global.slides[chessBoard.piece_in_square[attackFrom]]) {
+        
+        //if the attacker is a slide piece, generate moves to block the sliding attack
+        long target = Global.mask_between[kingPos][attackTo];    
+        
+        if (!Global.slides[chessBoard.piece_in_square[attackTo]] && target != 0) {
+            sortCaps(0, index, escapes);
             return index;
         }
 
-        long squares = 0;                                                           //intermediate squares between attacker and king
-        //need to get bitset of squares between attacker and king
-        int difference = kingPos - attackFrom;
-        int rankDiff = (kingPos >> 3) - (attackFrom >> 3);
-        if (difference < 0) {
-            rankDiff *= -1;
-        }
-        int relation = -1;
-        if (rankDiff != 0) {
-            relation = difference / rankDiff;
-        } else {
-            if (kingPos < attackFrom) {
-                relation = -99;
-            } else {
-                relation = 99;
-            }
-        }
-        switch (relation) {
-            case (-9):
-                squares = Global.plus9[kingPos] ^ Global.plus9[attackFrom - 9];// ^ Global.set_Mask[attackFrom];
-                break;
-            case (9):
-                squares = Global.plus9[attackFrom] ^ Global.plus9[kingPos - 9];// ^ Global.set_Mask[kingPos];
-                break;
-            case (-7):
-                squares = Global.plus7[kingPos] ^ Global.plus7[attackFrom - 7];// ^ Global.set_Mask[attackFrom];
-                break;
-            case (7):
-                squares = Global.plus7[attackFrom] ^ Global.plus7[kingPos - 7];// ^ Global.set_Mask[kingPos];
-                break;
-            case (-8):
-                squares = Global.plus8[kingPos] ^ Global.plus8[attackFrom - 8];// ^ Global.set_Mask[attackFrom];
-                break;
-            case (8):
-                squares = Global.plus8[attackFrom] ^ Global.plus8[kingPos - 8];//] ^ Global.set_Mask[kingPos];
-                break;
-            case (-99):
-                squares = Global.plus1[kingPos] ^ Global.plus1[attackFrom - 1];// ^ Global.set_Mask[attackFrom];
-                break;
-            case (99):
-                squares = Global.plus1[attackFrom] ^ Global.plus1[kingPos - 1];// ^ Global.set_Mask[kingPos];
-                break;
-        }   
-
-        //now generate all moves to the squares bit set to block the sliding check
-        while (squares != 0) {
-            long toBit = squares & -squares;
-            squares ^= toBit;
-            int to = Long.numberOfTrailingZeros(toBit);
-            long attackers = chessBoard.getMovesTo(to);
-            attackers &= (friends & ~king);
-            while (attackers != 0) {
-                type = Global.ORDINARY_MOVE;
-                fromBit = attackers & -attackers;
-                attackers ^= fromBit;
-                int from = Long.numberOfTrailingZeros(fromBit);
-                if( rookLoseCastle && chessBoard.piece_in_square[from] % 6 == 0 )
+        //lastly we need to generate moves to block a sliding attack
+        while (target != 0) {
+            int to = Long.numberOfTrailingZeros(target);
+            target ^= Global.set_Mask[to];
+            long friendMovers = chessBoard.getMovesTo(to) & chessBoard.pieceBits[side][Global.PIECE_ALL] & ~chessBoard.pieceBits[side][Global.PIECE_KING];
+            while (friendMovers != 0) {
+                int type = Global.ORDINARY_MOVE;
+                int from = Long.numberOfTrailingZeros(friendMovers);
+                friendMovers ^= Global.set_Mask[from];
+                
+                if( chessBoard.piece_in_square[from] % 6 == 0 && chessBoard.castleFlag[side] > Global.CASTLED ) {
                     type = Global.MOVE_ROOK_LOSE_CASTLE;
-                    if (SEE.isPinned(side, to, from)) {
-                        continue;
-                    }
-                    value =  -Global.values[chessBoard.piece_in_square[from]];
-                if (chessBoard.piece_in_square[from] == 5) {
-                    if (to > 55) {
+                }   
+                moveOrder[index] =  -Global.values[chessBoard.piece_in_square[from]];
+                
+                if (chessBoard.piece_in_square[from] % 6 == 5) {
+                    if (to < 8 || to > 55) {
                         if (PERFT_ENABLED) {
-                            moveOrder[index] = value;
+                            moveOrder[index] = -1000;
                             escapes[index++] = MoveFunctions.makeMove(to, from, chessBoard.piece_in_square[from], -1, Global.PROMO_N);
-                            moveOrder[index] = value;
+                            moveOrder[index] = -1000;
                             escapes[index++] = MoveFunctions.makeMove(to, from, chessBoard.piece_in_square[from], -1, Global.PROMO_R);
-                            moveOrder[index] = value;
+                            moveOrder[index] = -1000;
                             escapes[index++] = MoveFunctions.makeMove(to, from, chessBoard.piece_in_square[from], -1, Global.PROMO_B);
                         }
-                        value = -900;
+                        moveOrder[index] = -Global.values[Global.PIECE_QUEEN];
                         type = Global.PROMO_Q;
-                   } else if((to - from) == 16)   {
-                        type = Global.DOUBLE_PAWN;             //handle case where a double pawn move blocks the attack
-                   }
-                } else if (chessBoard.piece_in_square[from] == 11) {
-                    if (to < 8) {
-                        if (PERFT_ENABLED) {
-                            moveOrder[index] = value;
-                            escapes[index++] = MoveFunctions.makeMove(to, from, chessBoard.piece_in_square[from], -1, Global.PROMO_N);
-                            moveOrder[index] = value;
-                            escapes[index++] = MoveFunctions.makeMove(to, from, chessBoard.piece_in_square[from], -1, Global.PROMO_R);
-                            moveOrder[index] = value;
-                            escapes[index++] = MoveFunctions.makeMove(to, from, chessBoard.piece_in_square[from], -1, Global.PROMO_B);
-                        }
-                        value = -900;
-                        type = Global.PROMO_Q;
-                    } else if((from - to) == 16)   {
-                        type = Global.DOUBLE_PAWN;             //handle case where a double pawn move blocks the attack
+                    } 
+                    else if(Math.abs(to - from) == 16)   {
+                        type = Global.DOUBLE_PAWN;             
                     }
-                }
-                moveOrder[index] = value;
+                } 
                 escapes[index++] = MoveFunctions.makeMove(to, from, chessBoard.piece_in_square[from], -1, type);
             }
         }
         sortMoves(0, index, escapes);
         return index;
     }
-
-
+    
     /**
      * Method verifyHash
      *
@@ -1564,7 +1429,7 @@ public final class Engine {
         long temp;
         if (piece%6 == 5)
         { 
-            temp = chessBoard.getPawnMoves(side, from); 
+            temp = chessBoard.getPawnMovesNoAttack(side, from); 
         } else {
             temp = chessBoard.getAttackBoard(from);
         }
@@ -1611,8 +1476,9 @@ public final class Engine {
      */
     private int Max(int side, int depth, int alpha, int beta, boolean nMove, boolean isInCheck, boolean wasExtended, boolean iid) {
 
+       
         /*try {
-             buffWriter.write("max "+chessBoard.hashValue+" "+"alpha "+alpha+" beta "+beta+" isInCheck "+isInCheck+" null "+nMove);
+             buffWriter.write("max hash is"+chessBoard.hashValue+" "+"alpha "+alpha+" beta "+beta+" isInCheck "+isInCheck+" null is"+ nMove +" iid is "+iid+" extended is "+wasExtended+" \n");
         } catch (Exception ex2) {};
         */
        
@@ -1641,6 +1507,8 @@ public final class Engine {
             return nalpha;
         }
        
+        boolean bNodePV = alpha < beta -1;
+        
         /** score that a move must exceed to be searched during futility pruning */
         int scoreThreshold = chessBoard.GetMaterialScore(side);
        // int scoreThreshold = Evaluation2.getEval(side, -99999, 99999, thisDepth);
@@ -1681,18 +1549,6 @@ public final class Engine {
                 case (1):
                     if (!iid && HashTable.getDepth(key, index) >= depth) {
                         int hVal = HashTable.getValue(key, index);
-                       /*if(hVal == 0 )
-                        {
-                              int mv = HashTable.getMove(key, index);
-                              int reps = chessBoard.MakeMove(mv, true);
-                              chessBoard.UnMake(mv, true);
-                              if(reps >= 2)
-                              {
-                                      SavePV(TT_PV);
-                                      return 0;
-                              }
-                     }
-                    else*/ 
                         if (hVal > alpha && hVal < beta) {
                             SavePV(TT_PV);
                             nodes++;
@@ -1800,14 +1656,14 @@ public final class Engine {
         int noHash = 0;
         boolean drawPV = false;
    
-        boolean testCheck = !isInCheck;
+        boolean testCheck = false;
         
         while (state != SEARCH_END) {
 
             switch (state) {
                 case (SEARCH_HASH):
                     index = 0;
-                    testCheck = false;
+
                     int hashIndex = HashTable.hasHash(key);
                     if (hashIndex == 1 && depth > 3 && !isInCheck) {
                         thisDepth--;
@@ -1846,7 +1702,7 @@ public final class Engine {
                     nMove = false;       
                     break;
                 case (MATE_KILLER):
-                    testCheck = !isInCheck;
+                    testCheck = true;
                     if (isInCheck) {
                         state = SEARCH_END - 1;
                         index = getCheckEscapes(side, moveArr);
@@ -1870,15 +1726,13 @@ public final class Engine {
                     }
                     break;
                 case (GOOD_CAPTURES):
-                    testCheck = !isInCheck;
                     index = getCaptures(side, moveArr);                 
                     capIndex = index;
                     badCapIndex = index - 1; 
                     break;
                 case (KILLER_MOVES):
-                    testCheck = !isInCheck;
-                    index = 0;
-                    endIndex = 0;
+                    index = 126;
+                    endIndex = 126;
                     
                     if (MoveFunctions.getValue(killerMoves[thisDepth][1]) == 0 && verifyKiller(side, killerMoves[thisDepth][1])) {
                        if( (hashArr[0] & 16777215) != (killerMoves[thisDepth][1] & 16777215) && (hashArr[1] & 16777215) != (killerMoves[thisDepth][1] & 16777215 )) {
@@ -1895,18 +1749,16 @@ public final class Engine {
                     }
                     break;
                 case (NON_CAPS):
-                    testCheck = !isInCheck;
                     index = getMoves(side, moveArr, capIndex);
                     endIndex = capIndex;
                     break;
                 case (BAD_CAPS):
-                    testCheck = !isInCheck;
                     index = capIndex;
                     endIndex = badCapIndex + 1;
                break;
             }
             for (int i = index - 1; i >= endIndex; i--) {
-
+                
                 /*if(state == SEARCH_HASH) {
                 if(!verifyHash(side,moveArr[i])) {
                    System.out.println("info string crap move");
@@ -1915,7 +1767,6 @@ public final class Engine {
                 }*/
 
                 theMove = moveArr[i];
-                
                 
                 if( state == BAD_CAPS || state == NON_CAPS || state == GOOD_CAPTURES) {
                     boolean bDuplicate = false;
@@ -1929,6 +1780,12 @@ public final class Engine {
                     if( bDuplicate ) continue;
                 } 
                
+                /*if(testCheck && !chessBoard.CheckMove(side, theMove, checkinfo) )
+                {
+                    continue;
+                }*/
+                
+                
                 to = MoveFunctions.getTo(theMove);
                 from = MoveFunctions.getFrom(theMove);
                 piece = MoveFunctions.getPiece(theMove);
@@ -1936,9 +1793,9 @@ public final class Engine {
                 /** any captures which the static exchnage evaluator finds lose material
                  * get placed in the bad capture array and are tried later
                  */
-                if (state == GOOD_CAPTURES) {
+                /*if (state == GOOD_CAPTURES) {
                     int type = MoveFunctions.moveType(theMove);
-                    if( type < Global.PROMO_Q)
+                     if( type < Global.PROMO_Q)
                     {
                         if (Global.values[chessBoard.piece_in_square[to]] < Global.values[chessBoard.piece_in_square[from]]
                         && (SEE.GetSEE2(side, to, from, type, 0)) < 0) {
@@ -1951,10 +1808,47 @@ public final class Engine {
                         moveArr[badCapIndex--] = theMove;
                         continue;
                     }
-                }
-   
+                }*/
+                    
+                    
+                    
+                if (state == GOOD_CAPTURES) {
+                    int type = MoveFunctions.moveType(theMove);
+                    int initialGain = 0;
+                    if( type < Global.PROMO_Q) {
+                        initialGain = Global.values[chessBoard.piece_in_square[to]]- Global.values[chessBoard.piece_in_square[from]];
+                    } else if( type < Global.EN_PASSANT_CAP) {
+                        initialGain = Global.values[3] - Global.values[5];
+                    }
+                    
+                    /*int score1 = SEE.GetSEE2(side, to, from, type, 0);
+                    int score2 = SEE.GetSEE(side, to, from, type, 0);
+                    
+                    if( (score1 >= 0 && score2 < 0) || (score2 >= 0 && score1 < 0 ) )
+                    
+                    {
+                        SEE.GetSEE2(side, to, from, type, 0);
+                        SEE.GetSEE(side, to, from, type, 0);
+                        System.out.println("info string issue here");
+                    }*/
+                    
+                    if( initialGain < 0 && (SEE.GetSEE2(side, to, from, type, 0)) < 0)
+                    {
+                        moveArr[badCapIndex--] = theMove;
+                        //moveCount++;
+                        continue;
+                    }
+                }  
                 extendAmount = 0;
+                
+                //extend if this is a checking move
+                //boolean checkingMove = false;
 
+                /*if(chessBoard.MoveGivesCheck(side, theMove, checkinfo) )
+                {
+                    checkingMove = true;
+                    extendAmount++;
+                }*/
                 /* for(int m=0; m< playedMoveNo; m++) {
                     if( (theMove & 16777215) == (playedMoves[m] & 16777215))
                     {
@@ -1966,11 +1860,12 @@ public final class Engine {
                 /** make the move */
                 boolean draw = false;
                 
+            
                 int reps = chessBoard.MakeMove(theMove, true);
                 
                 if( reps >= 2)
                 {
-                    if(testCheck && inCheck(side))
+                    if(testCheck && inCheck(side) )
                     {
                         chessBoard.UnMake(theMove, true);
                         continue;
@@ -1978,10 +1873,11 @@ public final class Engine {
                     draw = true;
                     oneLegal = true;
                     value = 0;
+                    //moveCount++;
                 }
                 else
                 {
-                    if(testCheck && inCheck(side))
+                   if(testCheck && inCheck(side) )
                     {
                         chessBoard.UnMake(theMove, true);
                         continue;
@@ -1995,21 +1891,22 @@ public final class Engine {
                         checkingMove = true;
                         extendAmount++;
                     }
-
+                    
                     /** we have a legal move */
                     oneLegal = true;
-
-                    //passed pawn push extension
-                    boolean pawnExtension = false;
-                    if ((chessBoard.getTotalValue() < Global.totalValue * 0.4) && !checkingMove && !isInCheck && ((piece % 6) == 5 && ((to >> 3) == 6 || (to >> 3) == 1))) {	//extention for close to promotion
-                        pawnExtension = true;
-                        extendAmount++;
-                    }
 
                     //recognize moves involving passed pawns
                     //do not want to forward prune/lmr these moves
                     boolean passedPawnMove = false;
-                    if (piece % 6 == 5) {
+                    
+                    //passed pawn push extension
+                    boolean pawnExtension = false;
+                    if ((chessBoard.getTotalValue() < Global.totalValue * 0.4) && !checkingMove && !isInCheck && ((piece % 6) == 5 && ((to >> 3) == 6 || (to >> 3) == 1))) {	//extention for close to promotion
+                        pawnExtension = true;
+                        passedPawnMove = true;
+                        extendAmount++;
+                    }
+                    else if (piece % 6 == 5) {
                         passedPawnMove = Evaluation2.isPassedPawn(side, to);
                     }
 
@@ -2022,48 +1919,58 @@ public final class Engine {
                         if (scoreThreshold + futilityMargin <= alpha) {
                             numberOfSkippedNodesFP++;
                             chessBoard.UnMake(theMove, true);
+                            //moveCount++;
                             continue;
                         }
                     }
           
                     //late move reduction code
                     boolean lmr = false;
-                    if (state == NON_CAPS && ((alpha == beta - 1 && moveCount >= 4) || moveCount >= 15) && depth >= 2 && !passedPawnMove
-                           && !isInCheck && !checkingMove) {
+                    if (state == NON_CAPS && ((!bNodePV && moveCount >= 4) || moveCount >= 15) && depth >= 2 && !passedPawnMove
+                           && !isInCheck && !checkingMove ) {
                         extendAmount = -1;
                         lmr = true;
                     }
+                   
+                    /*else if( state == BAD_CAPS && depth >= 2 && !passedPawnMove && !isInCheck && !checkingMove) {
+                        if( depth > 5 )
+                            extendAmount = -2;
+                        else
+                            extendAmount = -1;
+                        lmr = true;
+                    }*/
+                    
                     int nextDepth = depth - 1 + extendAmount;
+                    
                     if (moveCount == 0) {
                         if (nextDepth > 0) {
-                            value = -Max(SwitchSide(side), depth - 1 + extendAmount, -beta, -alpha, nMove, checkingMove, isInCheck | pawnExtension, false);
+                            value = -Max(SwitchSide(side), depth - 1 + extendAmount, -beta, -alpha, nMove, checkingMove, checkingMove | pawnExtension, false);
                         } else {
                             value = -Quies(SwitchSide(side), 0, -beta, -alpha);
-                        }
-                        thisDepth--;
+                        }    
+			thisDepth--;
                     } else {
                         if (nextDepth > 0) {
-                            value = -Max(SwitchSide(side), depth - 1 + extendAmount, -alpha - 1, -alpha, nMove, checkingMove, isInCheck | pawnExtension, false);
+                            value = -Max(SwitchSide(side), depth - 1 + extendAmount, -alpha - 1, -alpha, nMove, checkingMove, checkingMove | pawnExtension, false);
                         } else {
                             value = -Quies(SwitchSide(side), 0, -alpha - 1, -alpha);
                         }
-                        thisDepth--;
+			thisDepth--;
                         if (value > alpha && value < beta) {
-                            if (lmr == true) {
-                                extendAmount = 0;
-                                nextDepth = depth - 1 + extendAmount;
+                            if (lmr) {
+                                nextDepth = depth - 1;
                             }
                             if (nextDepth > 0) {
-                                value = -Max(SwitchSide(side), nextDepth, -beta, -alpha, nMove, checkingMove, isInCheck | pawnExtension, false);
+                                value = -Max(SwitchSide(side), nextDepth, -beta, -alpha, nMove, checkingMove, checkingMove | pawnExtension, false);
                             } else {
                                 value = -Quies(SwitchSide(side), 0, -beta, -alpha);
                             }
                             thisDepth--;
                         } else if (value > alpha && lmr == true) {       //use normal depth if lmr move looks interesting
-                            if (depth - 1 > 0) {   
-                                value = -Max(SwitchSide(side), depth - 1, -beta, -alpha, nMove, false, false, false);
-                                thisDepth--;
-                            } 
+                              if (depth - 1 > 0) {   
+                                    value = -Max(SwitchSide(side), depth - 1, -beta, -alpha, nMove, false, false, false);
+                                    thisDepth--;                              
+                              } 
                         }
                     }
                 }
@@ -2190,7 +2097,8 @@ public final class Engine {
         int bValue = -Global.MATE_SCORE + thisDepth;
         int state = QUIES_CAPS;
         int testValue = 0;
-       
+        boolean oneLegal = false;
+        //Board.CheckInfo checkinfo = chessBoard.GetEmptyCheckInfo();
         if( depth > 0 && inCheck(side)) {
             state = QUIES_IN_CHECK;
         }
@@ -2226,12 +2134,12 @@ public final class Engine {
                 case( QUIES_IN_CHECK ): 
                     index = getCheckEscapes(side, capArr);
                     bValue = -(Global.MATE_SCORE - thisDepth);
-                    if (index == 0) {
+                    /*if (index == 0) {
                         if (bValue > alpha && bValue < beta) {
                             SavePV(MATE_PV);
                         }
                         return -Global.MATE_SCORE + thisDepth;
-                    }
+                    }*/
                 break;
             }
             
@@ -2239,6 +2147,7 @@ public final class Engine {
                 int to = MoveFunctions.getTo(capArr[i]);
                 int from = MoveFunctions.getFrom(capArr[i]);
                
+                //if( !chessBoard.CheckMove( side, capArr[i], checkinfo)) continue;
                 
                 if (state == QUIES_CAPS ) {
                     int type = MoveFunctions.moveType(capArr[i]);
@@ -2249,6 +2158,17 @@ public final class Engine {
                     } else if( type < Global.EN_PASSANT_CAP) {
                         initialGain = Global.values[3] - Global.values[5];
                     }
+                    /*int score1 = SEE.GetSEE2(side, to, from, type, neededScore);
+                    int score2 = SEE.GetSEE(side, to, from, type, neededScore);
+                    
+                    if( (score1 >= neededScore && score2 < neededScore) || (score2 >= neededScore && score1 < neededScore ) )
+                    {
+                    
+                    
+                        SEE.GetSEE2(side, to, from, type, neededScore);
+                        SEE.GetSEE(side, to, from, type, neededScore);
+                        System.out.println("info string issue here");
+                    }*/
                     
                     if( initialGain < neededScore && (SEE.GetSEE2(side, to, from, type, neededScore)) < neededScore)
                     {
@@ -2261,15 +2181,17 @@ public final class Engine {
                 {
                     if( IsCheckDangerous( capArr[i], side )) continue;
                 }
+               // boolean bChecking = chessBoard.MoveGivesCheck(side, capArr[i], checkinfo);
                 
                 chessBoard.MakeMove(capArr[i], false);	
                 
-                if( state != QUIES_IN_CHECK && inCheck(side)) {
+                if( inCheck(side)) {
                     chessBoard.UnMake(capArr[i], false);
                     continue;
                 }
+                oneLegal = true;
                 
-                value = -Quies(SwitchSide(side), depth + 1, -beta, -alpha);
+                value = -Quies(SwitchSide(side), depth + 1, -beta, -alpha);   
                 thisDepth--;
                 chessBoard.UnMake(capArr[i], false);
                 if (value > bValue) {
@@ -2282,10 +2204,21 @@ public final class Engine {
                     }
                 }
             }
+            
+            if( state == QUIES_IN_CHECK ) {
+                if( !oneLegal) {
+                    if (bValue > alpha && bValue < beta) {
+                            SavePV(MATE_PV);
+                    }
+                   return bValue;
+                }
+            }
             state++;
-            if( state == QUIES_IN_CHECK ) break;
+             if( state == QUIES_IN_CHECK ) break;
             //if( state == QUIES_CHECKING && depth >= 2) break;
         }
+        
+        
         
         if(alpha != oldAlpha)   {
             PV[thisDepth - 1][thisDepth - 1] = chessBoard.GetMoveAtDepth(thisDepth - 1);
@@ -2307,7 +2240,7 @@ public final class Engine {
     public void PerftTest(int depth) {
         perft = 0;
         long temp = System.currentTimeMillis();
-        PerftDebug(chessBoard.getTurn(), depth);
+        Perft(chessBoard.getTurn(), depth);
         long temp2 = System.currentTimeMillis();
         long time = temp2 - temp;
         System.out.println("Perft value is " + perft);
@@ -2348,13 +2281,13 @@ public final class Engine {
             int from = MoveFunctions.getFrom(moveArr[i]);
             int piece = MoveFunctions.getPiece(moveArr[i]);
 
-            if (!inCheck && inCheck(side)) {
+            if (inCheck(side)) {
                 chessBoard.UnMake(moveArr[i], false);
                 continue;
             }
             String output = HistoryWriter.getUCIMove(to, from, piece);
-            System.out.print(output);
-
+            //System.out.print(output);
+            System.out.print(" to is "+to+" from is "+from+" ");
             if (reps == 3) {
                 System.out.println("1");
                     continue;
@@ -2467,7 +2400,7 @@ public final class Engine {
         }
         for (int i = index - 1; i >= 0; i--) {
             chessBoard.MakeMove(moveArr[i], true);
-            if (!inCheck && inCheck(side)) {
+            if (inCheck(side)) {
                 chessBoard.UnMake(moveArr[i], true);
                 continue;
             }
