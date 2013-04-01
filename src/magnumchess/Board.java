@@ -205,7 +205,7 @@ public final class Board {
     private boolean reversable = true;
 
     /** variables used to store the current line of moves from the root of the search **/
-    private static final int[] arrCurrentMoves = new int[64];
+    private static final int[] arrCurrentMoves = new int[128];
     private int iCurrentMovesDepth;
 
     private Bitbase bitbase;
@@ -476,6 +476,12 @@ public final class Board {
                     
                 }
             }
+        }
+        
+        for( int i=0; i<64; i++)
+        {
+            Global.bishopMasks[i] = (Global.diag1Masks[Global.Diag1Groups[i]] | Global.diag2Masks[Global.Diag2Groups[i]]) ^ Global.set_Mask[i];
+            Global.rookMasks[i] = (Global.rankMasks[i/8] | Global.fileMasks[i%8]) ^ Global.set_Mask[i];
         }
     }
 
@@ -1422,10 +1428,11 @@ public final class Board {
     public  final boolean isAttacked(int side, int i) {
         int eSide = side ^ 1;
         return ((PawnAttackBoard[side][i] & pieceBits[eSide][Global.PIECE_PAWN] ) != 0L ||
+                (KnightMoveBoard[i] & pieceBits[eSide][Global.PIECE_KNIGHT] ) != 0L ||
+		(kingMoveTable[i] & pieceBits[eSide][Global.PIECE_KING] ) != 0L ||
 		(getMagicBishopMoves(i) & ( pieceBits[eSide][Global.PIECE_BISHOP] | pieceBits[eSide][Global.PIECE_QUEEN])) != 0L ||
-		(getMagicRookMoves(i) & ( pieceBits[eSide][Global.PIECE_ROOK] | pieceBits[eSide][Global.PIECE_QUEEN] )) != 0L ||
-		(KnightMoveBoard[i] & pieceBits[eSide][Global.PIECE_KNIGHT] ) != 0L ||
-		(kingMoveTable[i] & pieceBits[eSide][Global.PIECE_KING] ) != 0L);
+		(getMagicRookMoves(i) & ( pieceBits[eSide][Global.PIECE_ROOK] | pieceBits[eSide][Global.PIECE_QUEEN] )) != 0L );
+		
     }
     
     public final CheckInfo GetEmptyCheckInfo() {
@@ -1550,8 +1557,8 @@ public final class Board {
         long pinners = pieceBits[side^1][Global.PIECE_ALL];
         int kingSquare = pieceList[4 + 6 * side][0];
         
-        pinners &= (getMagicRookMoves(kingSquare, 0) & ( pieceBits[side^1][Global.PIECE_ROOK] | pieceBits[side^1][Global.PIECE_QUEEN]) )
-                | (getMagicBishopMoves(kingSquare, 0) & ( pieceBits[side^1][Global.PIECE_BISHOP] | pieceBits[side^1][Global.PIECE_QUEEN]) ); 
+        pinners &= ((getMagicRookMoves(kingSquare, 0) & ( pieceBits[side^1][Global.PIECE_ROOK] | pieceBits[side^1][Global.PIECE_QUEEN]) )
+                | (getMagicBishopMoves(kingSquare, 0) & ( pieceBits[side^1][Global.PIECE_BISHOP] | pieceBits[side^1][Global.PIECE_QUEEN]) ) ); 
     
         while( pinners != 0 )
         {
@@ -1604,6 +1611,14 @@ public final class Board {
         return PawnAttackBoard[side][index];
     }
     
+     public  final long getPawnMovesNoAttack(int side, int index) {   //get White Pawn Moves Based on index of pawn
+        long moves = PawnMoveBoard[side][index];
+        if( piece_in_square[index + Global.forwardRank[side]] != -1 )//bitboard & Global.set_Mask[index + Global.forwardRank[side]]) != 0)
+            moves = 0;
+        else if( Global.RelativeRanks[side][index/8] == 1 && piece_in_square[index + 2 * Global.forwardRank[side]] != -1)
+            moves = Global.set_Mask[index + Global.forwardRank[side]];
+        return moves;
+     }
     /***********************************************************************		
             Name:		getPawnMoves
             Parameters:	int

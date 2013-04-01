@@ -70,7 +70,7 @@ abstract class Global {
     public static final String pieces[]= new String[] {"wRook","wKnight","wBishop","wQueen","wKing","wPawn",
 													"bRook","bKnight","bBishop","bQueen","bKing","bPawn"};
     /** material values for each piece */
-	 public static final int values[] = new int[] {753,454,515,1421,2000,132,753,454,515,1421,2000,132};
+	 public static final int values[] = new int[] {753,454,515,1421,20000,132,753,454,515,1421,20000,132};
 
     public static int totalValue;
 
@@ -147,7 +147,10 @@ abstract class Global {
 	public static final long[] diag2Masks = new long[15];
 	public static final long[] fileMasks = new long[8];		//used to isolate all pieces on a rank
 	public static final long[] rankMasks = new long[8];
-	//public static final long[][] passedPawnMasks = new long[2][64];          //passed pawn masks for white
+	
+        public static final long[] bishopMasks = new long[64];
+        public static final long[] rookMasks = new long[64];
+        //public static final long[][] passedPawnMasks = new long[2][64];          //passed pawn masks for white
 	//public static final long[] blackPassedPawnMasks = new long[64];          //passed pawn masks for black
 
 	public static final long[] wRookTrap = new long[] {0x303L, 0xC0C0L};

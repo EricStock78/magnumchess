@@ -1,8 +1,5 @@
 package magnumchess;
 
-
-import magnumchess.Board;
-import magnumchess.Bitbase;
 import java.util.Arrays;
 
 /**

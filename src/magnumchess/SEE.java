@@ -1,8 +1,5 @@
 package magnumchess;
 
-
-import magnumchess.Board;
-
 /**
  * SEE.java
  *
@@ -58,116 +55,44 @@ public class SEE {
      * @param from - the square moved from
      */
     public static boolean isPinned(int side, int to, int from) {
-    	int relation;
-    	
-    	long king = Board.pieceBits[side][Global.PIECE_KING];
-		long enemies = Board.pieceBits[side ^ 1][Global.PIECE_ALL];
+        int king = Board.pieceList[Global.PIECE_KING + side * 6][0];
+        long queenMoves = Board.getMagicRookMoves(king) | Board.getMagicBishopMoves(king);
+        if( (queenMoves & (1L << from)) != 0 ) {
+            long queenMovesUncovered = Board.getMagicRookMoves(king, Board.bitboard ^ (1L << from) | (1L << to)) | Board.getMagicBishopMoves(king, Board.bitboard ^ (1L << from) | (1L << to));
+            long uncovered = queenMovesUncovered & ~queenMoves;
+            uncovered &= (Board.pieceBits[side^1][Global.PIECE_ALL] & Board.bitboard);
+            //uncovered &= (Board.pieceBits[side^1][Global.PIECE_ALL]);
+            if( uncovered != 0)
+            {
+                int pos = Long.numberOfTrailingZeros(uncovered);
+                int piece = Board.piece_in_square[pos]%6;
+                if( pos/8 == king/8 || pos%8 == king%8) {
+                    if(  piece == 0 || piece == 3 ) {
+                        return true;
+                    }
+                }
+                else if(  piece == 2 || piece == 3 ) {
+                    return true;
+                }
+                return false;
+            }
+            else {
+                return false;
+            }
+        }
+        else
+        {
+            return false;
+        }
+    }   
 
-    	int kingPos = Long.numberOfTrailingZeros(king);
-    	
-    	if(kingPos == from) {
-    	
-    		return false;	
-    	}
-      enemies &= ( Board.pieceBits[side ^ 1][Global.PIECE_QUEEN] | Board.pieceBits[side ^ 1][Global.PIECE_BISHOP] | Board.pieceBits[side ^ 1][Global.PIECE_ROOK] );
-	
-    	int difference = kingPos - from;
-    	int rankDifference = (kingPos >> 3) - (from >> 3);
-    	if(difference < 0)
-    		rankDifference *= -1;
-    	if(rankDifference != 0) {
-    		if((difference % rankDifference) != 0) return false;
-    		relation = difference / rankDifference;
-    	
-    	} else  {
-    		if(kingPos < from)
-    			relation = -99;
-    		else
-    			relation = 99;		
-    	}
-      long temp;
-    	int nextPos;
-    	switch(relation) {
-    		case(-9):	
-    			if(Global.Diag2Groups[from] == Global.Diag2Groups[to]) return false;
-    			
-    			temp = Board.bitboard & Global.plus9[kingPos];
-    			temp &= -temp;
-    			nextPos = Long.numberOfTrailingZeros(temp);
-    			if(nextPos < from) return false;
-    			if((Board.getAttack2(from) & enemies & Global.diag2Masks[Global.Diag2Groups[from]]) == 0) return false;
-    			return true;
-    		case(9):
-    			if(Global.Diag2Groups[from] == Global.Diag2Groups[to]) return false;
-    			
-    			temp = Board.bitboard & Global.plus9[from];
-    			temp &= -temp;
-    			nextPos = Long.numberOfTrailingZeros(temp);
-    			if(nextPos < kingPos) return false;
-    			if((Board.getAttack2(from) & enemies & Global.diag2Masks[Global.Diag2Groups[from]]) == 0) return false;
-    			return true;
-    		case(-7):
-    			if(Global.Diag1Groups[from] == Global.Diag1Groups[to]) return false;
-    			
-    			temp = Board.bitboard & Global.plus7[kingPos];
-    			temp &= -temp;
-    			nextPos = Long.numberOfTrailingZeros(temp);
-    			if(nextPos < from) return false;
-    			if((Board.getAttack2(from) & enemies & Global.diag1Masks[Global.Diag1Groups[from]]) == 0) return false;
-    			return true;
-    		case(7):
-    			if(Global.Diag1Groups[from] == Global.Diag1Groups[to]) return false;
-    			temp = Board.bitboard & Global.plus7[from];
-    			temp &= -temp;
-    			nextPos = Long.numberOfTrailingZeros(temp);
-    			if(nextPos < kingPos) return false;
-    			if((Board.getAttack2(from) & enemies & Global.diag1Masks[Global.Diag1Groups[from]]) == 0) return false;
-    			return true;	
-    		case(-8):
-    			if((from & 7) == (to & 7)) return false;
-    			temp = Board.bitboard & Global.plus8[kingPos];
-    			temp &= -temp;
-    			nextPos = Long.numberOfTrailingZeros(temp);
-    			if(nextPos < from) return false;
-    			if((Board.getAttack2(from) & enemies & Global.fileMasks[from&7]) == 0) return false;
-    			return true;			
-    		case(8):
-    			if((from & 7) == (to & 7)) return false;
-    			temp = Board.bitboard & Global.plus8[from];
-    			temp &= -temp;
-    			nextPos = Long.numberOfTrailingZeros(temp);
-    			if(nextPos < kingPos) return false;
-    			if((Board.getAttack2(from) & enemies & Global.fileMasks[from&7]) == 0) return false;
-    			return true;
-    		case(-99):
-    			if((from >> 3) == (to >> 3)) return false;
-    			temp = Board.bitboard & Global.plus1[kingPos];
-    			temp &= -temp;
-    			nextPos = Long.numberOfTrailingZeros(temp);
-    			if(nextPos < from) return false;
-    			if((Board.getAttack2(from) & enemies & Global.rankMasks[from>>3]) == 0) return false;
-    			return true;	
- 			case(99):
- 				if((from >> 3) == (to >> 3)) return false;
-    			temp = Board.bitboard & Global.plus1[from];
-    			temp &= -temp;
-    			nextPos = Long.numberOfTrailingZeros(temp);
-    			if(nextPos < kingPos) return false;
-    			if((Board.getAttack2(from) & enemies & Global.rankMasks[from>>3]) == 0) return false;
-    			return true;
- 				
-    	}
-    	return false;
-    	
-    }
-    
     /** 
      * Method getSEE
      * 
      *
      * performs the static exchange evaluation of proposed capture
      * Takes into consideration hidden pieces behind pieces making a capture
-     * Performs the alpha-beta algorithm 
+     * Performs the test algorithm 
      *
      * @param param side - the side on move
      * @param to - the square to move to
@@ -175,13 +100,353 @@ public class SEE {
      * 
      */
 
-	 public static int GetSEE2(int side, int to, int from, int moveType, int test)
-	 {
-		//System.out.println("to is "+to);
- 		//System.out.println("from is "+from);
+    public static int GetSEE2(int side, int to, int from, int moveType, int test)
+    {
+        long origPieces = Board.bitboard;   //used to restore board
+        int capPiece = Board.piece_in_square[to];
+        int captured = Board.piece_in_square[from];
+        int gain = capPiece == -1 ? 0 : Global.values[capPiece];
+        switch( moveType ) {
+            case(Global.EN_PASSANT_CAP):
+                Board.bitboard ^= side == Global.COLOUR_WHITE ? Global.set_Mask[to-8] : Global.set_Mask[to+8];
+                gain = Global.values[Global.PIECE_PAWN];
+            break;
+            case(Global.LONG_CASTLE):
+                return 0;
+            case(Global.SHORT_CASTLE):
+                return 0;
+            case( Global.PROMO_Q ):
+                captured = Global.PIECE_QUEEN;
+                gain += Global.values[Global.PIECE_QUEEN] - Global.values[Global.PIECE_PAWN];
+            break;
+        }
+        
+        if(gain < test)
+        {
+            Board.bitboard = origPieces;
+            return gain;
+        }
+        
+        Board.bitboard ^= Global.set_Mask[from];
+        long attack = Board.getAttack2(to) & Board.bitboard;
+        long stmAttacks = attack & Board.pieceBits[side^1][Global.PIECE_ALL];
+        if( stmAttacks == 0 )
+        {
+            Board.bitboard = origPieces;
+            return gain;
+        }
+        
+        int[] swapList = new int[32];
+        int swapIndex = 1;
+        int stm = side ^ 1;
+        swapList[0] = gain;
+        //long[] pins = new long[2];
+        //int ourBest = -20000;
+        //int theirBest = -gain;
+        do
+        {
+            int oldCaptured = captured;
+            captured = -1;
+            do{
+                
+                long bits = stmAttacks & Board.pieceBits[stm][Global.PIECE_PAWN];             
+                while( bits != 0 )
+                { 
+                    if( !isPinned( stm, to, Long.numberOfTrailingZeros(bits))) {
+                        captured = Global.PIECE_PAWN;
+                        Board.bitboard ^= (bits & -bits);
+                        attack |= Board.getMagicBishopMoves(to) & (Board.pieceBits[0][Global.PIECE_BISHOP] | Board.pieceBits[1][Global.PIECE_BISHOP] |
+                            Board.pieceBits[0][Global.PIECE_QUEEN] | Board.pieceBits[1][Global.PIECE_QUEEN] );
+                        break;
+                    }
+                    
+                    bits ^= (bits & -bits);
+                }
+                if( captured != -1) break;
+                
+                bits = stmAttacks & Board.pieceBits[stm][Global.PIECE_KNIGHT];
+                while( bits != 0 )
+                { 
+                    if( !isPinned( stm, to, Long.numberOfTrailingZeros(bits))) {
+                        captured = Global.PIECE_KNIGHT;
+                        Board.bitboard ^= (bits & -bits);
+                        break;
+                    }
+                    bits ^= (bits & -bits);
+                }
+                
+                if( captured != -1) break;
+                
+                bits = stmAttacks & Board.pieceBits[stm][Global.PIECE_BISHOP];
+                if( bits != 0 )
+                {  
+                     if( !isPinned( stm, to, Long.numberOfTrailingZeros(bits))) {
+                         captured = Global.PIECE_BISHOP;
+                         Board.bitboard ^= (bits & -bits);
+                         attack |= Board.getMagicBishopMoves(to) & (Board.pieceBits[0][Global.PIECE_BISHOP] | Board.pieceBits[1][Global.PIECE_BISHOP] |
+                             Board.pieceBits[0][Global.PIECE_QUEEN] | Board.pieceBits[1][Global.PIECE_QUEEN] );
+                         break;
+                     }
+                }
+               
+                bits = stmAttacks & Board.pieceBits[stm][Global.PIECE_ROOK];
+                while( bits != 0 )
+                { 
+                    if( !isPinned( stm, to, Long.numberOfTrailingZeros(bits))) {
+                        captured = Global.PIECE_ROOK;
+                        Board.bitboard ^= (bits & -bits);
+                        attack |= Board.getMagicRookMoves(to) & (Board.pieceBits[0][Global.PIECE_ROOK] | Board.pieceBits[1][Global.PIECE_ROOK] |
+                           Board.pieceBits[0][Global.PIECE_QUEEN] | Board.pieceBits[1][Global.PIECE_QUEEN] );
+                        break;
+                    }
+                    bits ^= (bits & -bits);
+                }
+                
+                if( captured != -1) break;
+                
+                bits = stmAttacks & Board.pieceBits[stm][Global.PIECE_QUEEN];
+                while( bits != 0 )
+                {  
+                    if( !isPinned( stm, to, Long.numberOfTrailingZeros(bits))) {
+                        captured = Global.PIECE_QUEEN; 
+                        Board.bitboard ^= (bits & -bits);
+                         attack |= Board.getMagicBishopMoves(to) & (Board.pieceBits[0][Global.PIECE_BISHOP] | Board.pieceBits[1][Global.PIECE_BISHOP] |
+                                Board.pieceBits[0][Global.PIECE_QUEEN] | Board.pieceBits[1][Global.PIECE_QUEEN] );
+                         attack |= Board.getMagicRookMoves(to) & (Board.pieceBits[0][Global.PIECE_ROOK] | Board.pieceBits[1][Global.PIECE_ROOK] |
+                                Board.pieceBits[0][Global.PIECE_QUEEN] | Board.pieceBits[1][Global.PIECE_QUEEN] );
+                         break;
+                    }
+                    bits ^= (bits & -bits);
+                }
+                
+                if( captured != -1) break;
+                
+                bits = stmAttacks & Board.pieceBits[stm][Global.PIECE_KING];
+                if( bits != 0 )
+                { 
+                   // no need to find attackers behind for king as it might mean king was in check or we can recapture after losing king...both don't make sense
+                   captured = Global.PIECE_KING;
+                   Board.bitboard ^= (bits & -bits);
+                   break;
+                }
+            } while(false);
+            
+            if( captured == -1) {
+                break;
+            }
+            
+            swapList[swapIndex] = -swapList[swapIndex-1] + Global.values[oldCaptured];
+            
+            // see if we can exit out due to test algorithm 
+            if( side == stm ) {
+                //theirBest = Math.max( theirBest, -swapList[swapIndex] );
+                
+                if(swapList[swapIndex] < test ) {
+                    Board.bitboard = origPieces;
+                    return swapList[swapIndex];
+                }
+            }
+            else if( side != stm ) {
+                //ourBest = Math.max( ourBest, -swapList[swapIndex] );
+                if( -swapList[swapIndex] >= test ) {
+                    Board.bitboard = origPieces;
+                    return -swapList[swapIndex];
+                }
+            }
+            
+            swapIndex++;
+            
+            stm = stm ^ 1;
+            stmAttacks = attack & Board.pieceBits[stm][Global.PIECE_ALL] & Board.bitboard;// & ~pins[stm];
+            
+        } while( stmAttacks != 0 );
+        
+        /*if( stm == side) {
+           theirBest = Math.max( theirBest, swapList[swapIndex-1] ); 
+        }
+        else {
+           ourBest = Math.max( ourBest, -swapList[swapIndex-1] );
+        }*/
+        
+        while (--swapIndex > 0) {
+            swapList[swapIndex-1] = Math.min(-swapList[swapIndex], swapList[swapIndex-1]);
+        }
+        
+        Board.bitboard = origPieces;
+        //return Math.max(ourBest, -theirBest);
+        
+        return swapList[0];
+    }
+    
+    
+     /** 
+     * Method getSEE
+     * 
+     *
+     * performs the static exchange evaluation of proposed capture
+     * Takes into consideration hidden pieces behind pieces making a capture
+     * Performs the test algorithm 
+     *
+     * @param param side - the side on move
+     * @param to - the square to move to
+     * @param from - the square moved from
+     * 
+     */
 
-		//int friendSide = Board.piece_in_square[from] /6;
-		int enemySide = side^1;
+    public static int GetSEE3(int side, int to, int from, int moveType, int test)
+    {
+        long origPieces = Board.bitboard;   //used to restore board
+        int capPiece = Board.piece_in_square[to];
+        int captured = Board.piece_in_square[from];
+        int gain = capPiece == -1 ? 0 : Global.values[capPiece];
+        switch( moveType ) {
+            case(Global.EN_PASSANT_CAP):
+                Board.bitboard ^= side == Global.COLOUR_WHITE ? Global.set_Mask[to-8] : Global.set_Mask[to+8];
+                gain = Global.values[Global.PIECE_PAWN];
+            break;
+            case(Global.LONG_CASTLE):
+                return 0;
+            case(Global.SHORT_CASTLE):
+                return 0;
+            case( Global.PROMO_Q ):
+                captured = Global.PIECE_QUEEN;
+                gain += Global.values[Global.PIECE_QUEEN] - Global.values[Global.PIECE_PAWN];
+            break;
+        }
+        
+        if(gain < test)
+        {
+            Board.bitboard = origPieces;
+            return gain;
+        }
+        
+        Board.bitboard ^= Global.set_Mask[from];
+        long attack = Board.getAttack2(to) & Board.bitboard;
+        long stmAttacks = attack & Board.pieceBits[side^1][Global.PIECE_ALL];
+        if( stmAttacks == 0 )
+        {
+            Board.bitboard = origPieces;
+            return gain;
+        }
+        
+        int[] swapList = new int[32];
+        int swapIndex = 1;
+        int stm = side ^ 1;
+        swapList[0] = gain;
+        //int ourBest = -20000;
+        //int theirBest = -gain;
+        do
+        {
+            swapList[swapIndex] = -swapList[swapIndex-1] + Global.values[captured];
+            
+            // see if we can exit out due to test algorithm 
+            if( side == stm ) {
+                //theirBest = Math.max( theirBest, -swapList[swapIndex] );
+                if(swapList[swapIndex] < test ) {
+                    Board.bitboard = origPieces;
+                    return swapList[swapIndex];
+                }
+            }
+            else if( side != stm ) {
+                //ourBest = Math.max( ourBest, -swapList[swapIndex] );
+                if( -swapList[swapIndex] >= test ) {
+                    Board.bitboard = origPieces;
+                    return -swapList[swapIndex];
+                }
+            }
+            
+            if( (stmAttacks & Board.pieceBits[stm][Global.PIECE_PAWN]) != 0 )
+            {
+                long bits = stmAttacks & Board.pieceBits[stm][Global.PIECE_PAWN];
+                captured = Global.PIECE_PAWN;
+                Board.bitboard ^= (bits & -bits);
+                attack |= Board.getMagicBishopMoves(to) & (Board.pieceBits[0][Global.PIECE_BISHOP] | Board.pieceBits[1][Global.PIECE_BISHOP] |
+                    Board.pieceBits[0][Global.PIECE_QUEEN] | Board.pieceBits[1][Global.PIECE_QUEEN] );
+            }
+            else if( (stmAttacks & Board.pieceBits[stm][Global.PIECE_KNIGHT]) != 0 )
+            {
+                long bits = stmAttacks & Board.pieceBits[stm][Global.PIECE_KNIGHT];
+                captured = Global.PIECE_KNIGHT;
+                Board.bitboard ^= (bits & -bits);
+            }
+            else if( (stmAttacks & Board.pieceBits[stm][Global.PIECE_BISHOP]) != 0 )
+            {
+                long bits = stmAttacks & Board.pieceBits[stm][Global.PIECE_BISHOP]; 
+                captured = Global.PIECE_BISHOP;
+                Board.bitboard ^= (bits & -bits);
+                attack |= Board.getMagicBishopMoves(to) & (Board.pieceBits[0][Global.PIECE_BISHOP] | Board.pieceBits[1][Global.PIECE_BISHOP] |
+                    Board.pieceBits[0][Global.PIECE_QUEEN] | Board.pieceBits[1][Global.PIECE_QUEEN] );
+            }
+            else if( (stmAttacks & Board.pieceBits[stm][Global.PIECE_ROOK]) != 0 )
+            {
+                long bits = stmAttacks & Board.pieceBits[stm][Global.PIECE_ROOK];
+                captured = Global.PIECE_ROOK;
+                Board.bitboard ^= (bits & -bits);
+                attack |= Board.getMagicRookMoves(to) & (Board.pieceBits[0][Global.PIECE_ROOK] | Board.pieceBits[1][Global.PIECE_ROOK] |
+                   Board.pieceBits[0][Global.PIECE_QUEEN] | Board.pieceBits[1][Global.PIECE_QUEEN] );
+            }
+            else if( (stmAttacks & Board.pieceBits[stm][Global.PIECE_QUEEN]) != 0 )
+            {
+                long bits = stmAttacks & Board.pieceBits[stm][Global.PIECE_QUEEN];
+                captured = Global.PIECE_QUEEN; 
+                Board.bitboard ^= (bits & -bits);
+                 attack |= Board.getMagicBishopMoves(to) & (Board.pieceBits[0][Global.PIECE_BISHOP] | Board.pieceBits[1][Global.PIECE_BISHOP] |
+                        Board.pieceBits[0][Global.PIECE_QUEEN] | Board.pieceBits[1][Global.PIECE_QUEEN] );
+                 attack |= Board.getMagicRookMoves(to) & (Board.pieceBits[0][Global.PIECE_ROOK] | Board.pieceBits[1][Global.PIECE_ROOK] |
+                        Board.pieceBits[0][Global.PIECE_QUEEN] | Board.pieceBits[1][Global.PIECE_QUEEN] );
+            }
+            else if( (stmAttacks & Board.pieceBits[stm][Global.PIECE_KING]) != 0 )
+            {
+               // no need to find attackers behind for king as it might mean king was in check or we can recapture after losing king...both don't make sense
+               captured = Global.PIECE_KING;
+               long bits = stmAttacks & Board.pieceBits[stm][Global.PIECE_KING];
+               Board.bitboard ^= (bits & -bits);
+            }
+            
+            swapIndex++;
+            
+            stm = stm ^ 1;
+            stmAttacks = attack & Board.pieceBits[stm][Global.PIECE_ALL] & Board.bitboard;
+            
+        } while( stmAttacks != 0 );
+        
+        /*if( stm == side) {
+           theirBest = Math.max( theirBest, swapList[swapIndex-1] ); 
+        }
+        else {
+           ourBest = Math.max( ourBest, -swapList[swapIndex-1] );
+        }*/
+        
+        while (--swapIndex > 0) {
+            swapList[swapIndex-1] = Math.min(-swapList[swapIndex], swapList[swapIndex-1]);
+        }
+        
+        Board.bitboard = origPieces;
+        //return Math.max(ourBest, -theirBest);
+        
+        return swapList[0];
+    }
+    
+    
+    
+    /** 
+     * Method getSEE
+     * 
+     *
+     * performs the static exchange evaluation of proposed capture
+     * Takes into consideration hidden pieces behind pieces making a capture
+     * Performs the test algorithm 
+     *
+     * @param param side - the side on move
+     * @param to - the square to move to
+     * @param from - the square moved from
+     * 
+     */
+
+	 public static int GetSEE(int side, int to, int from, int moveType, int test)
+	 {
+		
+                int enemySide = side^1;
 		int[][] arrPieces = new int[2][10];
  		int arrPieceCount[] = new int[2];
 		int tempVal;
