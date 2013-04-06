@@ -28,7 +28,7 @@ import java.util.Arrays;
 import java.io.InputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
-
+//import java.util.Random;
 
 /**
  * Board.java - This class follows the singleton design pattern
@@ -142,7 +142,7 @@ public final class Board {
 	
     /** 64 bit represent the hash code for each position*/
     public long hashValue;
-
+    public long excludedHash;   //used to modify hash table for storing and retrieving results from excluded move searches
     /** hash values for all 12 pieces on all 64 squares
      * note this is optimized for 32 bit computers
      */
@@ -226,6 +226,7 @@ public final class Board {
 
     private Board()
     {
+        //Random rand = new Random();
         initQueenDist();
         initRookDist();
         InitializeDataFromFile();
@@ -234,6 +235,8 @@ public final class Board {
         lastReversableMove[0] = 1;
         lastReversableMove[1] = 1;
         InitializeMaterialArray();
+        
+        //excludedHash = rand.nextLong() & Long.MAX_VALUE;
     }
 	
     private void InitializeDataFromFile()
@@ -1468,7 +1471,7 @@ public final class Board {
         int from = MoveFunctions.getFrom( move );
         int to = MoveFunctions.getTo( move );
         int type = MoveFunctions.moveType( move );
-        int piece = MoveFunctions.getPiece( move ) % 6;
+        int piece = piece_in_square[move&63]%6;
         int enemyKing = pieceList[Global.PIECE_KING + (side^1) * 6][0];
         if( (info.checkSquares[piece] & 1L << to) != 0 ) {
             return true;
@@ -1524,7 +1527,7 @@ public final class Board {
         int to = MoveFunctions.getTo( move );
         int type = MoveFunctions.moveType( move );
         int king = pieceList[4 + side*6][0];
-        int piece = MoveFunctions.getPiece( move );
+        int piece = piece_in_square[from];
         
         if( type == Global.EN_PASSANT_CAP ) {
             int enemyPawnPush = side == Global.COLOUR_WHITE ? -8 : 8;
@@ -1890,14 +1893,16 @@ public final class Board {
 
         int to = (move >> 6) & 63;
         int from = move & 63;
-        int type = (move >> 20) & 15;
+        int type = (move >> 12) & 15;
 
         arrCurrentMoves[iCurrentMovesDepth] = move;
         iCurrentMovesDepth++;
 
         hashHistory[moveCount] = hashValue;
 
-        flagHistory[moveCount] = (passant[Global.COLOUR_WHITE]) | (passant[Global.COLOUR_BLACK]) << 6 | castleFlag[Global.COLOUR_WHITE] << 12 | castleFlag[Global.COLOUR_BLACK] << 15 | turn << 18;
+        flagHistory[moveCount] = (passant[Global.COLOUR_WHITE]) | (passant[Global.COLOUR_BLACK]) << 6 
+                | castleFlag[Global.COLOUR_WHITE] << 12 | castleFlag[Global.COLOUR_BLACK] << 15 
+                | turn << 18 | (piece_in_square[to] + 1) << 19;
 
         moveCount++;
 
@@ -1911,19 +1916,15 @@ public final class Board {
 
             case(Global.ORDINARY_MOVE):
             {
-                int thePiece = ((move>>12) & 15);
-                if(thePiece % 6 == 5)
-                    reversable = false;
-                else
-                    reversable = true;
+                reversable = piece_in_square[from] % 6 != 5;
             }
             break;
 
             case(Global.ORDINARY_CAPTURE):
             {
                 reversable = false;
-                clearBoard(to);
-                hashValue ^= pHash[to][((move>>16) & 15) - 1];
+                hashValue ^= pHash[to][piece_in_square[to]];
+                clearBoard(to); 
             }
             break;
 
@@ -1960,13 +1961,13 @@ public final class Board {
 
             case(Global.PROMO_Q):
             {
-                int thePiece = ((move>>12) & 15);
+                int thePiece =  piece_in_square[from];
                 reversable = false;
                 clearBoard(from);
                 hashValue ^= pHash[from][thePiece];
                 setBoard(from, thePiece-2);
                 hashValue ^= pHash[from][thePiece-2];
-                int cP = ((move>>16) & 15) - 1;
+                int cP = piece_in_square[to];
                 if(cP != -1) {
                     UpdateCastleFlags(thePiece, to , from);
                     clearBoard(to);
@@ -1978,13 +1979,13 @@ public final class Board {
 
             case(Global.PROMO_N):
             {
-                int thePiece = ((move>>12) & 15);
+                int thePiece =  piece_in_square[from];
                 reversable = false;
                 clearBoard(from);
                 hashValue ^= pHash[from][thePiece];
                 setBoard(from, thePiece-4);
                 hashValue ^= pHash[from][thePiece-4];
-                int cP = ((move>>16) & 15) - 1;
+                int cP = piece_in_square[to];
                 if(cP != -1) {
                     UpdateCastleFlags(thePiece, to , from);
                     clearBoard(to);
@@ -1994,13 +1995,13 @@ public final class Board {
             break;
             case(Global.PROMO_R):
             {
-                int thePiece = ((move>>12) & 15);
+                int thePiece =  piece_in_square[from];
                 reversable = false;
                 clearBoard(from);
                 hashValue ^= pHash[from][thePiece];
                 setBoard(from, thePiece-5);
                 hashValue ^= pHash[from][thePiece-5];
-                int cP = ((move>>16) & 15) - 1;
+                int cP = piece_in_square[to];
                 if(cP != -1) {
                     UpdateCastleFlags(thePiece, to , from);
                     clearBoard(to);
@@ -2010,13 +2011,13 @@ public final class Board {
             break;
             case(Global.PROMO_B):
             {
-                int thePiece = ((move>>12) & 15);
+                int thePiece =  piece_in_square[from];
                 reversable = false;
                 clearBoard(from);
                 hashValue ^= pHash[from][thePiece];
                 setBoard(from, thePiece-3);
                 hashValue ^= pHash[from][thePiece-3];
-                int cP = ((move>>16) & 15) - 1;
+               int cP = piece_in_square[to];
                 if(cP != -1) {
                     UpdateCastleFlags(thePiece, to , from);
                     clearBoard(to);
@@ -2041,7 +2042,7 @@ public final class Board {
                 castleFlag[turn] = Global.NO_CASTLE;
                 hashValue ^= CastleHash[turn][castleFlag[turn]];
                
-                int cP = ((move>>16) & 15) - 1;
+                int cP = piece_in_square[to];
                 if(cP != -1)
                 {
                     clearBoard(to);
@@ -2052,20 +2053,20 @@ public final class Board {
 
             case(Global.CAPTURE_ROOK_LOSE_CASTLE):
             {
-                int thePiece = ((move>>12) & 15);
+                int thePiece =  piece_in_square[from];
                 UpdateCastleFlags(thePiece, to , from);
                 reversable = false;
+                hashValue ^= pHash[to][piece_in_square[to]];
                 clearBoard(to);
-                hashValue ^= pHash[to][((move>>16) & 15) - 1];
             }
             break;
 
             case(Global.MOVE_ROOK_LOSE_CASTLE):
             {
-                int thePiece = ((move>>12) & 15);
+                int thePiece =  piece_in_square[from];
                 reversable = false;
                 UpdateCastleFlags(thePiece, to , from);
-                int cP = ((move>>16) & 15) - 1;
+                int cP = piece_in_square[to];
                 if(cP != -1)
                 {
                     clearBoard(to);
@@ -2184,21 +2185,21 @@ public final class Board {
         if(board)
             zorbistDepth--;	
         moveCount--;
-        turn = (flagHistory[moveCount] >> 18);
+        turn = (flagHistory[moveCount] >> 18) & 1;
         castleFlag[Global.COLOUR_WHITE] = (flagHistory[moveCount] >> 12) & 7;
         castleFlag[Global.COLOUR_BLACK] = (flagHistory[moveCount] >> 15) & 7;
         iCurrentMovesDepth--;
         int to = (move >> 6) & 63;
         int from = move & 63;
 
-        switch( (move >> 20) & 15) {
+        switch( (move >> 12) & 15) {
             case(Global.ORDINARY_MOVE):
                 updateBoard(from, to);
             break;
 
             case(Global.ORDINARY_CAPTURE):
                 updateBoard(from, to);
-                setBoard(to, ((move>>16) & 15) - 1);
+                setBoard(to, (flagHistory[moveCount] >>19) - 1);
             break;
 
             case(Global.SHORT_CASTLE):
@@ -2216,11 +2217,11 @@ public final class Board {
 
             case(Global.PROMO_Q):
             {
-                int piece = ((move>>12) & 15);
+                int piece = 5 + turn * 6;
                 clearBoard(to);
                 setBoard(to, piece);
                 updateBoard(from, to);
-                int capPiece = ((move>>16) & 15) - 1;
+                int capPiece = (flagHistory[moveCount] >>19) - 1;
                 if(capPiece != -1)
                     setBoard(to, capPiece);
             }
@@ -2235,10 +2236,11 @@ public final class Board {
 
             case(Global.PROMO_N):
             {
+                int piece = 1 + turn * 6;
                 clearBoard(to);
-                setBoard(to, ((move>>12) & 15));
+                setBoard(to, piece);
                 updateBoard(from, to);
-                int capPiece = ((move>>16) & 15) - 1;
+                int capPiece = (flagHistory[moveCount] >>19) - 1;
                 if(capPiece != -1)
                     setBoard(to, capPiece);
             }
@@ -2246,10 +2248,11 @@ public final class Board {
 
             case(Global.PROMO_R):
             {
+                int piece = 0 + turn * 6;
                 clearBoard(to);
-                setBoard(to, ((move>>12) & 15));
+                setBoard(to, piece);
                 updateBoard(from, to);
-                int capPiece = ((move>>16) & 15) - 1;
+                int capPiece = (flagHistory[moveCount] >>19) - 1;
                 if(capPiece != -1)
                     setBoard(to, capPiece);
             }
@@ -2257,10 +2260,11 @@ public final class Board {
 
             case(Global.PROMO_B):
             {
+                int piece = 2 + turn * 6;
                 clearBoard(to);
-                setBoard(to, ((move>>12) & 15));
+                setBoard(to, piece);
                 updateBoard(from, to);
-                int capPiece = ((move>>16) & 15) - 1;
+                int capPiece = (flagHistory[moveCount] >>19) - 1;
                 if(capPiece != -1)
                     setBoard(to, capPiece);
             }
@@ -2276,7 +2280,7 @@ public final class Board {
             case(Global.MOVE_KING_LOSE_CASTLE):
             {
                 updateBoard(from, to);
-                int capPiece = ((move>>16) & 15) - 1;
+                int capPiece = (flagHistory[moveCount] >>19) - 1;
                 if(capPiece != -1)
                     setBoard(to, capPiece);
             }
@@ -2285,14 +2289,14 @@ public final class Board {
             case(Global.CAPTURE_ROOK_LOSE_CASTLE):
             {
                 updateBoard(from, to);
-                setBoard(to, ((move>>16) & 15) - 1);
+                setBoard(to, (flagHistory[moveCount] >>19) - 1);
             }
             break;
 
             case(Global.MOVE_ROOK_LOSE_CASTLE):
             {
                 updateBoard(from, to);
-                int capPiece = ((move>>16) & 15) - 1;
+                int capPiece = (flagHistory[moveCount] >>19) - 1;
                 if(capPiece != -1)
                     setBoard(to, capPiece);
             }

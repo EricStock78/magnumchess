@@ -51,16 +51,8 @@ public class MoveFunctions {
     	return (move)&63;
     }
     
-    public static int getPiece(int move) {
-    	return (move>>12)&15;
-    }
-	
-    public static int getCapture(int move) {
-		return ((move>>16)&15) - 1;                     //must subtract 1 since we store -1 as 0
-	}
-	
     public static int moveType(int move) {
-		return (move>>20)&15;
+		return (move>>12)&15;
 	}
 	
     public static int getValue(int move) {
@@ -68,14 +60,16 @@ public class MoveFunctions {
 	}
 	
     public static int setValue(int move, int value) {          //used to mark the move as a mate killer
-		return move |= (value<<24);
-	}
+	return move |= (value<<24);
+    }
     
-    public static int makeMove(int to,int from,int piece,int capture,int type) {
-		int move = from | to<<6 | piece <<12 | (capture+1)<<16 | type<<20;
-		return move;
-	}
+    public static int makeMove(int to,int from, int type) {
+	return from | to<<6 | type<<12;
+    }
 
+    public static int makeKillerMove( int to, int from, int piece) {
+        return from | to << 6 | Global.ORDINARY_MOVE << 12 | piece << 16;
+    }
 	
     public static int makeMove(int to,int from) {
 		int piece = Board.getInstance().piece_in_square[from];
@@ -137,6 +131,6 @@ public class MoveFunctions {
 			}
 		}
 
-		return from | to<<6 | piece <<12 | (cP+1)<<16 | type<<20;
+		return from | to<<6 | type<<12;
 	}
 }

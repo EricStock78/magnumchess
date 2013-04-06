@@ -287,7 +287,7 @@ public final class HistoryWriter {
 					}
 					else if( generatedTo == to && generatedFrom == from && type >= Global.PROMO_R )
 					{
-						int mv = MoveFunctions.makeMove(to, from, 5, chessBoard.piece_in_square[to], type);
+						int mv = MoveFunctions.makeMove(to, from, type);
 						chessBoard.AddMove( mv );
 						chessBoard.MakeMove( mv, false);
 						chessBoard.AddRepetitionRoot();
@@ -322,14 +322,14 @@ public final class HistoryWriter {
      * @param int piece - piece type
      * 
      */ 
-	public static String getUCIMove(int to,int from,int piece) {
+	/*public static String getUCIMove(int to,int from,int piece) {
 		String st = "";
 		st = st.concat(boardString[from]);
 		st = st.concat(boardString[to]);
 		if(piece%6==5 && (to/8==0 || to/8==7))
 			st = st.concat("q");
 		return st;
-	}
+	}*/
     
     /*
      * method getUCIMove
@@ -341,24 +341,20 @@ public final class HistoryWriter {
      *
      */  
     public static String getUCIMove(int move) {
-		int to = MoveFunctions.getTo(move);
+        int to = MoveFunctions.getTo(move);
         int from = MoveFunctions.getFrom(move);
-        int piece = MoveFunctions.getPiece(move);
-
         String st = "";
-		st = st.concat(boardString[from]);
-		st = st.concat(boardString[to]);
-		if(piece%6==5 && (to/8==0 || to/8==7)) {
-			int type = MoveFunctions.moveType(move);
-            if(type == Global.PROMO_Q)
-               st = st.concat("q");
-            else if(type == Global.PROMO_B)
-               st = st.concat("b");
-            else if(type == Global.PROMO_N)
-               st = st.concat("n");
-            else if(type == Global.PROMO_R)
-               st = st.concat("r");
-        }
+        st = st.concat(boardString[from]);
+        st = st.concat(boardString[to]);
+	int type = MoveFunctions.moveType(move);
+        if(type == Global.PROMO_Q)
+           st = st.concat("q");
+        else if(type == Global.PROMO_B)
+           st = st.concat("b");
+        else if(type == Global.PROMO_N)
+           st = st.concat("n");
+        else if(type == Global.PROMO_R)
+           st = st.concat("r");
         return st;
 	}
 
