@@ -1223,7 +1223,7 @@ public class Evaluation2 {
      *
      */
     public static boolean isPassedPawn(int side, int position) {
-       return ((Global.passed_masks[side][position] & chessBoard.pieceBits[(side+1)&1][Global.PIECE_PAWN]) == 0);
+       return ((Global.passed_masks[side][position] & chessBoard.pieceBits[side^1][Global.PIECE_PAWN]) == 0);
     }
 
     /**

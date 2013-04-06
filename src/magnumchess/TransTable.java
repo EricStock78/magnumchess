@@ -41,16 +41,16 @@ public class TransTable {
    private long[] Table2;
    private long[] Table3;
    private int hashCount;
-   private Board chessBoard;
    private static final long mask3 = ~((long)1 << 58 | (long)1 << 59 | (long)1 << 60);
-    public static final long LAZY_BIT = ( (long)1 << 31);
+   public static final long LAZY_BIT = ( (long)1 << 31);
+   public static final int NUM_SLOTS = 4;
    private static final int PAWN_TABLE_SIZE = 6;
-    private static final int EVAL_TABLE_SIZE = 2;
+   private static final int EVAL_TABLE_SIZE = 2;
 
 
-	/**flag indicating what type of table...0 regular, 1 pawn, 2 eval **/
+   /**flag indicating what type of table...0 regular, 1 pawn, 2 eval **/
    private int type;						
-	private int size;
+   private int size;
 	
 	 /*
      * Constructor Transtable
@@ -60,17 +60,71 @@ public class TransTable {
      *
      */ 
     public TransTable(int s,int t) {
-		type = t;
-		size = s;
-		if(type == 0)
-			Table2 = new long[size*4];
-		else if (type == 1)
-			Table = new long[size*PAWN_TABLE_SIZE];
-		else if (type == 2)
-			Table3 = new long[size*EVAL_TABLE_SIZE];
-		hashCount = 0;
-		chessBoard = Board.getInstance();
-	}
+        type = t;
+        size = s;
+        if(type == 0) {
+            Table2 = new long[size * 4];
+        } else if (type == 1) {
+            Table = new long[size * PAWN_TABLE_SIZE];
+        } 
+        else if (type == 2) {
+            Table3 = new long[size * EVAL_TABLE_SIZE];
+        } 
+        hashCount = 0;
+    }
+    
+     /*
+     * Method addEvalHash
+     * 
+     * Stores an entry in the 2 level hash table - depth first and always replace schemes used
+     * 
+     * @param int key - index of hash entry
+     * @param int lock - 1st half of 64 bit hash
+     * @param int lock2 - 2nd half of 64 bit hash
+     * @param int move - best move for the position
+     * @param int value - the score for this pawn position
+     * @param int depth - the depth searched for this entry
+     * @param int type - the type of entry (exact, lower, upper, terminal)
+     * @param int nullFail - flag to indicate if a null move should be tried at this position
+     * @param int ancient - counter to represent "freshness" of entry
+     *
+     */ 
+    public final void addHash(int key,int move,int value,int depth,int type,int nullFail,int ancient, long lock) {
+                assert( value >= -Global.MATE_SCORE && value <= Global.MATE_SCORE);
+                assert( type >= 0 && type < 8);
+                assert( depth >= 0 && depth < 64 );
+                assert( nullFail >= 0 && nullFail < 2);
+                assert( ancient >= 0 && ancient < 8);
+		/*if(value < -Global.MATE_SCORE || value > Global.MATE_SCORE ) {
+            System.out.println("info string Here");
+            int j = 5/0;
+        }*/
+         
+        int index = key*4;
+		/** if empty slot, add entry */
+		long word = (long)move
+			| ((long)(value + Global.MATE_SCORE) << 32)
+			| ((long)type << 48)
+			| ((long)depth << 51)
+			| ((long)nullFail << 57)
+			| ((long)ancient << 58);
+
+		if(Table2[index]==0)  {
+			hashCount++;
+			Table2[index] = lock;
+			Table2[index+1] = word;
+		}/** replace if depth greater */
+		else if(depth >= (int)((Table2[index+1]>>51)&63L) || (int)((Table2[index+1] >> 58) & 7L) != ancient) {
+			Table2[index] = lock;
+			Table2[index+1] = word;
+		}
+		if(Table2[index+2]==0)
+			hashCount++;
+		Table2[index+2] = lock;
+		Table2[index+3] = word;
+		}
+
+    
     
     /*
      * Method addPawnHash
@@ -139,57 +193,7 @@ public class TransTable {
       Table3[index+1] = (long)value | LAZY_BIT;
 	}
 	
-    /*
-     * Method addEvalHash
-     * 
-     * Stores an entry in the 2 level hash table - depth first and always replace schemes used
-     * 
-     * @param int key - index of hash entry
-     * @param int lock - 1st half of 64 bit hash
-     * @param int lock2 - 2nd half of 64 bit hash
-     * @param int move - best move for the position
-     * @param int value - the score for this pawn position
-     * @param int depth - the depth searched for this entry
-     * @param int type - the type of entry (exact, lower, upper, terminal)
-     * @param int nullFail - flag to indicate if a null move should be tried at this position
-     * @param int ancient - counter to represent "freshness" of entry
-     *
-     */ 
-    public final void addHash(int key,int move,int value,int depth,int type,int nullFail,int ancient) {
-                assert( value >= -Global.MATE_SCORE && value <= Global.MATE_SCORE);
-                assert( type >= 0 && type < 8);
-                assert( depth >= 0 && depth < 64 );
-                assert( nullFail >= 0 && nullFail < 2);
-                assert( ancient >= 0 && ancient < 8);
-		/*if(value < -Global.MATE_SCORE || value > Global.MATE_SCORE ) {
-            System.out.println("info string Here");
-            int j = 5/0;
-        }*/
-              
-        int index = key*4;
-		/** if empty slot, add entry */
-		long word = (long)move
-			| ((long)(value + Global.MATE_SCORE) << 32)
-			| ((long)type << 48)
-			| ((long)depth << 51)
-			| ((long)nullFail << 57)
-			| ((long)ancient << 58);
-
-		if(Table2[index]==0)  {
-			hashCount++;
-			Table2[index] = chessBoard.hashValue;
-			Table2[index+1] = word;
-		}/** replace if depth greater */
-		else if(depth >= (int)((Table2[index+1]>>51)&63L) || (int)((Table2[index+1] >> 58) & 7L) != ancient) {
-			Table2[index] = chessBoard.hashValue;
-			Table2[index+1] = word;
-		}
-		if(Table2[index+2]==0)
-			hashCount++;
-		Table2[index+2] = chessBoard.hashValue;
-		Table2[index+3] = word;
-		}
-
+   
     /*
      * Method getEvalValue
      * 
@@ -270,7 +274,7 @@ public class TransTable {
      * @return int - the value
      */     
     public final int getValue(int key,int probe) {
-		return ((int)((Table2[key*4+1+probe] >>> 32)&65535L)) - Global.MATE_SCORE;
+		return ((int)((Table2[key*4+1+probe*2] >>> 32)&65535L)) - Global.MATE_SCORE;
     }
 	
     /*
@@ -284,7 +288,7 @@ public class TransTable {
      * @return int - the depth
      */ 
     public final int getDepth(int key,int probe ) {
-		long temp = Table2[key*4+1+probe];
+		long temp = Table2[key*4+1+probe * 2];
 		return (int)((temp>>51)&63L);
 	}
 	
@@ -299,7 +303,7 @@ public class TransTable {
      * @return int - the type (0 upper, 1 exact, 2 lower, 4) 
      */ 
     public final int getType(int key,int probe) {
-		long temp =  Table2[key*4+1+probe];
+		long temp =  Table2[key*4+1+probe * 2];
 		return (int)((temp>>48)&7L);
 	}	
 	
@@ -314,7 +318,7 @@ public class TransTable {
      * @return int - 0 use null, 1 don't
      */ 
     public final int getNullFail(int key,int probe) {
-		return (int)(Table2[key*4+1+probe]>>57)&1;
+		return (int)(Table2[key*4+1+probe * 2]>>57)&1;
 			
 	}	
 	
@@ -329,7 +333,8 @@ public class TransTable {
      * @return int - 0 use null, 1 don't
      */ 
     public final int getMove(int key,int probe) {
-       return (int)(Table2[key*4+1+probe]);
+       
+        return (int)(Table2[key*4+1+probe * 2]);
 	}
 
     /*
@@ -379,32 +384,14 @@ public class TransTable {
      *
      * @return boolean - is there a hash stored (0 hash at slot 1, 4 hash at slot 2, 1 none)
      */ 
-	public final int hasHash(int key) {
-		int index = key*4;
-		if( chessBoard.hashValue == Table2[index])
-			return 0;
-		else if(chessBoard.hashValue == Table2[index+2])
-			return 2;
-		return 1;
+	public final boolean hasHash(int key, int slot, long lock) {
+            int index = key*4 + slot * 2;
+            if( lock == Table2[index])
+                return true;
+            else
+                return false;
 	}
-    /*
-     * Method hasSecondHash
-     * 
-     * returns flag indicating if a hash entry at the second level in the table is
-     * stored for the position
-     * 
-     * @param int key - index of hash entry
-     * @param int lock - 1st half of 64 bit hash signature
-     * @param int lock2 - 2nd half of 64 bit hash signature
-     *
-     * @return boolean - is there a hash stored (4 hash at slot 2, 1 none)
-     */ 
-	public final int hasSecondHash(int key) {
-		if(chessBoard.hashValue == Table2[key*4+2])
-			return 2;
-		return 1;
-	}
-	
+    
     /*
      * Method setNew
      * 
@@ -415,17 +402,9 @@ public class TransTable {
      * @param int ancient - new "freshness" value
      */ 
 	public void setNew(int key,int probe,int ancient) {
-		if(probe == 0)   {
-         Table2[key*4+1] &= mask3;
-         Table2[key*4+1] |= ((long)ancient << 58);
+            Table2[key*4+1 + probe * 2] &= mask3;
+            Table2[key*4+1 + probe * 2] |= ((long)ancient << 58);
       }
-      else if(probe == 2 && ((Table2[key*4 + 3] >> 58)&7)!=ancient)  {
-         Table2[key*4 + 3] &= mask3;
-         Table2[key*4 + 3] |= ((long)ancient << 58);
-         Table2[key*4] = Table2[key*4 + 2];
-         Table2[key*4 + 1] = Table2[key*4 + 3];
-      }
-   }
 	
     /*
      * Method clearEvalHash

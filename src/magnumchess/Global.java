@@ -64,6 +64,10 @@ abstract class Global {
     public static final int blackKPK = 26244;
     public static final int whiteKPK = 2916;
     
+    public static final int PLY = 4;
+    public static final int HALF_EXTENSION = 2;
+    public static final int THREE_QUARTER_EXTENSION = 3;
+    
     public static int[][] RelativeRanks = { {0, 1, 2, 3, 4, 5, 6, 7} , {7, 6, 5, 4, 3, 2, 1, 0} };
     
     /** string representation of all pieces */
