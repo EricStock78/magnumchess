@@ -74,12 +74,11 @@ abstract class Global {
     public static final String pieces[]= new String[] {"wRook","wKnight","wBishop","wQueen","wKing","wPawn",
 													"bRook","bKnight","bBishop","bQueen","bKing","bPawn"};
     /** material values for each piece */
-	 public static final int values[] = new int[] {753,454,515,1421,20000,132,753,454,515,1421,20000,132};
+    public static final int values[] = new int[] {753,454,515,1421,20000,132,753,454,515,1421,20000,132};
 
     public static int totalValue;
 
-	 public static final int[] materialOffset =				new int[] {1, 81, 9, 729, 0, 2916,
-                                                            3, 243, 27, 1458, 0, 26244};
+    public static final int[] materialOffset = new int[] {1, 81, 9, 729, 0, 2916, 3, 243, 27, 1458, 0, 26244};
 
     public static final int materialDraw = 999999;
 
@@ -92,7 +91,7 @@ abstract class Global {
      /** castling status flags */
     public static final int NO_CASTLE = 0;
     public static final int CASTLED = 1;
-	 public static final int SHORT_CASTLE = 2;
+    public static final int SHORT_CASTLE = 2;
     public static final int LONG_CASTLE = 4;
     public static final int BOTH_CASTLE = 6;
   
@@ -104,67 +103,64 @@ abstract class Global {
     public static final int INSUFICIENT_MATERIAL = 5;
 
 
-	/** move types */
-	public static final int ORDINARY_MOVE = 0;
-	public static final int ORDINARY_CAPTURE = 1;
-	public static final int DOUBLE_PAWN = 3;
-	public static final int MOVE_KING_LOSE_CASTLE = 5;
-	public static final int MOVE_ROOK_LOSE_CASTLE = 7;
-	public static final int CAPTURE_ROOK_LOSE_CASTLE = 8;
-	public static final int PROMO_Q = 9;
-	public static final int PROMO_R = 10;
-	public static final int PROMO_B = 11;
-	public static final int PROMO_N = 12;
-	public static final int EN_PASSANT_CAP = 13;
-	
-	/** search result types **/
-        public static final int SCORE_EXACT = 3;
-        public static final int SCORE_LOWER = 1;
-        public static final int SCORE_UPPER = 2;
-        public static final int SCORE_TERMINAL = 4;     //the score represents a terminal node..ie checkmate or some type of draw
-        
-        /** hash table size */
-	public static int HASHSIZE = 2048 * 64;				//64 mb initial hashsize
-	/** pawn hash table size */
-	public static int PawnHASHSIZE = 43960 * 8;		//8 mb initial pawn hash size
-	/** eval hash table size */
-	public static int EvalHASHSIZE = 131072 * 8;		//8 mb initial eval hash size
+    /** move types */
+    public static final int ORDINARY_MOVE = 0;
+    public static final int ORDINARY_CAPTURE = 1;
+    public static final int DOUBLE_PAWN = 3;
+    public static final int MOVE_KING_LOSE_CASTLE = 5;
+    public static final int MOVE_ROOK_LOSE_CASTLE = 7;
+    public static final int CAPTURE_ROOK_LOSE_CASTLE = 8;
+    public static final int PROMO_Q = 9;
+    public static final int PROMO_R = 10;
+    public static final int PROMO_B = 11;
+    public static final int PROMO_N = 12;
+    public static final int EN_PASSANT_CAP = 13;
 
-	/** various masks needed for evaluation and move generation */
-	public static final long[][] mask_between = new long[64][64];
-    
+    /** search result types **/
+    public static final int SCORE_EXACT = 3;
+    public static final int SCORE_LOWER = 1;
+    public static final int SCORE_UPPER = 2;
+    public static final int SCORE_TERMINAL = 4;     //the score represents a terminal node..ie checkmate or some type of draw
+
+    /** hash table size */
+    public static int HASHSIZE = 2048 * 64;		//64 mb initial hashsize
+    /** pawn hash table size */
+    public static int PawnHASHSIZE = 43960 * 8;		//8 mb initial pawn hash size
+    /** eval hash table size */
+    public static int EvalHASHSIZE = 131072 * 8;	//8 mb initial eval hash size
+
+    /** various masks needed for evaluation and move generation */
+    public static final long[][] mask_between = new long[64][64];
+
     public static final long[][] mask_behind = new long[2][64];
-	public static final long[][] mask_in_front = new long[2][64];
-	public static final long[][] mask_forward = new long[2][64];
+    public static final long[][] mask_in_front = new long[2][64];
+    public static final long[][] mask_forward = new long[2][64];
 
-	public static final long[] neighbour_files = new long[8];
-	public static final long[][] passed_masks = new long[2][64];
+    public static final long[] neighbour_files = new long[8];
+    public static final long[][] passed_masks = new long[2][64];
 
-	public static final int[] behindRank = {-8, 8};
-        public static final int[] forwardRank = {8, -8};
-   public static final int[] pieceAdd = {0, 6};
+    public static final int[] behindRank = {-8, 8};
+    public static final int[] forwardRank = {8, -8};
+    public static final int[] pieceAdd = {0, 6};
    
-   public static final long[] set_Mask = new long[64];
-	public static final long[] plus9 = new long[64];
-	public static final long[] plus7 = new long[64];
-	public static final long[] plus8 = new long[64];
-	public static final long[] plus1 = new long[64];
-	public static final long[] minus9 = new long[64];
-	public static final long[] minus7 = new long[64];
-	public static final long[] minus8 = new long[64];
-	public static final long[] minus1 = new long[64];
-	public static final long[] diag1Masks = new long[15];
-	public static final long[] diag2Masks = new long[15];
-	public static final long[] fileMasks = new long[8];		//used to isolate all pieces on a rank
-	public static final long[] rankMasks = new long[8];
-	
-        public static final long[] bishopMasks = new long[64];
-        public static final long[] rookMasks = new long[64];
-        //public static final long[][] passedPawnMasks = new long[2][64];          //passed pawn masks for white
-	//public static final long[] blackPassedPawnMasks = new long[64];          //passed pawn masks for black
+    public static final long[] set_Mask = new long[64];
+    public static final long[] plus9 = new long[64];
+    public static final long[] plus7 = new long[64];
+    public static final long[] plus8 = new long[64];
+    public static final long[] plus1 = new long[64];
+    public static final long[] minus9 = new long[64];
+    public static final long[] minus7 = new long[64];
+    public static final long[] minus8 = new long[64];
+    public static final long[] minus1 = new long[64];
+    public static final long[] diag1Masks = new long[15];
+    public static final long[] diag2Masks = new long[15];
+    public static final long[] fileMasks = new long[8];
+    public static final long[] rankMasks = new long[8];
 
-	public static final long[] wRookTrap = new long[] {0x303L, 0xC0C0L};
-	public static final long[] bRookTrap = new long[] {wRookTrap[0]<<48, wRookTrap[1]<<48};
+    public static final long[] bishopMasks = new long[64];
+    public static final long[] rookMasks = new long[64];
+    public static final long[] wRookTrap = new long[] {0x303L, 0xC0C0L};
+    public static final long[] bRookTrap = new long[] {wRookTrap[0]<<48, wRookTrap[1]<<48};
     
     /** length of diagonals */
     public static final int Diag1Length[] = new int[]  {1,2,3,4,5,6,7,8,
@@ -177,7 +173,7 @@ abstract class Global {
                                                         8,7,6,5,4,3,2,1};
     
     /** length of opposite diagonal */                                                    
-	public static final int Diag2Length[]= new int[]   {8,7,6,5,4,3,2,1,
+    public static final int Diag2Length[]= new int[]   {8,7,6,5,4,3,2,1,
                                                         7,8,7,6,5,4,3,2,
                                                         6,7,8,7,6,5,4,3,
                                                         5,6,7,8,7,6,5,4,
@@ -187,7 +183,7 @@ abstract class Global {
                                                         1,2,3,4,5,6,7,8,};												 			
 	
     /** array used for bishop move rotated bitboard generation */
-	public static final int Diag1Groups[] = new int[]  {0,1,2,3,4,5,6,7,
+    public static final int Diag1Groups[] = new int[]  {0,1,2,3,4,5,6,7,
                                                         1,2,3,4,5,6,7,8,
                                                         2,3,4,5,6,7,8,9,
                                                         3,4,5,6,7,8,9,10,
@@ -197,7 +193,7 @@ abstract class Global {
                                                         7,8,9,10,11,12,13,14};
 	
     /** array used for bishop move rotated bitboard generation */												 														 			
-	public static final int Diag2Groups[] = new int[]   {7,8,9,10,11,12,13,14,
+    public static final int Diag2Groups[] = new int[]   {7,8,9,10,11,12,13,14,
                                                          6,7,8,9,10,11,12,13,
                                                          5,6,7,8,9,10,11,12,
                                                          4,5,6,7,8,9,10,11,
