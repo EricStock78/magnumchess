@@ -224,7 +224,7 @@ public final class Engine {
         HashTable = new TransTable(Global.HASHSIZE, 0);
         //add code to reset the eval table
 
-      //add code to reset the pawn table
+        //add code to reset the pawn table
    }
 
    public int GetAllMoves(int side, int[] arrMoves)
@@ -239,7 +239,7 @@ public final class Engine {
         int theSide = chessBoard.getTurn();
         int[] moveArr = new int[128];
         boolean bInCheck = inCheck(theSide);
-        int numberOfMoves = GetAllMoves(theSide, moveArr);
+        int numberOfMoves = inCheck(theSide) ? getCheckEscapes(theSide, moveArr) : GetAllMoves(theSide, moveArr);
 
         for (int i = numberOfMoves - 1; i >= 0; i--) {
             int tempMove = moveArr[i];
@@ -783,21 +783,7 @@ public final class Engine {
             Moves[index++] = MoveFunctions.makeMove(to, from, Global.ORDINARY_MOVE);
         }
 
-        for(int j=0; j < chessBoard.pieceTotals[Global.pieceAdd[side]]; j++)
-        {
-            from = chessBoard.pieceList[Global.pieceAdd[side]][j];
-            toSquares = chessBoard.getAttackBoard(from);
-            toSquares &= ~chessBoard.bitboard;
-            while (toSquares != 0) {
-                long toBit = toSquares & -toSquares;
-                toSquares ^= toBit;
-                int to = Long.numberOfTrailingZeros(toBit);
-                moveOrder[index] = Hist[side][0][to];
-                Moves[index++] = MoveFunctions.makeMove(to, from, Global.ORDINARY_MOVE);
-            }
-        }
-
-        for(int i=1; i<4; i++)
+        for(int i=0; i<4; i++)
         {
             int pType = i + Global.pieceAdd[side];
             for(int j=0; j < chessBoard.pieceTotals[pType]; j++)
@@ -2083,8 +2069,8 @@ public final class Engine {
     public void PerftTest(int depth) {
         perft = 0;
         long temp = System.currentTimeMillis();
-        int side = chessBoard.getTurn();
-        Perft(chessBoard.getTurn(), depth, inCheck(side));
+        Perft(chessBoard.getTurn(), depth, inCheck(chessBoard.getTurn()));
+        //PerftDebug(chessBoard.getTurn(), depth);
         long temp2 = System.currentTimeMillis();
         long time = temp2 - temp;
         System.out.println("Perft value is " + perft);
@@ -2108,7 +2094,6 @@ public final class Engine {
         if (inCheck(side)) {
             inCheck = true;
         }
-
         int[] moveArr = new int[128];
         if (!inCheck) {
             int index2 = getCaptures(side, moveArr);
@@ -2118,18 +2103,13 @@ public final class Engine {
         }
         for (int i = index - 1; i >= 0; i--) {
             perft = 0;
-            int reps = chessBoard.MakeMove(moveArr[i], false);		//make the move;
-            //print out the to and from algebraic positions
+            int reps = chessBoard.MakeMove(moveArr[i], false);		
             int to = MoveFunctions.getTo(moveArr[i]);
             int from = MoveFunctions.getFrom(moveArr[i]);
-            int piece = chessBoard.piece_in_square[from];
-
             if (inCheck(side)) {
                 chessBoard.UnMake(moveArr[i], false);
                 continue;
             }
-            String output = HistoryWriter.getUCIMove(moveArr[i]);
-            //System.out.print(output);
             System.out.print(" to is "+to+" from is "+from+" ");
             if (reps == 3) {
                 System.out.println("1");
@@ -2138,9 +2118,6 @@ public final class Engine {
                 Perft(SwitchSide(side), depth - 1, inCheck(side^1));
             }
             chessBoard.UnMake(moveArr[i], false);
-            //String output = HistoryWriter.getUCIMove(to, from, piece);
-            //System.out.print(output);
-
             System.out.println(" " + perft);
         }
    }
@@ -2160,8 +2137,6 @@ public final class Engine {
             perft++;
             return;
         }
-        int key = (int) (chessBoard.hashValue % Global.HASHSIZE);
-
         int value = Evaluation2.getEval(side, -2000, 2000, 0);
         Board.getInstance().FlipPosition();
         int value2 = Evaluation2.getEval(SwitchSide(side), -2000, 2000, 0);
@@ -2180,22 +2155,17 @@ public final class Engine {
             Board.getInstance().FlipPosition();
         }
 
-        /*if(PERFT_TRANSTABLE) {
-            int hashIndex = HashTable.hasHash(key, chessBoard.hashValue);
-            if (hashIndex != 1 ) {
-                if(HashTable.getDepth(key,  hashIndex) == depth) {
-                    perft += (long)HashTable.getMove(key,  hashIndex);
-                    return;
-                }
-                hashIndex = HashTable.hasSecondHash(key, chessBoard.hashValue);
-                if (hashIndex != 1 && HashTable.getDepth(key,  hashIndex) == depth) {
-                    perft += (long)HashTable.getMove(key,  hashIndex);
+        if(PERFT_TRANSTABLE) {
+            int hashIndex = HashTable.hasHash(chessBoard.hashValue);
+            if (hashIndex != -1 ) {
+                if(HashTable.getDepth(hashIndex) == depth) {
+                    perft += HashTable.getValue(hashIndex);
                     return;
                 }
             }
-        }*/
+        }
         long perftBefore = perft;
-        boolean inCheck = inCheck(side) ? true : false;
+        boolean inCheck = inCheck(side);
         int index;
         int[] moveArr = new int[128];
         if (!inCheck) {
@@ -2206,15 +2176,16 @@ public final class Engine {
         }
         for (int i = index - 1; i >= 0; i--) {
             chessBoard.MakeMove(moveArr[i], true);
-            if (!inCheck && inCheck(side)) {
+            if (inCheck(side)) {
                 chessBoard.UnMake(moveArr[i], true);
                 continue;
             }
             PerftDebug(SwitchSide(side), depth - 1);
             chessBoard.UnMake(moveArr[i], true);
         }
-        if(PERFT_TRANSTABLE)
-            HashTable.addHash((int)(perft - perftBefore) , 0, depth, 0, 0, chessBoard.hashValue);
+        if(PERFT_TRANSTABLE) {
+            HashTable.addHash(0 , (int)(perft - perftBefore), depth, 0, 0, chessBoard.hashValue);
+        }
     }
 
     /**
@@ -2227,11 +2198,6 @@ public final class Engine {
     *
     */
     private void Perft(int side, int depth, boolean inCheck) {
-        if (depth == 0) {
-            perft++;
-            return;
-        }
-
         int index;
         int[] moveArr = new int[128];
         if (!inCheck) {
@@ -2241,20 +2207,18 @@ public final class Engine {
             index = getCheckEscapes(side, moveArr);
         }
         
-        //Board.CheckInfo checkInfo = chessBoard.GetEmptyCheckInfo();
         for (int i = index - 1; i >= 0; i--) {
-            
-            //if( !chessBoard.CheckMove(side, moveArr[i], checkInfo) ) continue;
-            //boolean checkingMove = chessBoard.MoveGivesCheck(side, moveArr[i], checkInfo);
-            
             chessBoard.MakeMove(moveArr[i], true);
             if( inCheck(side) ) {
                 chessBoard.UnMake(moveArr[i], true);
                 continue;
             }
-            boolean checkingMove = inCheck(side^1);
-            
-            Perft(SwitchSide(side), depth - 1, checkingMove);
+            if( depth > 1) {
+                Perft(SwitchSide(side), depth - 1, inCheck(side^1));
+            } 
+            else {
+                perft++;
+            }
             chessBoard.UnMake(moveArr[i], true);
         }
     }

@@ -60,7 +60,7 @@ public class SEE {
         if( (queenMoves & (1L << from)) != 0 ) {
             long queenMovesUncovered = Board.getMagicRookMoves(king, Board.bitboard ^ (1L << from) | (1L << to)) | Board.getMagicBishopMoves(king, Board.bitboard ^ (1L << from) | (1L << to));
             long uncovered = queenMovesUncovered & ~queenMoves;
-            uncovered &= (Board.pieceBits[side^1][Global.PIECE_ALL] & Board.bitboard);
+            uncovered &= (Board.pieceBits[side^1][Global.PIECE_ALL] & Board.bitboard); //need to & with bitboard when called from SEE 
             //uncovered &= (Board.pieceBits[side^1][Global.PIECE_ALL]);
             if( uncovered != 0)
             {
