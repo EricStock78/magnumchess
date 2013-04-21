@@ -1,8 +1,5 @@
 package magnumchess;
 
-
-import magnumchess.Board;
-
 /**
  * MovesFunctions.java
  *
@@ -34,15 +31,6 @@ import magnumchess.Board;
 
 public class MoveFunctions {
     
-    /** chessBoard represents the instance of the singleton class Board - which 
-     *contains all data structures and methods to make and unmake moves
-     */
-    private static Board chessBoard;
-    
-    public MoveFunctions() {
-        chessBoard = Board.getInstance();
-    }
-    
     public static int getTo(int move) {
     	return (move>>6)&63;	
     }
@@ -52,14 +40,15 @@ public class MoveFunctions {
     }
     
     public static int moveType(int move) {
-		return (move>>12)&15;
-	}
+        return (move>>12)&15;
+    }
 	
     public static int getValue(int move) {
-		return (move>>>24) & 1;
-	}
-	
-    public static int setValue(int move, int value) {          //used to mark the move as a mate killer
+        return (move>>>24) & 1;
+    }
+    
+    //used to mark the move as a mate killer
+    public static int setValue(int move, int value) {          
 	return move |= (value<<24);
     }
     
@@ -67,70 +56,46 @@ public class MoveFunctions {
 	return from | to<<6 | type<<12;
     }
 
-    public static int makeKillerMove( int to, int from, int piece) {
-        return from | to << 6 | Global.ORDINARY_MOVE << 12 | piece << 16;
+    public static int makeKillerMove( int move, int piece) {
+        return move | piece << 16;
     }
-	
+    
+    public static int getKillerPiece( int move ) {
+        return move >> 16 & 63;
+    }
+    
     public static int makeMove(int to,int from) {
-		int piece = Board.getInstance().piece_in_square[from];
-		int cP = Board.getInstance().piece_in_square[to];
-		int type;
-		if(cP != -1 )
-		{
-			type = Global.ORDINARY_CAPTURE;
-			
-			if(piece % 6 == 4)
-				type = Global.MOVE_KING_LOSE_CASTLE;
-			else if(piece % 6 == 0)
-				type = Global.MOVE_ROOK_LOSE_CASTLE;
-			else if(cP % 6 == 0)
-				type = Global.CAPTURE_ROOK_LOSE_CASTLE;
-		}
-		else
-		{
-			type = Global.ORDINARY_MOVE;
-			if(piece == 4)	{			//wKing
-				if(from == 4) {
-					if(to == 2)
-						type = Global.LONG_CASTLE;
-					else if(to == 6)
-						type = Global.SHORT_CASTLE;
-					else
-						type = Global.MOVE_KING_LOSE_CASTLE;
-				}
-			} else if(piece == 10) {	//bKing
-				if(from == 60) {
-					if(to == 58)
-						type = Global.LONG_CASTLE;
-					else if(to == 62)
-						type = Global.SHORT_CASTLE;
-					else
-						type = Global.MOVE_KING_LOSE_CASTLE;
-				}
-			}
-			else if(piece == 5)	{			//wPawn
-				if(to - from == 16)
-					type = Global.DOUBLE_PAWN;
-
-				if(to/8 == 7)
-					type = Global.PROMO_Q;
-				else if(to == chessBoard.getPassant(Global.COLOUR_BLACK))
-					type = Global.EN_PASSANT_CAP;
-			}
-			else if(piece == 11) {			//bPawn
-				if(from - to == 16)
-					type = Global.DOUBLE_PAWN;
-
-				if(to/8 == 0)
-					type = Global.PROMO_Q;
-				else if(to == chessBoard.getPassant(Global.COLOUR_WHITE))
-					type = Global.EN_PASSANT_CAP;
-			}
-			else if(piece % 6 == 0) {
-					type = Global.MOVE_ROOK_LOSE_CASTLE;
-			}
-		}
-
-		return from | to<<6 | type<<12;
-	}
+        int piece = Board.getInstance().piece_in_square[from];
+        int cP = Board.getInstance().piece_in_square[to];
+        int type;
+        if(cP != -1 ) {
+            type = Global.ORDINARY_CAPTURE;
+        }
+        else {
+            int side = piece % 6;
+            type = Global.ORDINARY_MOVE;
+            if(piece % 6 == 4)	{			
+                if(from == 4 + (side * 56)) {
+                    if(to == 2 + (side * 56)) {
+                        type = Global.LONG_CASTLE;
+                    } 
+                    else if(to == 6 + (side * 56)) {
+                        type = Global.SHORT_CASTLE;
+                    }
+                }
+            } 
+            else if(piece % 6 == 5) {			
+                if(to - from == 16 - (32 * side)) {
+                    type = Global.DOUBLE_PAWN;
+                }         
+                if( Global.RelativeRanks[side][to / 8] == 7) {
+                    type = Global.PROMO_Q;
+                }
+                else if(to == Board.getInstance().getPassant(side^1)) {
+                    type = Global.EN_PASSANT_CAP;
+                }
+            }
+        }
+        return from | to<<6 | type<<12;
+    }
 }

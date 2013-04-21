@@ -22,13 +22,10 @@ package magnumchess;
  */
 
 
-import magnumchess.Bitbase;
-import java.io.File;
 import java.util.Arrays;
 import java.io.InputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
-//import java.util.Random;
 
 /**
  * Board.java - This class follows the singleton design pattern
@@ -44,21 +41,14 @@ import java.io.IOException;
 
 public final class Board {
 
-   public class CheckInfo {
-        public long[] checkSquares = new long[Global.PIECE_ALL];
-        public long dcCandidates;
-        public long pinned; 
-        public boolean pinnedReady;
-        public boolean checksReady;
-   }
-    
-    
-    
     InputStream inputStream;
     DataInputStream dataInputStream;
 
     /** count of all moves made over the board*/
     public int moveCount;					
+   
+    /** tracks freshness of transposition table entries */
+    public static int ancient = 0;
     
     /** boardMoves is an array of all moves made in the game
      * -To do - switch this to a list as currently if the game goes over 256 moves, there is a crash
@@ -142,7 +132,6 @@ public final class Board {
 	
     /** 64 bit represent the hash code for each position*/
     public long hashValue;
-    public long excludedHash;   //used to modify hash table for storing and retrieving results from excluded move searches
     /** hash values for all 12 pieces on all 64 squares
      * note this is optimized for 32 bit computers
      */
@@ -179,9 +168,6 @@ public final class Board {
      */
     private long pawnHash;
 	
-    /** HistoryWrite object is used to convert moves to and from algebraic notation and fen notation */
-    private HistoryWriter writer;					//stores and writes the history of all moves made
-	
     /** Array of values representing the number of squares a queen would traverse
      * between any two squares on the board
      */
@@ -204,18 +190,12 @@ public final class Board {
     /** flag to indicate if the last move made was reversable or not */
     private boolean reversable = true;
 
-    /** variables used to store the current line of moves from the root of the search **/
-    private static final int[] arrCurrentMoves = new int[128];
     private int iCurrentMovesDepth;
 
     private Bitbase bitbase;
     /** call to private constructor - a la singleton pattern */
     private static final Board INSTANCE = new Board();
-
-    public void SetHistoryWriter( HistoryWriter theWriter )
-    {
-            writer = theWriter;
-    }
+    
     /**
     * Constructor Board
     * 
@@ -226,7 +206,6 @@ public final class Board {
 
     private Board()
     {
-        //Random rand = new Random();
         initQueenDist();
         initRookDist();
         InitializeDataFromFile();
@@ -235,8 +214,6 @@ public final class Board {
         lastReversableMove[0] = 1;
         lastReversableMove[1] = 1;
         InitializeMaterialArray();
-        
-        //excludedHash = rand.nextLong() & Long.MAX_VALUE;
     }
 	
     private void InitializeDataFromFile()
@@ -297,22 +274,23 @@ public final class Board {
             //read the generated random 64 bit hash values used to generate the zorbist key
             for(int i=0;i<64;i++) {
                 for(int j=0;j<12;j++) {
-                    pHash[i][j] = dataInputStream.readLong();
+                    pHash[i][j] = dataInputStream.readLong() & Long.MAX_VALUE;
+                   
                     if( j%6 == 5 || j%6 == 4)
                         pawnKingHash[i][j] = pHash[i][j];
                 }
             }
 
             for(int i=0;i<9;i++) {
-                passantHashW[i] = dataInputStream.readLong();
-                passantHashB[i] = dataInputStream.readLong();
+                passantHashW[i] = dataInputStream.readLong() & Long.MAX_VALUE;
+                passantHashB[i] = dataInputStream.readLong() & Long.MAX_VALUE;
             }
 
-            bHashMove = dataInputStream.readLong();
-
+            bHashMove = dataInputStream.readLong() & Long.MAX_VALUE;
+            
             for(int i=0;i<8;i++) {
-                CastleHash[Global.COLOUR_BLACK][i] = dataInputStream.readLong();
-                CastleHash[Global.COLOUR_WHITE][i] = dataInputStream.readLong();
+                CastleHash[Global.COLOUR_BLACK][i] = dataInputStream.readLong() & Long.MAX_VALUE;
+                CastleHash[Global.COLOUR_WHITE][i] = dataInputStream.readLong() & Long.MAX_VALUE;
             }
 
             bitbase = new Bitbase();
@@ -507,7 +485,6 @@ public final class Board {
         int noMoves = moveCount;
         for(int i=noMoves-1;i>=0;i--) {
             UnMake(boardMoves[i] ,true);
-            writer.removeLastHistory();
         }
         zorbistDepth = 1;
         iCurrentMovesDepth = 0;
@@ -553,7 +530,6 @@ public final class Board {
         Engine.resetHash();
         Evaluation2.clearEvalHash();
         Evaluation2.clearPawnHash();
-        writer.reset();	
     }
 
     /**
@@ -566,194 +542,182 @@ public final class Board {
      */
     public  void acceptFen(String fen)
     {
+        fen = fen.trim();
+        
+        //see if we have 2 whitespace characters back to back which would mess things up
+        if( fen.matches("[\\s{2,}]")) {
+            System.out.println( "info string illegal fen string" );
+            return; 
+        }
+        
+        //fen string contains 6 fields separated by a space
+        String fenArr[] = fen.split("[\\s]");
+        
+        if( fenArr.length != 6 ) {
+            System.out.println("info string illegal fen string");
+            return;     
+        }
+        
+        //collect and verify exists the rank information
+        if( fenArr[0].matches("[^/rnbqkpRNBQKP1-8]")) {
+            System.out.println("info string illegal fen string");
+            return; 
+        }
+        
+        String rankArr[] = fenArr[0].split("[/]");
+        
+        if( rankArr.length != 8) {
+            System.out.println("info string illegal fen string");
+            return; 
+        }
+        
+        //verify side to move
+        if( fenArr[1].matches("[^wb]") ) {
+            System.out.println("info string illegal fen string");
+            return; 
+        }
+        
+        //verify castline
+         if( fenArr[2].matches("[^-KQkq]")) {
+            System.out.println("info string illegal fen string");
+            return; 
+        }
+        
+        //verify en passant
+        if( fenArr[3].matches("[^-0-9]")) {
+            System.out.println("info string illegal fen string");
+            return; 
+        }
+        
+        //verify half move
+        if( fenArr[4].matches("[^0-9]")) {
+            System.out.println("info string illegal fen string");
+            return; 
+        }
+        
+        //verify full move
+        if( fenArr[5].matches("[^0-9]")) {
+            System.out.println("info string illegal fen string");
+            return; 
+        }
+        
+        //fen seems ok, so lets process it
         ClearBoard();
-
-        /** now process the fen string where it contains the placement of pieces */
-        int count = 63;
+       
+        //process rank info
         for(int i=0; i<8; i++) {
-            String rank;
-            int endOfRank = fen.indexOf("/");
-            if(endOfRank == -1) {
-                endOfRank = fen.indexOf(" ");
-                rank = fen.substring(0,endOfRank);
-                fen = fen.substring(endOfRank+1);
-            }else {
-                rank = fen.substring(0,endOfRank);
-                fen = fen.substring(endOfRank+1);
-            }
-
-            for(int j=0; j<endOfRank; j++) {
-                char c = rank.charAt(endOfRank-1-j);
-                switch(c) {
-                    case('r'):
-                        setBoard(count,6);
-                        hashValue ^= pHash[count][6];
-                        count--;
-                        break;
-                    case('n'):
-                        setBoard(count,7);
-                        hashValue ^= pHash[count][7];
-                        count--;
-                        break;
-                    case('b'):
-                        setBoard(count,8);
-                        hashValue ^= pHash[count][8];
-                        count--;
-                        break;
-                    case('q'):
-                        setBoard(count,9);
-                        hashValue ^= pHash[count][9];
-                        count--;
-                        break;
-                    case('k'):
-                        setBoard(count,10);
-                        hashValue ^= pHash[count][10];
-                        count--;
-                        break;
-                    case('p'):
-                        setBoard(count,11);
-                        hashValue ^= pHash[count][11];
-                        count--;
-                        break;
-                    case('R'):
-                        setBoard(count,0);
-                        hashValue ^= pHash[count][0];
-                        count--;
-                        break;
-                    case('N'):
-                        setBoard(count,1);
-                        hashValue ^= pHash[count][1];
-                        count--;
-                        break;
-                    case('B'):
-                        setBoard(count,2);
-                        hashValue ^= pHash[count][2];
-                        count--;
-                        break;
-                    case('Q'):
-                        setBoard(count,3);
-                        hashValue ^= pHash[count][3];
-                        count--;
-                        break;
-                    case('K'):
-                        setBoard(count,4);
-                        hashValue ^= pHash[count][4];
-                        count--;
-                        break;
-                    case('P'):
-                        setBoard(count,5);
-                        hashValue ^= pHash[count][5];
-                        count--;
-                        break;
-                    case('1'):
-                        count--;
-                        break;
-                    case('2'):
-                        count-=2;
-                        break;
-                    case('3'):
-                        count-=3;
-                        break;
-                    case('4'):
-                        count-=4;
-                        break;
-                    case('5'):
-                        count-=5;
-                        break;
-                    case('6'):
-                        count-=6;
-                        break;
-                    case('7'):
-                        count-=7;
-                        break;
-                    case('8'):
-                        count-=8;
-                        break;
+            int fileAdd = 0;
+            for(int strPos = 0; strPos < rankArr[7-i].length(); strPos++) {
+                char c = rankArr[7-i].charAt(strPos);
+                if( c >= '1' && c <= '8' ) {
+                    fileAdd += c - 49;
+                }
+                else {
+                    int filePos = i * 8 + strPos + fileAdd;
+                    switch( c ) {
+                        case('r'):
+                            setBoard(filePos,6);
+                            hashValue ^= pHash[filePos][6];
+                            break;
+                        case('n'):
+                            setBoard(filePos,7);
+                            hashValue ^= pHash[filePos][7];
+                            break;
+                        case('b'):
+                            setBoard(filePos,8);
+                            hashValue ^= pHash[filePos][8];
+                            break;
+                        case('q'):
+                            setBoard(filePos,9);
+                            hashValue ^= pHash[filePos][9];
+                            break;
+                        case('k'):
+                            setBoard(filePos,10);
+                            hashValue ^= pHash[filePos][10];
+                            break;
+                        case('p'):
+                            setBoard(filePos,11);
+                            hashValue ^= pHash[filePos][11];
+                            break;
+                        case('R'):
+                            setBoard(filePos,0);
+                            hashValue ^= pHash[filePos][0];
+                            break;
+                        case('N'):
+                            setBoard(filePos,1);
+                            hashValue ^= pHash[filePos][1];
+                            break;
+                        case('B'):
+                            setBoard(filePos,2);
+                            hashValue ^= pHash[filePos][2];
+                            break;
+                        case('Q'):
+                            setBoard(filePos,3);
+                            hashValue ^= pHash[filePos][3];
+                            break;
+                        case('K'):
+                            setBoard(filePos,4);
+                            hashValue ^= pHash[filePos][4];
+                            break;
+                        case('P'):
+                            setBoard(filePos,5);
+                            hashValue ^= pHash[filePos][5];
+                            break;
+                    }
                 }
             }
         }
-
+         
         /** now process the side to move information */
-        char c = fen.charAt(0);
-        fen = fen.substring(fen.indexOf(" ")+1);
-        if(c == 'w') {
+        if( fenArr[1].charAt(0) == 'w') {
             turn = Global.COLOUR_WHITE;
-        } else {
-            turn = Global.COLOUR_BLACK;
         }
-        if(turn == Global.COLOUR_BLACK) {
+        else {
+            turn = Global.COLOUR_BLACK;
             hashValue ^= bHashMove;
         }
-        /** now process the castling rights */
-        String token = fen.substring(0,fen.indexOf(" "));
-        fen = fen.substring(fen.indexOf(" ")+1);
-        int tokenSize = token.length();
-        for(int i=0;i<tokenSize;i++) {
-        c = token.charAt(i);
-        switch(c) {
-            case('-'):
-                castleFlag[Global.COLOUR_WHITE] = Global.NO_CASTLE;
-                castleFlag[Global.COLOUR_BLACK] = Global.NO_CASTLE;
-                break;
-            case('K'):
-                castleFlag[Global.COLOUR_WHITE] = Global.SHORT_CASTLE;
-                break;
-            case('Q'):
-                if(castleFlag[Global.COLOUR_WHITE] == Global.NO_CASTLE)
-                    castleFlag[Global.COLOUR_WHITE] = Global.LONG_CASTLE;
-                else
-                    castleFlag[Global.COLOUR_WHITE] = Global.BOTH_CASTLE;
-                break;
-            case('k'):
-                castleFlag[Global.COLOUR_BLACK] = Global.SHORT_CASTLE;
-                break;
-            case('q'):
-                if(castleFlag[Global.COLOUR_BLACK] == Global.NO_CASTLE)
-                    castleFlag[Global.COLOUR_BLACK] = Global.LONG_CASTLE;
-                else
-                    castleFlag[Global.COLOUR_BLACK] = Global.BOTH_CASTLE;
-                break;
+        
+         /** now process the castling rights */
+        if( fenArr[2].matches("[-]")) {
+            castleFlag[Global.COLOUR_WHITE] = Global.NO_CASTLE;
+            castleFlag[Global.COLOUR_BLACK] = Global.NO_CASTLE;
+        }
+        else {
+            if( fenArr[2].matches("[K]")) {
+                 castleFlag[Global.COLOUR_WHITE] |= Global.SHORT_CASTLE;
+            }
+            if( fenArr[2].matches("[Q]")) {
+                castleFlag[Global.COLOUR_WHITE] |= Global.LONG_CASTLE;
+            }
+            if( fenArr[2].matches("[k]")) {
+                 castleFlag[Global.COLOUR_BLACK] |= Global.SHORT_CASTLE;
+            }
+            if( fenArr[2].matches("[q]")) {
+                castleFlag[Global.COLOUR_BLACK] |= Global.LONG_CASTLE;
+            }
+            hashValue ^= CastleHash[Global.COLOUR_BLACK][castleFlag[Global.COLOUR_BLACK]];
+            hashValue ^= CastleHash[Global.COLOUR_WHITE][castleFlag[Global.COLOUR_WHITE]];
+        }
+        
+        /**process the passant square*/
+        if( !fenArr[3].matches("[-]")) {  
+            if(turn == Global.COLOUR_WHITE)  {  
+                passant[Global.COLOUR_BLACK] = ((fenArr[3].charAt(0) - 97) * 8) + fenArr[3].charAt(1) - 49;
+                hashValue ^= passantHashB[passant[Global.COLOUR_BLACK]%9];
+            }
+            else {
+                passant[Global.COLOUR_WHITE] = ((fenArr[3].charAt(0) - 97) * 8) + fenArr[3].charAt(1) - 49;
+                hashValue ^= passantHashW[passant[Global.COLOUR_WHITE]%9];
             }
         }
-
-        /**process the passant square
-        *get the first character - if it is a '-', then no passant square
-        */
-        c = fen.charAt(0);
-        if(c != '-') {
-            token = fen.substring(0,fen.indexOf(" "));
-            int pSq = HistoryWriter.getNumericPosition(token);
-            if(turn == Global.COLOUR_WHITE)                  
-                passant[Global.COLOUR_BLACK] = pSq;
-            else
-                passant[Global.COLOUR_WHITE] = pSq;
-        }
-        fen = fen.substring(fen.indexOf(" "));
-
+       
         /** now process the drawCount */
-        fen = fen.substring(fen.indexOf(" ")+1);
-        token = fen.substring(0,fen.indexOf(" "));
-        Integer noMoves = new Integer(token);
-        drawCount = noMoves.intValue();
+        drawCount = new Integer(fenArr[4]).intValue();
+        
+        /** now process the moveCount */
+        //At this time since I am not saving out game moves I don't care about this value
+        //in the future I may want to add a new variable used to track the move I started at
 
-        /** now process the moveCount
-        *   Note there are problems with this part of the fen reader
-        *   To Do...change internal representation of number of moves
-        * - fix unmaking moves based on this the no of moves
-        * - currently will only work for no of moves at 1
-        */
-
-        fen = fen.substring(fen.indexOf(" ")+1);
-        token = fen;
-        noMoves = new Integer(token);
-        moveCount = noMoves.intValue()-1;
-
-        hashValue ^= passantHashW[passant[Global.COLOUR_WHITE]%9];
-        hashValue ^= passantHashB[passant[Global.COLOUR_BLACK]%9];
-
-        /** set the has values for the recently set castling rights */
-        hashValue ^= CastleHash[Global.COLOUR_BLACK][castleFlag[Global.COLOUR_BLACK]];
-        hashValue ^= CastleHash[Global.COLOUR_WHITE][castleFlag[Global.COLOUR_WHITE]];
     }
 
     public void ClearBoard()
@@ -1017,7 +981,7 @@ public final class Board {
      * 
      * initializes arrays containing distance between two squares 
      */
-    private  final void initQueenDist() {
+    private void initQueenDist() {
         for(int i=0;i<64;i++) {
             for(int j=0;j<64;j++) {
                     queenDist[i][j] = Math.max( Math.abs(i/8 - j/8), Math.abs(i%8 - j%8) );
@@ -1030,7 +994,7 @@ public final class Board {
      * 
      * initializes arrays containing distance between two squares 
      */
-    private  final void initRookDist() {
+    private void initRookDist() {
         for(int i=0;i<64;i++) {
             for(int j=0;j<64;j++) {
                      rookDist[i][j] = Math.abs(i/8 - j/8) + Math.abs(i%8 - j%8);
@@ -1064,27 +1028,6 @@ public final class Board {
         return rookDist[to][from];
     }		
 	
-    /** 
-     *  method callFileWrite
-     * 
-     * writes all moves to a file
-     * 
-     *  @ param File f - the file to write to
-     */
-    public  final void callFileWrite(File f) {
-        writer.historyToFile(f);
-    }	
-    
-    /** 
-     *  method callFileRead
-     * 
-     * reads in all moves from a file
-     * 
-     *  @ param File f - the file to read from
-     */
-    public  final void callFileRead(File f) {
-        writer.readHistory(f);
-    }	
     
     /** 
     *  method getPawnHash
@@ -1122,7 +1065,6 @@ public final class Board {
             temp2 = temp&-temp;
             int pos = Long.numberOfTrailingZeros(temp2);
             temp&=~temp2;
-
             hash ^=pHash[pos][piece_in_square[pos]];
         }			
         hash ^= passantHashW[passant[Global.COLOUR_WHITE]%9];
@@ -1156,7 +1098,7 @@ public final class Board {
     * @param int piece - the piece to place on the board
     * 
     */
-    public  final void setBoard(int i,int piece) {
+    private void setBoard(int i,int piece) {
         bitboard |= Global.set_Mask[i];
         int type = piece % 6;
         int side = piece / 6;
@@ -1179,7 +1121,7 @@ public final class Board {
             Description:This method updates all of the boards so that on index
                                     int there exists piece String
     ***********************************************************************/	
-    private  final void updateBoard(int i,int j) 
+    private void updateBoard(int i,int j) 
     {
         long bit = 1L << i | 1L << j;
         bitboard ^= bit;
@@ -1202,7 +1144,7 @@ public final class Board {
             Returns:	None
             Description:On index i String s is removed by this method
     ***********************************************************************/
-    public  final void clearBoard(int i) {
+    private void clearBoard(int i) {
         bitboard ^= Global.set_Mask[i];
         int piece = piece_in_square[i];
         int type = piece % 6;
@@ -1436,144 +1378,6 @@ public final class Board {
 		(getMagicBishopMoves(i) & ( pieceBits[eSide][Global.PIECE_BISHOP] | pieceBits[eSide][Global.PIECE_QUEEN])) != 0L ||
 		(getMagicRookMoves(i) & ( pieceBits[eSide][Global.PIECE_ROOK] | pieceBits[eSide][Global.PIECE_QUEEN] )) != 0L );
 		
-    }
-    
-    public final CheckInfo GetEmptyCheckInfo() {
-        CheckInfo info = new CheckInfo();
-        info.checksReady = false;
-        info.pinnedReady = false;
-        return info;
-    }
-    
-    //the side on move
-    public final void GetCheckInfo(int side, CheckInfo info) {
-        info.pinnedReady = true;
-        info.pinned = GetPinnedPieces( side, false );
-    }
-    
-    public final void GetGivesCheckInfo(int side, CheckInfo info) {
-        info.checksReady = true;
-        int enemyKing = pieceList[4 + (side^1) * 6][0];
-        info.checkSquares[Global.PIECE_PAWN] = PawnAttackBoard[side^1][enemyKing];
-        info.checkSquares[Global.PIECE_BISHOP] = getMagicBishopMoves( enemyKing );
-        info.checkSquares[Global.PIECE_KNIGHT] = getKnightMoves( enemyKing );
-        info.checkSquares[Global.PIECE_ROOK] = getMagicRookMoves( enemyKing );
-        info.checkSquares[Global.PIECE_QUEEN] = getMagicBishopMoves( enemyKing ) | getMagicRookMoves( enemyKing );
-        info.checkSquares[Global.PIECE_KING] = 0L;
-        info.dcCandidates = GetPinnedPieces( side, true );
-    }
-    
-    public final boolean MoveGivesCheck(int side, int move, CheckInfo info ) {
-        if( !info.checksReady) {
-            GetGivesCheckInfo(side, info);
-        }
-        
-        int from = MoveFunctions.getFrom( move );
-        int to = MoveFunctions.getTo( move );
-        int type = MoveFunctions.moveType( move );
-        int piece = piece_in_square[move&63]%6;
-        int enemyKing = pieceList[Global.PIECE_KING + (side^1) * 6][0];
-        if( (info.checkSquares[piece] & 1L << to) != 0 ) {
-            return true;
-        }
-        
-        else if( (info.dcCandidates & (1L << from)) != 0  && ( piece < Global.PIECE_KING  ||
-                (((Global.mask_between[enemyKing][from] & (1L << to)) == 0 )
-                && (Global.mask_between[enemyKing][to] & (1L << from)) == 0) ))
-        {
-            return true;
-        }
-        
-        switch( type ) {
-            case( Global.PROMO_Q ):
-                return ( (getMagicBishopMoves( to, bitboard ^ (1L << from) ) & (1L << enemyKing)) != 0) || 
-                        ( (getMagicRookMoves( to, bitboard ^ (1L << from) ) & (1L << enemyKing)) != 0);
-           
-            case( Global.PROMO_R ):
-                return ( (getMagicRookMoves( to, bitboard ^ (1L << from) ) & (1L << enemyKing)) != 0 );
-                
-            case( Global.PROMO_B ):
-                return ( (getMagicBishopMoves( to, bitboard ^ (1L << from) ) & (1L << enemyKing)) != 0 );
-              
-            case( Global.PROMO_N ):
-                return ( (KnightMoveBoard[to] & (1L << enemyKing)) != 0 );
-                
-            case( Global.EN_PASSANT_CAP ):
-                int enemyPawnPush = side == Global.COLOUR_WHITE ? -8 : 8;
-                int capSquare = to + enemyPawnPush;
-                long occ = bitboard ^ (1L << capSquare) ^ (1L << from) ^ (1L << to);
-
-                return ( ((getMagicBishopMoves(enemyKing, occ) & ( pieceBits[side][Global.PIECE_BISHOP] | pieceBits[side][Global.PIECE_QUEEN] ))
-                        | ( getMagicRookMoves(enemyKing, occ) & ( pieceBits[side][Global.PIECE_ROOK] | pieceBits[side][Global.PIECE_QUEEN] ))) != 0 );
-
-            case( Global.SHORT_CASTLE ):
-                occ = bitboard ^ ( 1L << to ) ^ ( 1L << (to-1)) ^ ( 1L << (to+1)) ^ ( 1L << (from));
-                return ( getMagicRookMoves( enemyKing, occ) & (1L << (to-1))) != 0;
-                
-            case( Global.LONG_CASTLE ):
-                 occ = bitboard ^ ( 1L << to ) ^ ( 1L << (to-2)) ^ ( 1L << (to+1)) ^ ( 1L << (from));
-                return ( getMagicRookMoves( enemyKing, occ) & (1L << (to+1))) != 0;
-            default:
-                return false;
-        } 
-    }
-    
-    
-    public final boolean CheckMove(int side, int move, CheckInfo info) {
-        if( !info.pinnedReady ) {
-            GetCheckInfo(side, info);
-        }
-        int from = MoveFunctions.getFrom( move );
-        int to = MoveFunctions.getTo( move );
-        int type = MoveFunctions.moveType( move );
-        int king = pieceList[4 + side*6][0];
-        int piece = piece_in_square[from];
-        
-        if( type == Global.EN_PASSANT_CAP ) {
-            int enemyPawnPush = side == Global.COLOUR_WHITE ? -8 : 8;
-            int capSquare = to + enemyPawnPush;
-            long occ = bitboard ^ (1L << from) ^ (1L << to) ^ (1L << capSquare);
-            
-            return ( ((getMagicBishopMoves(king, occ) & ( pieceBits[side^1][Global.PIECE_BISHOP] | pieceBits[side^1][Global.PIECE_QUEEN] ))
-                    | ( getMagicRookMoves(king, occ) & ( pieceBits[side^1][Global.PIECE_ROOK] | pieceBits[side^1][Global.PIECE_QUEEN] ))) == 0 );
-        }
-        else if( piece % 6 == Global.PIECE_KING) {
-            return ( getAttack2( to ) & pieceBits[side^1][Global.PIECE_ALL]) == 0; 
-        }
-            
-        return( ( info.pinned == 0) || ((info.pinned & (1L << from)) == 0) || ((Global.mask_between[king][from] & (1L << to)) != 0 )
-                || (Global.mask_between[king][to] & (1L << from)) != 0);          
-    }
-    
-    private final boolean MoreThanOne(long bits) {
-        return( (bits & (bits-1)) != 0);
-    }
-    
-    private final long GetPinnedPieces(int side, boolean bDiscoverChecks) {
-        
-        long pinned = 0;
-        int sideToMove = side;
-        if( bDiscoverChecks) {
-            side ^= 1;
-        }
-        
-        long pinners = pieceBits[side^1][Global.PIECE_ALL];
-        int kingSquare = pieceList[4 + 6 * side][0];
-        
-        pinners &= ((getMagicRookMoves(kingSquare, 0) & ( pieceBits[side^1][Global.PIECE_ROOK] | pieceBits[side^1][Global.PIECE_QUEEN]) )
-                | (getMagicBishopMoves(kingSquare, 0) & ( pieceBits[side^1][Global.PIECE_BISHOP] | pieceBits[side^1][Global.PIECE_QUEEN]) ) ); 
-    
-        while( pinners != 0 )
-        {
-            int pinPos = Long.numberOfTrailingZeros(pinners);
-            pinners ^= 1L << pinPos;
-            long pieces_between = Global.mask_between[kingSquare][pinPos] & bitboard;
-            if( pieces_between != 0 && !MoreThanOne(pieces_between) && (pieceBits[sideToMove][Global.PIECE_ALL] & pieces_between) != 0 ) {
-                pinned |= pieces_between;
-            }
-        }
-        
-        return pinned;
     }
     
     /***********************************************************************
@@ -1849,28 +1653,10 @@ public final class Board {
      *
      * @param move - the move to be added
      */
-    public final void AddMove(int move) {
-        int to = (move >> 6) & 63;//MoveFunctions.getTo(move);
-        int from = move & 63; //MoveFunctions.getFrom(move);
+    public final void AddMove(int move) { 
         boardMoves[moveCount] = move;
-        writer.addHistory(to,from,moveCount);
     }
-
-    /**
-     *  method GetMoveAtDepth()
-     *
-     * This method returns the move made at the requested depth in the current line of the recursive search
-     *
-     * @param depth - the requested depth for the move
-     *
-     * @return int - the move made
-     *
-     */
-    public int GetMoveAtDepth(int depth)   {
-        return arrCurrentMoves[depth];
-    }
-
-
+    
     public void ResetMovesDepth() {
         iCurrentMovesDepth = 0;
     }
@@ -1895,7 +1681,6 @@ public final class Board {
         int from = move & 63;
         int type = (move >> 12) & 15;
 
-        arrCurrentMoves[iCurrentMovesDepth] = move;
         iCurrentMovesDepth++;
 
         hashHistory[moveCount] = hashValue;
@@ -1917,14 +1702,60 @@ public final class Board {
             case(Global.ORDINARY_MOVE):
             {
                 reversable = piece_in_square[from] % 6 != 5;
+                int pieceType = piece_in_square[from] % 6;
+                if( pieceType == Global.PIECE_KING) {
+                    castleFlag[turn] = Global.NO_CASTLE;           
+                }
+                else if( pieceType == Global.PIECE_ROOK ) {
+                    if( from == (0 + 56 * turn) && (castleFlag[turn] & Global.LONG_CASTLE) != 0 ) {
+                        hashValue ^= CastleHash[turn][castleFlag[turn]];
+                        castleFlag[turn] &= Global.SHORT_CASTLE;
+                        hashValue ^= CastleHash[turn][castleFlag[turn]];
+                    }
+                    else if( from == ( 7 + 56 * turn) && (castleFlag[turn] & Global.SHORT_CASTLE) != 0) {
+                        hashValue ^= CastleHash[turn][castleFlag[turn]];
+                        castleFlag[turn] &= Global.LONG_CASTLE;
+                        hashValue ^= CastleHash[turn][castleFlag[turn]];
+                    }
+                }
             }
             break;
 
             case(Global.ORDINARY_CAPTURE):
             {
                 reversable = false;
+                int enemyTurn = turn^1;
+                int pieceType = piece_in_square[from] % 6;
+                if( pieceType == Global.PIECE_KING) {
+                    castleFlag[turn] = Global.NO_CASTLE;           
+                }
+                else if( pieceType == Global.PIECE_ROOK ) {
+                    if( from == (0 + 56 * turn) && (castleFlag[turn] & Global.LONG_CASTLE) != 0 ) {
+                        hashValue ^= CastleHash[turn][castleFlag[turn]];
+                        castleFlag[turn] &= Global.SHORT_CASTLE;
+                        hashValue ^= CastleHash[turn][castleFlag[turn]];
+                    }
+                    else if( from == ( 7 + 56 * turn) && (castleFlag[turn] & Global.SHORT_CASTLE) != 0) {
+                        hashValue ^= CastleHash[turn][castleFlag[turn]];
+                        castleFlag[turn] &= Global.LONG_CASTLE;
+                        hashValue ^= CastleHash[turn][castleFlag[turn]];
+                    }
+                }
+                
+                if( to == (0 + 56 * enemyTurn) && (castleFlag[enemyTurn] & Global.LONG_CASTLE) != 0 ) {
+                     hashValue ^= CastleHash[enemyTurn][castleFlag[enemyTurn]];
+                     castleFlag[enemyTurn] &= Global.SHORT_CASTLE;
+                     hashValue ^= CastleHash[enemyTurn][castleFlag[enemyTurn]];
+                }
+                else if ( to == (7 + 56 * enemyTurn) && (castleFlag[enemyTurn] & Global.SHORT_CASTLE) != 0 ) {
+                     hashValue ^= CastleHash[enemyTurn][castleFlag[enemyTurn]];
+                     castleFlag[enemyTurn] &= Global.LONG_CASTLE;
+                     hashValue ^= CastleHash[enemyTurn][castleFlag[enemyTurn]];
+                }
+                
+                
                 hashValue ^= pHash[to][piece_in_square[to]];
-                clearBoard(to); 
+                clearBoard(to);
             }
             break;
 
@@ -2034,46 +1865,6 @@ public final class Board {
             }
             break;
 
-            case(Global.MOVE_KING_LOSE_CASTLE):
-            {
-                reversable = false;
-                
-                hashValue ^= CastleHash[turn][castleFlag[turn]];
-                castleFlag[turn] = Global.NO_CASTLE;
-                hashValue ^= CastleHash[turn][castleFlag[turn]];
-               
-                int cP = piece_in_square[to];
-                if(cP != -1)
-                {
-                    clearBoard(to);
-                    hashValue ^= pHash[to][cP];
-                }
-            }
-            break;
-
-            case(Global.CAPTURE_ROOK_LOSE_CASTLE):
-            {
-                int thePiece =  piece_in_square[from];
-                UpdateCastleFlags(thePiece, to , from);
-                reversable = false;
-                hashValue ^= pHash[to][piece_in_square[to]];
-                clearBoard(to);
-            }
-            break;
-
-            case(Global.MOVE_ROOK_LOSE_CASTLE):
-            {
-                int thePiece =  piece_in_square[from];
-                reversable = false;
-                UpdateCastleFlags(thePiece, to , from);
-                int cP = piece_in_square[to];
-                if(cP != -1)
-                {
-                    clearBoard(to);
-                    hashValue ^= pHash[to][cP];
-                }
-            }
-            break;
         }
 
         hashValue ^= pHash[from][piece_in_square[from]];
@@ -2094,9 +1885,10 @@ public final class Board {
 
         SwitchTurn();
 
-        //if(hashValue != generateHash()) {
-        //	System.out.println("info string generatehash is +"+generateHash());
-        //}
+        /*if(hashValue != generateHash()) {
+        	System.out.println("info string generatehash is +"+generateHash());
+                System.out.println("crash time "+5/0);
+        }*/
 
         if( board )
             return AddRepetition();
@@ -2236,7 +2028,7 @@ public final class Board {
 
             case(Global.PROMO_N):
             {
-                int piece = 1 + turn * 6;
+                int piece = 5 + turn * 6;
                 clearBoard(to);
                 setBoard(to, piece);
                 updateBoard(from, to);
@@ -2248,7 +2040,7 @@ public final class Board {
 
             case(Global.PROMO_R):
             {
-                int piece = 0 + turn * 6;
+                int piece = 5 + turn * 6;
                 clearBoard(to);
                 setBoard(to, piece);
                 updateBoard(from, to);
@@ -2260,7 +2052,7 @@ public final class Board {
 
             case(Global.PROMO_B):
             {
-                int piece = 2 + turn * 6;
+                int piece = 5 + turn * 6;
                 clearBoard(to);
                 setBoard(to, piece);
                 updateBoard(from, to);
@@ -2277,37 +2069,16 @@ public final class Board {
             }
             break;
 
-            case(Global.MOVE_KING_LOSE_CASTLE):
-            {
-                updateBoard(from, to);
-                int capPiece = (flagHistory[moveCount] >>19) - 1;
-                if(capPiece != -1)
-                    setBoard(to, capPiece);
-            }
-            break;
-
-            case(Global.CAPTURE_ROOK_LOSE_CASTLE):
-            {
-                updateBoard(from, to);
-                setBoard(to, (flagHistory[moveCount] >>19) - 1);
-            }
-            break;
-
-            case(Global.MOVE_ROOK_LOSE_CASTLE):
-            {
-                updateBoard(from, to);
-                int capPiece = (flagHistory[moveCount] >>19) - 1;
-                if(capPiece != -1)
-                    setBoard(to, capPiece);
-            }
-            break;
         }
         hashValue = hashHistory[moveCount];
         passant[Global.COLOUR_WHITE] = (flagHistory[moveCount] & 63);
         passant[Global.COLOUR_BLACK] = ((flagHistory[moveCount] >> 6) & 63);
 
-        // if(hashValue != generateHash()) {
-        //    System.out.println("info string generatehash is +"+generateHash());
-        // }
+        
+        
+        /*if(hashValue != generateHash()) {
+            System.out.println("info string generatehash is +"+generateHash());
+            System.out.println("crash time "+5/0);
+         }*/
     }			
 }

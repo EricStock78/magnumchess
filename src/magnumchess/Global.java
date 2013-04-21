@@ -117,8 +117,14 @@ abstract class Global {
 	public static final int PROMO_N = 12;
 	public static final int EN_PASSANT_CAP = 13;
 	
-	/** hash table size */
-	public static int HASHSIZE = 65536 * 64;				//64 mb initial hashsize
+	/** search result types **/
+        public static final int SCORE_EXACT = 3;
+        public static final int SCORE_LOWER = 1;
+        public static final int SCORE_UPPER = 2;
+        public static final int SCORE_TERMINAL = 4;     //the score represents a terminal node..ie checkmate or some type of draw
+        
+        /** hash table size */
+	public static int HASHSIZE = 2048 * 64;				//64 mb initial hashsize
 	/** pawn hash table size */
 	public static int PawnHASHSIZE = 43960 * 8;		//8 mb initial pawn hash size
 	/** eval hash table size */

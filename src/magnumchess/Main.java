@@ -21,10 +21,6 @@ package magnumchess;
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-import magnumchess.HistoryWriter;
-import magnumchess.Evaluation2;
-import magnumchess.Engine;
-import magnumchess.Board;
 import java.io.*;
 
 /*
@@ -87,8 +83,6 @@ public class Main
             writer = new HistoryWriter( theSearch );
             Board = Board.getInstance();
             eval = new Evaluation2();
-           
-            Board.SetHistoryWriter( writer );
             Board.newGame();
             reader = new BufferedReader(new InputStreamReader(System.in));
             latestMoves = "none";
@@ -221,8 +215,10 @@ public class Main
 					cmd = cmd.substring(index+5);
 					cmd = cmd.trim();
 					int hashSize = Integer.parseInt(cmd.substring(0));
-					Global.HASHSIZE = hashSize * 65536;
-					Engine.resetHash();
+					Global.HASHSIZE = hashSize * 2048;
+					//ensure always a power of 2 for proper indexing
+                                        Global.HASHSIZE = Integer.highestOneBit(Global.HASHSIZE);
+                                        Engine.resetHash();
 					System.out.println("info string hashsize is "+hashSize);
 				} else if(cmd.indexOf("Evaluation Table")!= -1) {
                index = cmd.indexOf("value");
@@ -400,41 +396,31 @@ public class Main
 							{
 								case(Global.CHECKMATE):
 								{
-									File f = new File("./checkmate/file"+iNumberCheckmates+".pgn");
-									f.createNewFile();
-									Board.callFileWrite(f);
+									
 									iNumberCheckmates++;
 								}
 								break;
 								case(Global.STALEMATE):
 								{
-									File f = new File("./stalemate/file"+iNumberStalemates+".pgn");
-									f.createNewFile();
-									Board.callFileWrite(f);
+									
 									iNumberStalemates++;
 								}
 								break;
 								case(Global.DRAW_50MOVES):
 								{
-									File f = new File("./draw_50/file"+iNumberDraw50Moves+".pgn");
-									f.createNewFile();
-									Board.callFileWrite(f);
+									
 									iNumberDraw50Moves++;
 								}
 								break;
 								case(Global.DRAW_REPETITION):
 								{
-									File f = new File("./repetition_draw/file"+iNumberDrawRepetition+".pgn");
-									f.createNewFile();
-									Board.callFileWrite(f);
+									
 									iNumberDrawRepetition++;
 								}
 								break;
 								case(Global.INSUFICIENT_MATERIAL):
 								{
-									File f = new File("./insufficient_material/file"+iNumberRandomGames+".pgn");
-									f.createNewFile();
-									Board.callFileWrite(f);
+									
 									iNumberInsufficientMaterial++;
 								}
 								break;

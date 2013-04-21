@@ -785,7 +785,7 @@ public final class Board {
 	***********************************************************************/
 	private final void InitWhitePawnMoveBoard(long[] board){
 		int square;
-		for(square=0;square<=55;square++){
+		for(square=8;square<=55;square++){
 			if(square >= 8 && square <=15){
 				board[square] |=(long)1<<(square+16);
 			}
