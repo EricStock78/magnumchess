@@ -182,8 +182,17 @@ public class Main
                     }
                 } 
                 else {
-                     String fen = cmd.substring(cmd.indexOf("fen")+4);
-                     Board.acceptFen(fen);
+                    int mstart = cmd.indexOf("moves");
+                    if(mstart> -1) {
+                        Board.undoAll();
+                        String fen = cmd.substring(cmd.indexOf("fen")+4,mstart-1);
+                        Board.acceptFen(fen);
+                        String moves = cmd.substring(mstart+5);
+                        HistoryWriter.acceptMoves(moves);
+                    } else {
+                        String fen = cmd.substring(cmd.indexOf("fen")+4);
+                        Board.acceptFen(fen);
+                    }   
                 }
             }                
             else if(cmd.startsWith("setoption")) {
