@@ -1,5 +1,9 @@
 package magnumchess;
 
+/*import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;*/
+import java.util.Arrays;
 import java.util.Random;
 //import java.io.*;
 /**
@@ -56,7 +60,7 @@ public final class Engine {
     /** array for storing moves from the root position */
     private static final int[] moveOrder = new int[128];
     /** 2D array to store killer moves - 2 slots for each ply in the search */
-    private static final int[][] killerMoves = new int[100][2];
+    private static final int[][] killerMoves = new int[2][100];
 
     /** global boolean flag to trigger then end of the search when out of time */
     private static boolean stop;
@@ -98,10 +102,10 @@ public final class Engine {
     private static final int NON_CAPS = 5;
     private static final int BAD_CAPS = 6;
     private static final int SEARCH_END = 7;
-    private static final int QUIES_CAPS = 2;
+    private static final int QUIES_HASH = 1;
+    private static final int QUIES_MOVES = 2;
     private static final int QUIES_CHECKING = 5;
-    private static final int QUIES_IN_CHECK = 3;
-    private static final int QUIES_END = 4;
+    private static final int QUIES_END = 3;
     
     /** constants for starting values of search */
     private static final int ALPHA_START = -Global.MATE_SCORE;
@@ -116,7 +120,7 @@ public final class Engine {
     
     private static Random rand = new Random(9L);
 
-   //public BufferedWriter buffWriter;
+    //public BufferedWriter buffWriter;
    /**
     * Constructor Engine
     *
@@ -125,7 +129,7 @@ public final class Engine {
     */
     public Engine() {
         chessBoard = Board.getInstance();
-      
+       
        /*File f = new File("debug");
         
         try {
@@ -303,13 +307,8 @@ public final class Engine {
         // array of moves
         int[] moveArr = new int[128];
 
-        int alpha, beta;
-
         // temporary varible to store the value returned from a search
         int value;
-
-        // flag indicating if we have an exact score and thus can now scout all remaining moves
-        boolean isExact = false;
 
         //flag indicating if the search has at least found a move which it can return if the search is terminated
         boolean hasValue = false;
@@ -341,85 +340,70 @@ public final class Engine {
         int partialDepthExtension = Global.HALF_EXTENSION;         //added to depth to ensure certain partial extensions will trigger the first time
         nextTimeCheck = Math.min(1000, time * nps);
 
-        //System.out.println("info string time is "+time);
-        //System.out.println("info string max root get a score time is "+maximumRootGetAScoreTime);
-        //System.out.println("info string max time is "+maxTime);
-
-        chessBoard.ancient = chessBoard.getCount() % 8;
+        Board.ancient = chessBoard.getCount() % 8;
+        
         infiniteTimeControl = inf;
 
         /** here we prepare the history arrays for the next search */
-        if ((chessBoard.getCount() / 2 >> 3) == 7) {
-           for (int i = 0; i < 6; i++) {
-              for (int j = 0; j < 64; j++) {
-                 Hist[Global.COLOUR_WHITE][i][j] = 0;
-                 Hist[Global.COLOUR_BLACK][i][j] = 0;
-              }
-           }
-        } else {
-           for (int i = 0; i < 6; i++) {
-              for (int j = 0; j < 64; j++) {
-                 Hist[Global.COLOUR_WHITE][i][j] /= 10;
-                 Hist[Global.COLOUR_BLACK][i][j] /= 10;
-              }
-           }
+        for (int i = 0; i < 6; i++) {
+            Arrays.fill(Hist[Global.COLOUR_WHITE][i], (short)0 );
+            Arrays.fill(Hist[Global.COLOUR_BLACK][i], (short)0 );
         }
-
+        
         /** here the killer moves are cleared out before the next search */
-        for (int j = 0; j < 25; j++) {
-           killerMoves[j][0] = 0;
-           killerMoves[j][1] = 0;
-        }
-
+        Arrays.fill(killerMoves[0], 0 );
+        Arrays.fill(killerMoves[1], 0 );
+       
         nodes = 0;
         //hashAttempts = 0;
         //hashHits = 0;
+       
         /** collect the root moves */
-
         if (!inCheck(theSide)) {
             numberOfMoves = GetAllMoves(theSide, moveArr);
         } else {
             numberOfMoves = getCheckEscapes(theSide, moveArr); 
-            if( numberOfMoves == 0)
+            if( numberOfMoves == 0) {
                 return "info string no legal move";
+            }
         }
 
         thisDepth = 0;
 
         int[] compareArray = new int[128];           //array used to store values of moves for sorting the move list
-
-
+        
         //remove illegal moves
         //mark moves which result in a draw
         //perform an initial sort of the moves list based on their Q sort scores
         for (int i = numberOfMoves - 1; i >= 0; i--) {
-            int tempMove = moveArr[i];
-            int reps = chessBoard.MakeMove(tempMove, true);
-
-            if (inCheck(theSide)) {                    //eliminate illegal moves from later ply
+            int tempmove = moveArr[i];
+            int reps = chessBoard.MakeMove(tempmove, true);
+            
+            //eliminate illegal moves from later ply
+            if (inCheck(theSide)) {                   
                 for (int j = i; j <= numberOfMoves - 1; j++) {
                     moveArr[j] = moveArr[j + 1];
                     compareArray[j] = compareArray[j + 1];
                 }
                 numberOfMoves--;
-                chessBoard.UnMake(tempMove, true);
+                chessBoard.UnMake(tempmove, true);
                 continue;
             }
 
             if (reps == 3) {
-                //System.out.println("Draw move is " + HistoryWriter.getUCIMove((tempMove >> 6) & 63, tempMove & 63, (tempMove >> 12) & 15));
-                compareArray[i] = 1;
+                moveArr[i] = MoveFunctions.setMoveRootDraw( moveArr[i] );
+                compareArray[i] = 0;
             } else if (chessBoard.getDraw() == 100) {
-                compareArray[i] = 1;
+                moveArr[i] = MoveFunctions.setMoveRootDraw( moveArr[i] );
+                compareArray[i] = 0;
             } else if (isStaleMate( SwitchSide(theSide) )) {
-                //System.out.println("stalemate move is " + HistoryWriter.getUCIMove((tempMove >> 6) & 63, tempMove & 63, (tempMove >> 12) & 15));
-                compareArray[i] = 1;
+                moveArr[i] = MoveFunctions.setMoveRootDraw( moveArr[i] );
+                compareArray[i] = 0;
             } else {
-                compareArray[i] = (int) -Quies(SwitchSide(theSide), 1, -BETA_START, -ALPHA_START);
-                compareArray[i] &= ~1;        //mask off the lowest bit
+                compareArray[i] = -Quies(SwitchSide(theSide), 1, -BETA_START, -ALPHA_START);
                 thisDepth--;
             }
-            chessBoard.UnMake(tempMove, true);
+            chessBoard.UnMake(moveArr[i], true);
         }
         sortMoves(0, numberOfMoves, moveArr, compareArray);
 
@@ -437,24 +421,21 @@ public final class Engine {
                 break;
             }
 
-            alpha = ALPHA_START;
-            beta = BETA_START;
+            int alpha = ALPHA_START;
+            int beta = BETA_START;
 
             int tempBestMove = Integer.MIN_VALUE;
-            isExact = false;
+            boolean isExact = false;
             thisDepth = 0;
 
             for (int i = numberOfMoves - 1; i >= 0; i--) {
                 int tempMove = moveArr[i];
                 int nextDepth = depth * Global.PLY - Global.PLY + partialDepthExtension;
-                if ((compareArray[i] & 1) != 0) {
-                    //System.out.println("Draw move 2 is " + HistoryWriter.getUCIMove((tempMove >> 6) & 63, tempMove & 63, (tempMove >> 12) & 15));
+               
+                if (MoveFunctions.isMoveRootDraw( moveArr[i] )) {
                     value = 0;
-
-                    if(!isExact && value < bestValue - 30 && !stop) {
-                        GotoTimeState(TIME_STATE_FAIL_LOW);
-                    }
-                } else if (!isExact) {
+                }
+                else if (!isExact) {
                     chessBoard.MakeMove(tempMove, true);
                     value = -Max(SwitchSide(theSide), nextDepth, -beta, -alpha, false, inCheck(SwitchSide(theSide)), false, false, 0);
                     chessBoard.UnMake(tempMove, true);
@@ -463,7 +444,9 @@ public final class Engine {
                     if(value < bestValue - 30 && value < 10000L && !stop) {
                         GotoTimeState(TIME_STATE_FAIL_LOW);
                     }
+                    
                 } else {
+                    
                     chessBoard.MakeMove(tempMove, true);
                     value = -Max(SwitchSide(theSide), nextDepth, -alpha - 1, -alpha, false, inCheck(SwitchSide(theSide)), false, false, 0);
                     thisDepth--;
@@ -472,11 +455,11 @@ public final class Engine {
                         //check for a move which goes HIGH
                         GotoTimeState(TIME_STATE_FAIL_HIGH);
                         value = -Max(SwitchSide(theSide), nextDepth, -beta, -alpha, false, inCheck(SwitchSide(theSide)), false, false, 0);
-                        thisDepth--;
-                    }
+                        thisDepth--;                
+                    } 
                     chessBoard.UnMake(tempMove, true);
                 }
-
+                
                 if ((((value > tempBestMove) && !stop) || !hasValue)) {      //have a new best move..update alpha..etc
                     GotoTimeState(TIME_STATE_HAVE_1ST_MOVE);
                     alpha = value;
@@ -485,18 +468,10 @@ public final class Engine {
                     bestValue = value;
                     tempBestMove = value;
                     bestMove = tempMove;
-                    if (value == 0 && (compareArray[i] & 1) != 0) //if this is a root draw or stalemate, set the lsb flag
-                    {
-                        compareArray[i] = 10000 - (i << 1 | 1);
-                    } else {
-                        compareArray[i] = 10000 - (i << 1);
-                    }
-                } else {                                                 //move is no good
-                    GotoTimeState(TIME_STATE_HAVE_1ST_MOVE);
-                    if (value == 0 && (compareArray[i] & 1) != 0)
-                       compareArray[i] = 2000 + (i << 1 | 1);
-                    else
-                       compareArray[i] = 2000 + (i << 1);                  //if this is a root draw or stalemate, set the lsb flag
+                    compareArray[i] = 10000 - i;
+                } 
+                else {                                                 //move is no good
+                    compareArray[i] = 2000 + i;                 
                 }
             }
 
@@ -1481,7 +1456,7 @@ public final class Engine {
 
             switch (HashTable.getType(hashIndex)) {
                 case (Global.SCORE_UPPER):
-                    if ( hDepth >= effectiveDepth) { 
+                    if ( hDepth >= effectiveDepth ) { 
                         if (hVal <= alpha) {
                             nodes++;
                             return hVal;
@@ -1495,7 +1470,7 @@ public final class Engine {
                             return hVal;
                         }
 
-                    }    
+                    }
                 break;
                 case (Global.SCORE_LOWER):
                      if ( hDepth >= effectiveDepth) {    
@@ -1503,7 +1478,7 @@ public final class Engine {
                             nodes++;
                             return hVal;
                         }
-                     }  
+                     } 
                 break;
                 case (Global.SCORE_TERMINAL):
                     if (hVal == -Global.MATE_SCORE) {
@@ -1591,6 +1566,7 @@ public final class Engine {
         int index = 0;
         
         int ttMove = 0;
+        
         while (state != SEARCH_END) {
 
             switch (state) {
@@ -1631,17 +1607,17 @@ public final class Engine {
                         index = 0;
                         endIndex = 0;
 
-                        if (MoveFunctions.getValue(killerMoves[thisDepth][1]) >= 1 && verifyMove(side, killerMoves[thisDepth][1], true)) {
-                           if( hashArr[0] != (killerMoves[thisDepth][1] & 65535) && hashArr[1] != (killerMoves[thisDepth][1] & 65535)) {
-                                moveArr[index++] = killerMoves[thisDepth][1] & 65535;
-                                hashArr[noHash++] = killerMoves[thisDepth][1] & 65535;
+                        if (MoveFunctions.getValue(killerMoves[1][thisDepth]) >= 1 && verifyMove(side, killerMoves[1][thisDepth], true)) {
+                           if( hashArr[0] != (killerMoves[1][thisDepth] & 65535) && hashArr[1] != (killerMoves[1][thisDepth] & 65535)) {
+                                moveArr[index++] = killerMoves[1][thisDepth] & 65535;
+                                hashArr[noHash++] = killerMoves[1][thisDepth] & 65535;
                            }
                         }
-                        if (MoveFunctions.getValue(killerMoves[thisDepth][0]) >= 1 && verifyMove(side, killerMoves[thisDepth][0], true) 
-                                && (killerMoves[thisDepth][0] & 65535) != (killerMoves[thisDepth][1]  & 65535)) {
-                            if (hashArr[0] != (killerMoves[thisDepth][0] & 65535) && hashArr[1] != (killerMoves[thisDepth][0] & 65535)) {
-                                moveArr[index++] = killerMoves[thisDepth][0] & 65535;
-                                hashArr[noHash++] = killerMoves[thisDepth][0] & 65535;
+                        if (MoveFunctions.getValue(killerMoves[0][thisDepth]) >= 1 && verifyMove(side, killerMoves[0][thisDepth], true) 
+                                && (killerMoves[0][thisDepth] & 65535) != (killerMoves[1][thisDepth]  & 65535)) {
+                            if (hashArr[0] != (killerMoves[0][thisDepth] & 65535) && hashArr[1] != (killerMoves[0][thisDepth] & 65535)) {
+                                moveArr[index++] = killerMoves[0][thisDepth] & 65535;
+                                hashArr[noHash++] = killerMoves[0][thisDepth] & 65535;
                            }
                         }
                     }
@@ -1655,17 +1631,17 @@ public final class Engine {
                     index = 126;
                     endIndex = 126;
                     
-                    if (MoveFunctions.getValue(killerMoves[thisDepth][1]) == 0 && verifyMove(side, killerMoves[thisDepth][1], true)) {
-                       if( (hashArr[0] & 65535) != (killerMoves[thisDepth][1] & 65535) && (hashArr[1] & 65535) != (killerMoves[thisDepth][1] & 65535 )) {
-                            moveArr[index++] = killerMoves[thisDepth][1] & 65535;
-                            hashArr[noHash++] = killerMoves[thisDepth][1] & 65535;
+                    if (MoveFunctions.getValue(killerMoves[1][thisDepth]) == 0 && verifyMove(side, killerMoves[1][thisDepth], true)) {
+                       if( (hashArr[0] & 65535) != (killerMoves[1][thisDepth] & 65535) && (hashArr[1] & 65535) != (killerMoves[1][thisDepth] & 65535 )) {
+                            moveArr[index++] = killerMoves[1][thisDepth] & 65535;
+                            hashArr[noHash++] = killerMoves[1][thisDepth] & 65535;
                        }
                     }
-                    if (MoveFunctions.getValue(killerMoves[thisDepth][0]) == 0 && verifyMove(side, killerMoves[thisDepth][0], true) 
-                            && (killerMoves[thisDepth][0] & 65535) != (killerMoves[thisDepth][1] & 65535 )) {
-                        if( (hashArr[0] & 65535) != (killerMoves[thisDepth][0] & 16777215) && (hashArr[1] & 65535) != (killerMoves[thisDepth][0] & 65535)) {
-                            moveArr[index++] = killerMoves[thisDepth][0] & 65535;
-                            hashArr[noHash++] = killerMoves[thisDepth][0] & 65535;
+                    if (MoveFunctions.getValue(killerMoves[0][thisDepth]) == 0 && verifyMove(side, killerMoves[0][thisDepth], true) 
+                            && (killerMoves[0][thisDepth] & 65535) != (killerMoves[1][thisDepth] & 65535 )) {
+                        if( (hashArr[0] & 65535) != (killerMoves[0][thisDepth] & 16777215) && (hashArr[1] & 65535) != (killerMoves[0][thisDepth] & 65535)) {
+                            moveArr[index++] = killerMoves[0][thisDepth] & 65535;
+                            hashArr[noHash++] = killerMoves[0][thisDepth] & 65535;
                        }
                     }
                     break;
@@ -1676,7 +1652,7 @@ public final class Engine {
                 case (BAD_CAPS):
                     index = capIndex;
                     endIndex = badCapIndex + 1;
-               break;
+                    break;
             }
             for (int i = index - 1; i >= endIndex; i--) {
                
@@ -1684,7 +1660,7 @@ public final class Engine {
                 
                 if( theMove == excludedMove ) continue;
                 
-                if( state == BAD_CAPS || state == NON_CAPS || state == GOOD_CAPTURES) {
+                if( state == BAD_CAPS || state == NON_CAPS || state == GOOD_CAPTURES ) {
                     boolean bDuplicate = false;
                     for( int m=0; m<noHash; m++)
                     {
@@ -1712,12 +1688,12 @@ public final class Engine {
                         initialGain = Global.values[3] - Global.values[5];
                     }
                     
-                    if( initialGain < 0 && (SEE.GetSEE_PinsPlus(side, to, from, type, 0)) < 0)
+                    if( initialGain < 0 && (SEE.GetSEE_NoPins(side, to, from, type, 0)) < 0)
                     {
                         moveArr[badCapIndex--] = theMove;
                         continue;
                     }
-                }  
+                }
                 int extendAmount = 0;
                 
                
@@ -1807,7 +1783,7 @@ public final class Engine {
                             continue;
                         }
                     }
-          
+                    
                     //late move reduction code
                     boolean lmr = false;
                     if (state == NON_CAPS && ((!bNodePV && moveCount >= 4) || moveCount >= 15) && effectiveDepth >= 2 && !passedPawnMove
@@ -1815,9 +1791,9 @@ public final class Engine {
                         extendAmount = -Global.PLY;
                         lmr = true;
                     }
-                   
-                    int nextDepth = depth - Global.PLY + extendAmount;
                     
+                    int nextDepth = depth - Global.PLY + extendAmount;
+                   
                     if (moveCount == 0) {
                         if (nextDepth >= Global.PLY) {
                             value = -Max(SwitchSide(side), nextDepth, -beta, -alpha, false, checkingMove, extendAmount > 0, false, 0);
@@ -1842,7 +1818,7 @@ public final class Engine {
                                 value = -Quies(SwitchSide(side), 0, -beta, -alpha);
                             }
                             thisDepth--;
-                        } else if (value > alpha && lmr == true) {       //use normal depth if lmr move looks interesting
+                        } else if (value > alpha && (lmr)) {       //use normal depth if lmr move looks interesting
                             nextDepth = depth - Global.PLY;  
                             if (nextDepth >= Global.PLY) {   
                                     value = -Max(SwitchSide(side), nextDepth, -beta, -alpha, false, false, false, false, 0);
@@ -1867,17 +1843,17 @@ public final class Engine {
                             HashTable.addHash(ttMove, value, effectiveDepth, Global.SCORE_LOWER, nullFail, hashLockValue);
                             
                             Hist[side][piece%6][to] += effectiveDepth * effectiveDepth;
-                            if (state == NON_CAPS ) {								
+                            if (state == NON_CAPS) {								
                                 int killerMove = MoveFunctions.makeKillerMove(theMove, piece);
-                                if (killerMove != killerMoves[thisDepth][0]) {
-                                    int temp1 = killerMoves[thisDepth][0];
+                                if (killerMove != killerMoves[0][thisDepth]) {
+                                    int temp1 = killerMoves[0][thisDepth];
                                     if (value >= (Global.MATE_SCORE - Global.MAX_DEPTH)) {  //mark this move as a mate killer
-                                        killerMoves[thisDepth][0] = MoveFunctions.setValue(killerMove, 1);
+                                        killerMoves[0][thisDepth] = MoveFunctions.setValue(killerMove, 1);
                                     }
                                     else {
-                                        killerMoves[thisDepth][0] = killerMove;
+                                        killerMoves[0][thisDepth] = killerMove;
                                     }
-                                    killerMoves[thisDepth][1] = temp1;
+                                    killerMoves[1][thisDepth] = temp1;
                                 }
                             }
                             return value;
@@ -1960,18 +1936,47 @@ public final class Engine {
         
         nodes++;
         
-        int[] capArr = new int[60];
-        int value;
-        int index = 0;
-        int bValue = -Global.MATE_SCORE + thisDepth;
-        int state = QUIES_CAPS;
-        int testValue = 0;
-        boolean oneLegal = false;
-        if( depth > 0 && inCheck(side)) {
-            state = QUIES_IN_CHECK;
+        int hashIndex = HashTable.hasHash(chessBoard.hashValue);
+        
+        if( hashIndex != -1) {
+            hashHits++;
+            HashTable.setNew(hashIndex);
+            
+            int hVal = HashTable.getValue(hashIndex);
+
+            switch (HashTable.getType(hashIndex)) {
+                case (Global.SCORE_UPPER):
+                    if (hVal <= alpha) {
+                        nodes++;
+                        return hVal;
+                    }   
+                break;
+                case (Global.SCORE_EXACT):
+                    if (hVal > alpha && hVal < beta) {
+                        nodes++;
+                        return hVal;
+                    }
+                break;
+                case (Global.SCORE_LOWER):
+                    if (hVal >= beta) {
+                        nodes++;
+                        return hVal;
+                    }
+                break;
+                case (Global.SCORE_TERMINAL):
+                    if (hVal == -Global.MATE_SCORE) {
+                        nodes++;
+                        hVal += thisDepth;
+                    }
+                    return hVal;   
+            }  
         }
-        else
-        {
+        
+        int bValue = -Global.MATE_SCORE + thisDepth;
+        int testValue = 0;
+        int value = 0;
+        boolean bInCheck = ( depth != 0 && inCheck(side));
+        if( !bInCheck ) {
             value = Evaluation2.getEval(side, alpha, beta, thisDepth); 
             if (value > alpha) {
                 if (value >= beta) {
@@ -1981,78 +1986,120 @@ public final class Engine {
             }
             bValue = testValue = value;
         }
-       
+
+        int index = 0;
+        
+        boolean oneLegal = false;
+        
+        int state = hashIndex == -1 ? QUIES_MOVES : QUIES_HASH;
+        
+        int[] capArr = new int[60];
+        int hType = Global.SCORE_UPPER;
+        int bestMove = 0;
+        int hashMove = 0;
         while( state != QUIES_END )
         {
             switch( state )
             {
-                case( QUIES_CAPS ):
-                    index = getCaptures(side, capArr);
+                case( QUIES_HASH ):
+                    capArr[0] = HashTable.getMove(hashIndex);
+                    int type = MoveFunctions.moveType(capArr[0]);
+                    if( !bInCheck && !(type == Global.ORDINARY_CAPTURE || type == Global.PROMO_Q || type == Global.EN_PASSANT_CAP)) {
+                        break;
+                    }
+                    else if( verifyMove(side, capArr[0], false) ) {                             
+                        hashMove = capArr[0];
+                        index = 1;
+                    }
+                break;
+                case( QUIES_MOVES ):
+                    if( bInCheck) {
+                        index = getCheckEscapes(side, capArr);
+                    }
+                    else {
+                        index = getCaptures(side, capArr);
+                    }      
                  break;
                     
                 case( QUIES_CHECKING ):
                     index = getCheckingMoves(side, capArr, 0);
-                break;
-                    
-                case( QUIES_IN_CHECK ): 
-                    index = getCheckEscapes(side, capArr);
-                    bValue = -(Global.MATE_SCORE - thisDepth);
-                break;
+                break; 
             }
             
             for (int i = index - 1; i >= 0; i--) {
+                
                 int to = MoveFunctions.getTo(capArr[i]);
                 int from = MoveFunctions.getFrom(capArr[i]);
-                if (state == QUIES_CAPS ) {
-                    int type = MoveFunctions.moveType(capArr[i]);
-                    int neededScore = (int)Math.max(0, (alpha - testValue));
-                    int initialGain = 0;
-                    if( type < Global.PROMO_Q) {
-                        initialGain = Global.values[chessBoard.piece_in_square[to]]- Global.values[chessBoard.piece_in_square[from]];
-                    } else if( type < Global.EN_PASSANT_CAP) {
-                        initialGain = Global.values[3] - Global.values[5];
-                    }
+                if (state == QUIES_MOVES ) {
                     
-                    if( initialGain < neededScore && (SEE.GetSEE_PinsPlus(side, to, from, type, neededScore)) < neededScore)
-                    {
-                        bValue = alpha;
+                    if( capArr[i] == hashMove ) {  
                         continue;
-                    }   
+                    }
+                    int type = MoveFunctions.moveType(capArr[i]);
+                    if( !bInCheck && (type == Global.ORDINARY_CAPTURE || type == Global.PROMO_Q || type == Global.EN_PASSANT_CAP)  ) {
+                        
+                        int neededScore = (int)Math.max(0, (alpha - testValue));
+                        int initialGain = 0;
+                        if( type < Global.PROMO_Q) {
+                            initialGain = Global.values[chessBoard.piece_in_square[to]]- Global.values[chessBoard.piece_in_square[from]];
+                        } else if( type < Global.EN_PASSANT_CAP) {
+                            initialGain = Global.values[3] - Global.values[5];
+                        }
+
+                        if( initialGain < neededScore && (SEE.GetSEE_PinsPlus(side, to, from, type, neededScore)) < neededScore)
+                        {
+                            bValue = alpha;
+                            continue;
+                        }   
+                    }
                 }
                 else if( state == QUIES_CHECKING )
                 {
                     if( IsCheckDangerous( capArr[i], side )) continue;
                 }
-                chessBoard.MakeMove(capArr[i], false);	
                 
-                if( inCheck(side)) {
-                    chessBoard.UnMake(capArr[i], false);
-                    continue;
+                int reps = chessBoard.MakeMove(capArr[i], true);	
+                
+                if( reps >= 2) {
+                    oneLegal = true;
+                    value = 0;
+                    chessBoard.UnMake(capArr[i], true);
                 }
-                oneLegal = true;
-                
-                value = -Quies(SwitchSide(side), depth + 1, -beta, -alpha);   
-                thisDepth--;
-                chessBoard.UnMake(capArr[i], false);
+                else {
+                    if( inCheck(side)) {
+                        chessBoard.UnMake(capArr[i], true);
+                        continue;
+                    }
+                    oneLegal = true;
+
+                    value = -Quies(SwitchSide(side), depth + 1, -beta, -alpha);   
+                    thisDepth--;
+                    chessBoard.UnMake(capArr[i], true);
+                }
                 if (value > bValue) {
                     if (value >= beta) {
+                        HashTable.addHash(capArr[i], value, 0, Global.SCORE_LOWER, 0, chessBoard.hashValue);
                         return value;
                     }
                     bValue = value;
                     if (value > alpha) {
+                        bestMove = capArr[i];
+                        hType = Global.SCORE_EXACT;
                         alpha = value;
                     }
                 }
             }
             
-            if( state == QUIES_IN_CHECK ) {
-                if( !oneLegal) {
-                   return bValue;
-                }
-            }
             state++;
-             if( state == QUIES_IN_CHECK ) break;
         }
+        if( bInCheck ) {
+            if( !oneLegal) {
+               HashTable.addHash(0, -Global.MATE_SCORE, 0, Global.SCORE_TERMINAL, 0, chessBoard.hashValue);
+               return bValue;
+            }
+        }
+        
+        HashTable.addHash(bestMove, bValue, 0, hType, 0, chessBoard.hashValue);
         
         return bValue;
     }

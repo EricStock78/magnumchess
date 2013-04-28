@@ -122,6 +122,8 @@ abstract class Global {
     public static final int SCORE_UPPER = 2;
     public static final int SCORE_TERMINAL = 4;     //the score represents a terminal node..ie checkmate or some type of draw
 
+    public static final int ROOT_DRAW = 1;  //used to track root moves which we know are draws
+    
     /** hash table size */
     public static int HASHSIZE = 2048 * 64;		//64 mb initial hashsize
     /** pawn hash table size */
