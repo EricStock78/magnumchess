@@ -64,6 +64,14 @@ public class MoveFunctions {
         return move >> 16 & 63;
     }
     
+    public static int setMoveRootDraw( int move ) {
+        return move | (Global.ROOT_DRAW << 16);
+    }
+    
+    public static boolean isMoveRootDraw( int move ) {
+        return (move >> 16) == Global.ROOT_DRAW;
+    }
+    
     public static int makeMove(int to,int from) {
         int piece = Board.getInstance().piece_in_square[from];
         int cP = Board.getInstance().piece_in_square[to];
