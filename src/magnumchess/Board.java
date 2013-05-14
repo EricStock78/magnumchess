@@ -41,6 +41,12 @@ import java.io.IOException;
 
 public final class Board {
 
+    public class CheckInfo {
+        public long[] checkSquares = new long[Global.PIECE_ALL];
+        public long dcCandidates;
+        public long pinned; 
+    }
+    
     InputStream inputStream;
     DataInputStream dataInputStream;
 
@@ -87,6 +93,8 @@ public final class Board {
      */
     public long bitboard;
 	 
+    public long checkers;
+    
     public long[][] pieceBits = new long[2][7];
    
     public long slidePieces;
@@ -118,7 +126,9 @@ public final class Board {
     private final long kingMoveTable[] = new long[64];
     private final long kingCastleTable[] = new long[256];
 
+    
     private int flagHistory[] = new int[2048];
+    private long checkersHistory[] = new long[2048];
 	
     /** enPassant capture squares for each side */
     //private int passantW, passantB;			
@@ -728,6 +738,7 @@ public final class Board {
         moveCount = 0;
         drawCount = 0;
         bitboard = 0;
+        checkers = 0;
         Arrays.fill( pieceBits[Global.COLOUR_BLACK], 0 );
         Arrays.fill( pieceBits[Global.COLOUR_WHITE], 0 );
         slidePieces = 0;
@@ -818,6 +829,7 @@ public final class Board {
                 }
             }
         }
+        checkers = getAttack2( pieceList[Global.PIECE_KING + (turn) * 6][0] ) & pieceBits[turn^1][Global.PIECE_ALL];
 
         //hashValue = generateHash();
         //if(hashValue != generateHash()) {
@@ -1380,6 +1392,147 @@ public final class Board {
 		
     }
     
+     public  final boolean isAttacked(int side, int i, long occupancy) {
+        int eSide = side ^ 1;
+        return ((PawnAttackBoard[side][i] & pieceBits[eSide][Global.PIECE_PAWN] ) != 0L ||
+                (KnightMoveBoard[i] & pieceBits[eSide][Global.PIECE_KNIGHT] ) != 0L ||
+		(kingMoveTable[i] & pieceBits[eSide][Global.PIECE_KING] ) != 0L ||
+		(getMagicBishopMoves(i, occupancy) & ( pieceBits[eSide][Global.PIECE_BISHOP] | pieceBits[eSide][Global.PIECE_QUEEN])) != 0L ||
+		(getMagicRookMoves(i, occupancy) & ( pieceBits[eSide][Global.PIECE_ROOK] | pieceBits[eSide][Global.PIECE_QUEEN] )) != 0L );
+		
+    }
+    
+     public final CheckInfo GetCheckInfo() {
+        CheckInfo info = new CheckInfo();
+        info.pinned = GetPinnedPieces( turn, false );
+        GetGivesCheckInfo( turn, info );
+        return info;
+    }
+    
+    public final void GetGivesCheckInfo(int side, CheckInfo info) {
+        int enemyKing = pieceList[4 + (side^1) * 6][0];
+        /*long bits = PawnAttackBoard[1][60];
+        while( bits != 0 ) {
+            int pos = Long.numberOfTrailingZeros(bits);
+            bits ^= 1L << pos;
+        }*/
+        
+        info.checkSquares[Global.PIECE_PAWN] = PawnAttackBoard[side^1][enemyKing];
+        info.checkSquares[Global.PIECE_BISHOP] = getMagicBishopMoves( enemyKing );
+        info.checkSquares[Global.PIECE_KNIGHT] = getKnightMoves( enemyKing );
+        info.checkSquares[Global.PIECE_ROOK] = getMagicRookMoves( enemyKing );
+        info.checkSquares[Global.PIECE_QUEEN] = getMagicBishopMoves( enemyKing ) | getMagicRookMoves( enemyKing );
+        info.checkSquares[Global.PIECE_KING] = 0L;
+        info.dcCandidates = GetPinnedPieces( side, true );
+    }
+    
+    public final boolean MoveGivesCheck(int side, int move, CheckInfo info ) {
+        int from = MoveFunctions.getFrom( move );
+        int to = MoveFunctions.getTo( move );
+        int type = MoveFunctions.moveType( move );
+        int piece = piece_in_square[move&63]%6;
+        int enemyKing = pieceList[Global.PIECE_KING + (side^1) * 6][0];
+        if( (info.checkSquares[piece] & 1L << to) != 0 ) {
+            return true;
+        }
+        
+        else if( (info.dcCandidates & (1L << from)) != 0  && ( piece < Global.PIECE_KING  ||
+                (((Global.mask_between[enemyKing][from] & (1L << to)) == 0 )
+                && (Global.mask_between[enemyKing][to] & (1L << from)) == 0) ))
+        {
+            return true;
+        }
+        
+        switch( type ) {
+            case( Global.PROMO_Q ):
+                return ( (getMagicBishopMoves( to, bitboard ^ (1L << from) ) & (1L << enemyKing)) != 0) || 
+                        ( (getMagicRookMoves( to, bitboard ^ (1L << from) ) & (1L << enemyKing)) != 0);
+           
+            case( Global.PROMO_R ):
+                return ( (getMagicRookMoves( to, bitboard ^ (1L << from) ) & (1L << enemyKing)) != 0 );
+                
+            case( Global.PROMO_B ):
+                return ( (getMagicBishopMoves( to, bitboard ^ (1L << from) ) & (1L << enemyKing)) != 0 );
+              
+            case( Global.PROMO_N ):
+                return ( (KnightMoveBoard[to] & (1L << enemyKing)) != 0 );
+                
+            case( Global.EN_PASSANT_CAP ):
+                int enemyPawnPush = side == Global.COLOUR_WHITE ? -8 : 8;
+                int capSquare = to + enemyPawnPush;
+                long occ = bitboard ^ (1L << capSquare) ^ (1L << from) ^ (1L << to);
+
+                return ( ((getMagicBishopMoves(enemyKing, occ) & ( pieceBits[side][Global.PIECE_BISHOP] | pieceBits[side][Global.PIECE_QUEEN] ))
+                        | ( getMagicRookMoves(enemyKing, occ) & ( pieceBits[side][Global.PIECE_ROOK] | pieceBits[side][Global.PIECE_QUEEN] ))) != 0 );
+
+            case( Global.SHORT_CASTLE ):
+                occ = bitboard ^ ( 1L << to ) ^ ( 1L << (to-1)) ^ ( 1L << (to+1)) ^ ( 1L << (from));
+                return ( getMagicRookMoves( enemyKing, occ) & (1L << (to-1))) != 0;
+                
+            case( Global.LONG_CASTLE ):
+                 occ = bitboard ^ ( 1L << to ) ^ ( 1L << (to-2)) ^ ( 1L << (to+1)) ^ ( 1L << (from));
+                return ( getMagicRookMoves( enemyKing, occ) & (1L << (to+1))) != 0;
+            default:
+                return false;
+        } 
+    }
+    
+    
+    public final boolean CheckMove(int side, int move, CheckInfo info) {
+        int from = MoveFunctions.getFrom( move );
+        int to = MoveFunctions.getTo( move );
+        int type = MoveFunctions.moveType( move );
+        int king = pieceList[4 + side*6][0];
+        int piece = piece_in_square[from];
+        
+        if( type == Global.EN_PASSANT_CAP ) {
+            int enemyPawnPush = side == Global.COLOUR_WHITE ? -8 : 8;
+            int capSquare = to + enemyPawnPush;
+            long occ = bitboard ^ (1L << from) ^ (1L << to) ^ (1L << capSquare);
+            
+            return ( ((getMagicBishopMoves(king, occ) & ( pieceBits[side^1][Global.PIECE_BISHOP] | pieceBits[side^1][Global.PIECE_QUEEN] ))
+                    | ( getMagicRookMoves(king, occ) & ( pieceBits[side^1][Global.PIECE_ROOK] | pieceBits[side^1][Global.PIECE_QUEEN] ))) == 0 );
+        }
+        else if( piece % 6 == Global.PIECE_KING) {
+            return ( getAttack2( to ) & pieceBits[side^1][Global.PIECE_ALL]) == 0; 
+        }
+            
+        return( ( info.pinned == 0) || ((info.pinned & (1L << from)) == 0) || ((Global.mask_between[king][from] & (1L << to)) != 0 )
+                || (Global.mask_between[king][to] & (1L << from)) != 0);          
+    }
+    
+    public final boolean MoreThanOne(long bits) {
+        return( (bits & (bits-1)) != 0);
+    }
+    
+    private final long GetPinnedPieces(int side, boolean bDiscoverChecks) {
+        
+        long pinned = 0;
+        int sideToMove = side;
+        if( bDiscoverChecks) {
+            side ^= 1;
+        }
+        
+        long pinners = pieceBits[side^1][Global.PIECE_ALL];
+        int kingSquare = pieceList[4 + 6 * side][0];
+        
+        pinners &= ((getMagicRookMoves(kingSquare, 0) & ( pieceBits[side^1][Global.PIECE_ROOK] | pieceBits[side^1][Global.PIECE_QUEEN]) )
+                | (getMagicBishopMoves(kingSquare, 0) & ( pieceBits[side^1][Global.PIECE_BISHOP] | pieceBits[side^1][Global.PIECE_QUEEN]) ) ); 
+    
+        while( pinners != 0 )
+        {
+            int pinPos = Long.numberOfTrailingZeros(pinners);
+            pinners ^= 1L << pinPos;
+            long pieces_between = Global.mask_between[kingSquare][pinPos] & bitboard;
+            if( pieces_between != 0 && !MoreThanOne(pieces_between) && (pieceBits[sideToMove][Global.PIECE_ALL] & pieces_between) != 0 ) {
+                pinned |= pieces_between;
+            }
+        }
+        
+        return pinned;
+    }
+    
+    
     /***********************************************************************
             Name:		getPiecesInSquare
             Parameters:	None
@@ -1675,12 +1828,14 @@ public final class Board {
      *
      */
 
-    public final int MakeMove(int move, boolean board) {
+    public final int MakeMove(int move, boolean board, boolean bGivesCheck, CheckInfo info) {
 
+        assert( hashValue == generateHash() );
+        
         int to = (move >> 6) & 63;
         int from = move & 63;
         int type = (move >> 12) & 15;
-
+        int piece = piece_in_square[from] % 6;
         iCurrentMovesDepth++;
 
         hashHistory[moveCount] = hashValue;
@@ -1688,7 +1843,8 @@ public final class Board {
         flagHistory[moveCount] = (passant[Global.COLOUR_WHITE]) | (passant[Global.COLOUR_BLACK]) << 6 
                 | castleFlag[Global.COLOUR_WHITE] << 12 | castleFlag[Global.COLOUR_BLACK] << 15 
                 | turn << 18 | (piece_in_square[to] + 1) << 19;
-
+        checkersHistory[moveCount] = checkers;
+        
         moveCount++;
 
         int oldPassantW = passant[Global.COLOUR_WHITE];
@@ -1697,14 +1853,18 @@ public final class Board {
         passant[Global.COLOUR_WHITE] = NO_PASSANT_WHITE;
         passant[Global.COLOUR_BLACK] = NO_PASSANT_BLACK;
 
+        checkers = 0;
+        
         switch(type) {
 
             case(Global.ORDINARY_MOVE):
             {
                 reversable = piece_in_square[from] % 6 != 5;
                 int pieceType = piece_in_square[from] % 6;
-                if( pieceType == Global.PIECE_KING) {
-                    castleFlag[turn] = Global.NO_CASTLE;           
+                if( pieceType == Global.PIECE_KING && castleFlag[turn] > Global.CASTLED ) {
+                    hashValue ^= CastleHash[turn][castleFlag[turn]];
+                    castleFlag[turn] = Global.NO_CASTLE; 
+                    hashValue ^= CastleHash[turn][castleFlag[turn]];
                 }
                 else if( pieceType == Global.PIECE_ROOK ) {
                     if( from == (0 + 56 * turn) && (castleFlag[turn] & Global.LONG_CASTLE) != 0 ) {
@@ -1726,8 +1886,10 @@ public final class Board {
                 reversable = false;
                 int enemyTurn = turn^1;
                 int pieceType = piece_in_square[from] % 6;
-                if( pieceType == Global.PIECE_KING) {
-                    castleFlag[turn] = Global.NO_CASTLE;           
+                 if( pieceType == Global.PIECE_KING && castleFlag[turn] > Global.CASTLED ) {
+                    hashValue ^= CastleHash[turn][castleFlag[turn]];
+                    castleFlag[turn] = Global.NO_CASTLE; 
+                    hashValue ^= CastleHash[turn][castleFlag[turn]];
                 }
                 else if( pieceType == Global.PIECE_ROOK ) {
                     if( from == (0 + 56 * turn) && (castleFlag[turn] & Global.LONG_CASTLE) != 0 ) {
@@ -1866,11 +2028,38 @@ public final class Board {
             break;
 
         }
-
+        
+        
+        
+        
         hashValue ^= pHash[from][piece_in_square[from]];
         hashValue ^= pHash[to][piece_in_square[from]];
         updateBoard(to,from);
-
+        if( bGivesCheck ) {
+            checkers |=  (info.checkSquares[piece] & (1L << to));
+            if( (info.dcCandidates & (1L << from)) != 0 ) {
+                int enemyKing = pieceList[Global.PIECE_KING + (turn^1) * 6][0];
+                checkers |= ( (getMagicBishopMoves(enemyKing) & ( pieceBits[turn][Global.PIECE_BISHOP] | pieceBits[turn][Global.PIECE_QUEEN] ))
+                        | ( getMagicRookMoves(enemyKing) & ( pieceBits[turn][Global.PIECE_ROOK] | pieceBits[turn][Global.PIECE_QUEEN] ) ) );
+            }
+            switch( type ) {
+                case( Global.PROMO_Q ):
+                    int enemyKing = pieceList[Global.PIECE_KING + (turn^1) * 6][0];
+                    checkers |= ( getMagicBishopMoves(enemyKing) | getMagicRookMoves(enemyKing) ) & (1L << to);
+                break;
+                case( Global.EN_PASSANT_CAP ):
+                    enemyKing = pieceList[Global.PIECE_KING + (turn^1) * 6][0];
+                    checkers |= ( (getMagicBishopMoves(enemyKing) & ( pieceBits[turn][Global.PIECE_BISHOP] | pieceBits[turn][Global.PIECE_QUEEN] ))
+                        | ( getMagicRookMoves(enemyKing) & ( pieceBits[turn][Global.PIECE_ROOK] | pieceBits[turn][Global.PIECE_QUEEN] ) ) );
+                break;
+                case( Global.SHORT_CASTLE ):
+                    checkers |= (1L << (to-1));
+                break;
+                case( Global.LONG_CASTLE ):
+                    checkers |= (1L << (to+1));
+                break;
+            }
+        }
         if(oldPassantW != passant[Global.COLOUR_WHITE])
         {
             hashValue ^= passantHashW[oldPassantW%9];
@@ -1883,12 +2072,20 @@ public final class Board {
             hashValue ^= passantHashB[passant[Global.COLOUR_BLACK]%9];
         }
 
-        SwitchTurn();
-
-        /*if(hashValue != generateHash()) {
-        	System.out.println("info string generatehash is +"+generateHash());
-                System.out.println("crash time "+5/0);
+        /*if( checkers != (getAttack2( pieceList[Global.PIECE_KING + (turn^1) * 6][0] ) & pieceBits[turn][Global.PIECE_ALL] ) )
+        {
+            long checks = getAttack2( pieceList[Global.PIECE_KING + (turn^1) * 6][0] ) & pieceBits[turn][Global.PIECE_ALL] ;
+            assert( checkers == ( getAttack2( pieceList[Global.PIECE_KING + (turn^1) * 6][0] ) & pieceBits[turn][Global.PIECE_ALL] ) );
         }*/
+        assert( checkers == ( getAttack2( pieceList[Global.PIECE_KING + (turn^1) * 6][0] ) & pieceBits[turn][Global.PIECE_ALL] ) );
+        
+        /*if( hashValue != generateHash() ) {
+            long hash = generateHash();
+            assert( hashValue == generateHash() );
+        }*/
+        assert( hashValue == generateHash() );
+        
+        SwitchTurn();
 
         if( board )
             return AddRepetition();
@@ -1980,6 +2177,7 @@ public final class Board {
         turn = (flagHistory[moveCount] >> 18) & 1;
         castleFlag[Global.COLOUR_WHITE] = (flagHistory[moveCount] >> 12) & 7;
         castleFlag[Global.COLOUR_BLACK] = (flagHistory[moveCount] >> 15) & 7;
+        checkers = checkersHistory[moveCount];
         iCurrentMovesDepth--;
         int to = (move >> 6) & 63;
         int from = move & 63;
@@ -2074,11 +2272,15 @@ public final class Board {
         passant[Global.COLOUR_WHITE] = (flagHistory[moveCount] & 63);
         passant[Global.COLOUR_BLACK] = ((flagHistory[moveCount] >> 6) & 63);
 
+        /*if( checkers != ( getAttack2( pieceList[Global.PIECE_KING + (turn^1) * 6][0] ) & pieceBits[turn][Global.PIECE_ALL] ) ) {
+            long attacks = getAttack2( pieceList[Global.PIECE_KING + (turn^1) * 6][0] ) & pieceBits[turn][Global.PIECE_ALL];
+            assert( checkers == ( getAttack2( pieceList[Global.PIECE_KING + (turn^1) * 6][0] ) & pieceBits[turn][Global.PIECE_ALL] ) );
+        
+        }*/
+        
+        assert( checkers == ( getAttack2( pieceList[Global.PIECE_KING + (turn) * 6][0] ) & pieceBits[turn^1][Global.PIECE_ALL] ) );
         
         
-        /*if(hashValue != generateHash()) {
-            System.out.println("info string generatehash is +"+generateHash());
-            System.out.println("crash time "+5/0);
-         }*/
+        assert( hashValue == generateHash() );
     }			
 }

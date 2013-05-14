@@ -43,7 +43,7 @@ public final class Engine {
    
     /** used similar to a C preprocessor define to instruct perft to use the transposition table */
     /** useful for testing transposition table */
-    private static final boolean PERFT_TRANSTABLE = true;
+    private static final boolean PERFT_TRANSTABLE = false;
 
     /** chessBoard object from singleton class Board represents chess board and associated datastructures */
     private Board chessBoard;
@@ -104,8 +104,8 @@ public final class Engine {
     private static final int SEARCH_END = 7;
     private static final int QUIES_HASH = 1;
     private static final int QUIES_MOVES = 2;
-    private static final int QUIES_CHECKING = 5;
-    private static final int QUIES_END = 3;
+    private static final int QUIES_CHECKING = 3;
+    private static final int QUIES_END = 4;
     
     /** constants for starting values of search */
     private static final int ALPHA_START = -Global.MATE_SCORE;
@@ -240,23 +240,22 @@ public final class Engine {
 
     public int RandomSearch() 
     {
-        int theSide = chessBoard.getTurn();
+        int side = chessBoard.getTurn();
         int[] moveArr = new int[128];
-        boolean bInCheck = inCheck(theSide);
-        int numberOfMoves = inCheck(theSide) ? getCheckEscapes(theSide, moveArr) : GetAllMoves(theSide, moveArr);
-
+        boolean bInCheck = inCheck(side);
+        int numberOfMoves = inCheck(side) ? getCheckEscapes(side, moveArr) : GetAllMoves(side, moveArr);
+        Board.CheckInfo checkInfo = chessBoard.GetCheckInfo();
         for (int i = numberOfMoves - 1; i >= 0; i--) {
-            int tempMove = moveArr[i];
-            chessBoard.MakeMove(tempMove, false);
-            if (inCheck(theSide)) {
+            if( !chessBoard.CheckMove(side, moveArr[i], checkInfo) ) {
                 for (int j = i; j <= numberOfMoves - 1; j++) {
                     moveArr[j] = moveArr[j + 1];
                 }
                 numberOfMoves--;
-                chessBoard.UnMake(tempMove, false);
                 continue;
             }
-            chessBoard.UnMake(tempMove, false);
+            boolean bGivesCheck = chessBoard.MoveGivesCheck(side, moveArr[i], checkInfo);
+            chessBoard.MakeMove(moveArr[i], false, bGivesCheck, checkInfo);
+            chessBoard.UnMake(moveArr[i], false);
         }
 
         if(numberOfMoves == 0)
@@ -265,9 +264,9 @@ public final class Engine {
         }
 
         int iRandomIndex = rand.nextInt(numberOfMoves);
-
+        boolean bGivesCheck = chessBoard.MoveGivesCheck(side, moveArr[iRandomIndex], checkInfo);
         chessBoard.AddMove( moveArr[iRandomIndex]);
-        chessBoard.MakeMove( moveArr[iRandomIndex], false);
+        chessBoard.MakeMove( moveArr[iRandomIndex], false, bGivesCheck, checkInfo );
         int reps =  chessBoard.AddRepetitionRoot();
 
         if(chessBoard.GetRawMaterialScore() == Global.materialDraw) {
@@ -375,21 +374,21 @@ public final class Engine {
         //remove illegal moves
         //mark moves which result in a draw
         //perform an initial sort of the moves list based on their Q sort scores
+        Board.CheckInfo checkInfo = chessBoard.GetCheckInfo();
         for (int i = numberOfMoves - 1; i >= 0; i--) {
             int tempmove = moveArr[i];
-            int reps = chessBoard.MakeMove(tempmove, true);
-            
-            //eliminate illegal moves from later ply
-            if (inCheck(theSide)) {                   
+            if( !chessBoard.CheckMove(theSide, tempmove, checkInfo) ) {
                 for (int j = i; j <= numberOfMoves - 1; j++) {
                     moveArr[j] = moveArr[j + 1];
                     compareArray[j] = compareArray[j + 1];
                 }
                 numberOfMoves--;
-                chessBoard.UnMake(tempmove, true);
                 continue;
             }
-
+            boolean bGivesCheck = chessBoard.MoveGivesCheck(theSide, tempmove, checkInfo);
+            
+            int reps = chessBoard.MakeMove(tempmove, true, bGivesCheck, checkInfo);
+            
             if (reps == 3) {
                 moveArr[i] = MoveFunctions.setMoveRootDraw( moveArr[i] );
                 compareArray[i] = 0;
@@ -400,7 +399,7 @@ public final class Engine {
                 moveArr[i] = MoveFunctions.setMoveRootDraw( moveArr[i] );
                 compareArray[i] = 0;
             } else {
-                compareArray[i] = -Quies(SwitchSide(theSide), 1, -BETA_START, -ALPHA_START);
+                compareArray[i] = -Quies(SwitchSide(theSide), 1, -BETA_START, -ALPHA_START, bGivesCheck);
                 thisDepth--;
             }
             chessBoard.UnMake(moveArr[i], true);
@@ -432,12 +431,14 @@ public final class Engine {
                 int tempMove = moveArr[i];
                 int nextDepth = depth * Global.PLY - Global.PLY + partialDepthExtension;
                
+                boolean bGivesCheck = chessBoard.MoveGivesCheck(theSide, tempMove, checkInfo);
+                 
                 if (MoveFunctions.isMoveRootDraw( moveArr[i] )) {
                     value = 0;
                 }
                 else if (!isExact) {
-                    chessBoard.MakeMove(tempMove, true);
-                    value = -Max(SwitchSide(theSide), nextDepth, -beta, -alpha, false, inCheck(SwitchSide(theSide)), false, false, 0);
+                    chessBoard.MakeMove(tempMove, true, bGivesCheck, checkInfo);
+                    value = -Max(SwitchSide(theSide), nextDepth, -beta, -alpha, false, bGivesCheck, false, false, 0);
                     chessBoard.UnMake(tempMove, true);
                     thisDepth--;
                     //check for a first move which goes LOW
@@ -447,14 +448,14 @@ public final class Engine {
                     
                 } else {
                     
-                    chessBoard.MakeMove(tempMove, true);
-                    value = -Max(SwitchSide(theSide), nextDepth, -alpha - 1, -alpha, false, inCheck(SwitchSide(theSide)), false, false, 0);
+                    chessBoard.MakeMove(tempMove, true, bGivesCheck, checkInfo);
+                    value = -Max(SwitchSide(theSide), nextDepth, -alpha - 1, -alpha, false, bGivesCheck, false, false, 0);
                     thisDepth--;
 
                     if (value > alpha && !stop) {
                         //check for a move which goes HIGH
                         GotoTimeState(TIME_STATE_FAIL_HIGH);
-                        value = -Max(SwitchSide(theSide), nextDepth, -beta, -alpha, false, inCheck(SwitchSide(theSide)), false, false, 0);
+                        value = -Max(SwitchSide(theSide), nextDepth, -beta, -alpha, false, bGivesCheck, false, false, 0);
                         thisDepth--;                
                     } 
                     chessBoard.UnMake(tempMove, true);
@@ -481,7 +482,9 @@ public final class Engine {
             int moveDepth = 0;
             int[] pvMoves = new int[64];
             do {
-                int reps = chessBoard.MakeMove( move, true );
+                Board.CheckInfo info = chessBoard.GetCheckInfo();
+                boolean bGivesCheck = chessBoard.MoveGivesCheck(chessBoard.getTurn(), move, info);
+                int reps = chessBoard.MakeMove( move, true, bGivesCheck, info );
                 
                 pvMoves[moveDepth++] = move;
                 int hashIndex = HashTable.hasHash(chessBoard.hashValue);
@@ -534,7 +537,8 @@ public final class Engine {
         } catch (Exception e) {};*/
         //make the best move
         chessBoard.AddMove(bestMove);
-        chessBoard.MakeMove(bestMove, false);
+        boolean bGivesCheck = chessBoard.MoveGivesCheck(chessBoard.getTurn(), bestMove, checkInfo);
+        chessBoard.MakeMove( bestMove, false, bGivesCheck, checkInfo );
         chessBoard.AddRepetitionRoot();
 
         return HistoryWriter.getUCIMove(bestMove);
@@ -556,14 +560,13 @@ public final class Engine {
         if (!inCheck(side)) {				//side to move must not be in check...otherwise could be checkmate
             int[] Moves = new int[128];
             int numberOfMoves = GetAllMoves(side, Moves);
+            Board.CheckInfo checkInfo = chessBoard.GetCheckInfo();
             for (int i = 0; i < numberOfMoves; i++) {
-                int temp = Moves[i];
-                chessBoard.MakeMove(temp, false);
-                if (!inCheck(side)) {
-                    chessBoard.UnMake(temp, false);
+                if( !chessBoard.CheckMove(side, Moves[i], checkInfo)) {
+                    continue;
+                }
+                else {
                     return false;
-                } else {
-                    chessBoard.UnMake(temp, false);
                 }
             }
             return true;
@@ -584,66 +587,86 @@ public final class Engine {
      * @return int - the number of moves added
      *
      */
-    public int getCheckingMoves(int side, int[] Moves, int start) 
+    public int getCheckingMoves(int side, int[] Moves, int start, Board.CheckInfo checkInfo) 
     {
-        long moves, doubleMoves;
+        long moves, doubleMoves, dcMoves, dcDoubleMoves;
         int index = start;
         long pieces = chessBoard.pieceBits[side][Global.PIECE_PAWN];
-        long enemyKing = chessBoard.pieceBits[side^1][Global.PIECE_KING];
+        long dcPieces = chessBoard.pieceBits[side][Global.PIECE_PAWN] & checkInfo.dcCandidates;
         if( side == Global.COLOUR_WHITE)
         {
             moves = pieces << 8 & ~chessBoard.bitboard & ~Global.rankMasks[7];
+            dcMoves = dcPieces << 8 & ~chessBoard.bitboard & ~Global.rankMasks[7];
             doubleMoves = moves << 8 & Global.rankMasks[3] & ~chessBoard.bitboard;
         }
         else
         {
             moves = pieces >> 8 & ~chessBoard.bitboard & ~Global.rankMasks[0];
+            dcMoves = dcPieces >> 8 & ~chessBoard.bitboard & ~Global.rankMasks[0];
             doubleMoves = moves >> 8 & Global.rankMasks[4] & ~chessBoard.bitboard;
         }
-
+        moves &= checkInfo.checkSquares[Global.PIECE_PAWN];
         while (moves != 0) 
         {
             long toBit = moves & -moves;
             moves ^= toBit;
             int to = Long.numberOfTrailingZeros(toBit);
-            if( (chessBoard.getPawnAttack(side, to) & enemyKing ) != 0 )
-            {
-                 int from = to + Global.behindRank[side];
-                 moveOrder[index] = Hist[side][5][to];
-                 Moves[index++] = MoveFunctions.makeMove(to, from, Global.ORDINARY_MOVE);
+            int from = to + Global.behindRank[side];
+            moveOrder[index] = Hist[side][5][to];
+            Moves[index++] = MoveFunctions.makeMove(to, from, Global.ORDINARY_MOVE);
+        }
+        
+        dcDoubleMoves = dcMoves;
+        while (dcMoves != 0) 
+        {
+            int enemyKing = chessBoard.pieceList[4 + (side^1) * 6][0];
+            long toBit = dcMoves & -dcMoves;
+            dcMoves ^= toBit;
+            int to = Long.numberOfTrailingZeros(toBit);
+            int from = to + Global.behindRank[side];
+            if(((Global.mask_between[enemyKing][from] & (1L << to)) == 0 )
+                && ((Global.mask_between[enemyKing][to] & (1L << from)) == 0) ) {
+                moveOrder[index] = Hist[side][5][to];
+                Moves[index++] = MoveFunctions.makeMove(to, from, Global.ORDINARY_MOVE);
+            }
+            else {
+                dcDoubleMoves ^= toBit;
             }
         }
+        
+        doubleMoves &= checkInfo.checkSquares[Global.PIECE_PAWN];
         while (doubleMoves != 0) 
         {
             long toBit = doubleMoves & -doubleMoves;
             doubleMoves ^= toBit;
             int to = Long.numberOfTrailingZeros(toBit);
-            if( (chessBoard.getPawnAttack(side, to) & enemyKing ) != 0 )
-            {
-                int from = to + Global.behindRank[side] * 2;
+            int from = to + Global.behindRank[side] * 2;
+            moveOrder[index] = Hist[side][5][to];
+            Moves[index++] = MoveFunctions.makeMove(to, from, Global.DOUBLE_PAWN);
+        }
+        
+        if( side == Global.COLOUR_WHITE) {
+            dcDoubleMoves = dcDoubleMoves << 8 & Global.rankMasks[3] & ~chessBoard.bitboard; 
+        }
+        else {
+            dcDoubleMoves = dcDoubleMoves >> 8 & Global.rankMasks[4] & ~chessBoard.bitboard;
+        }
+        
+        while (dcDoubleMoves != 0) 
+        {
+            int enemyKing = chessBoard.pieceList[4 + (side^1) * 6][0];
+            long toBit = dcDoubleMoves & -dcDoubleMoves;
+            dcDoubleMoves ^= toBit;
+            int to = Long.numberOfTrailingZeros(toBit);
+            int from = to + Global.behindRank[side] * 2;
+            if(((Global.mask_between[enemyKing][from] & (1L << to)) == 0 )
+                && ((Global.mask_between[enemyKing][to] & (1L << from)) == 0) ) {
                 moveOrder[index] = Hist[side][5][to];
                 Moves[index++] = MoveFunctions.makeMove(to, from, Global.DOUBLE_PAWN);
             }
         }
 
-        for(int j=0; j < chessBoard.pieceTotals[Global.pieceAdd[side]]; j++)
-        {
-            int from = chessBoard.pieceList[Global.pieceAdd[side]][j];
-            long toSquares = chessBoard.getAttackBoard(from);
-            toSquares &= ~chessBoard.bitboard;
-            while (toSquares != 0) {
-                long toBit = toSquares & -toSquares;
-                toSquares ^= toBit;
-                int to = Long.numberOfTrailingZeros(toBit);
-                if( (chessBoard.getMagicRookMoves(to) & enemyKing ) != 0 )
-                {
-                    moveOrder[index] = Hist[side][0][to];
-                    Moves[index++] = MoveFunctions.makeMove(to, from, Global.ORDINARY_MOVE);
-                }
-            }
-        }
-
-        for(int i=2; i<4; i++)
+        for(int i=0; i<4; i++)
         {
             int pType = i + Global.pieceAdd[side];
             for(int j=0; j < chessBoard.pieceTotals[pType]; j++)
@@ -651,29 +674,58 @@ public final class Engine {
                 int from = chessBoard.pieceList[pType][j];
                 long toSquares = chessBoard.getAttackBoard(from);
                 toSquares &= ~chessBoard.bitboard;
+                if( (checkInfo.dcCandidates & (1L << from)) == 0 ) {
+                    toSquares &= checkInfo.checkSquares[i];
+                }
                 while (toSquares != 0) {
                     long toBit = toSquares & -toSquares;
                     toSquares ^= toBit;
                     int to = Long.numberOfTrailingZeros(toBit);
-                    if( i == 2)
-                    {
-                        if( (chessBoard.getMagicBishopMoves(to) & enemyKing ) != 0 )
-                        {
-                            moveOrder[index] = Hist[side][i][to];
-                            Moves[index++] = MoveFunctions.makeMove(to, from, Global.ORDINARY_MOVE);
-                        }
+                    moveOrder[index] = Hist[side][i][to];
+                    Moves[index++] = MoveFunctions.makeMove(to, from, Global.ORDINARY_MOVE);
+                }
+            }
+        }
+        
+        int kingPos = chessBoard.pieceList[4 + side * 6][0];
+        if( (checkInfo.dcCandidates & (1L << kingPos)) != 0 ) {
+            int enemyKing = chessBoard.pieceList[4 + (side^1) * 6][0];
+            long toSquares = chessBoard.getAttackBoard(kingPos);
+            toSquares &= ~chessBoard.bitboard;
+            while (toSquares != 0) {
+                long toBit = toSquares & -toSquares;
+                toSquares ^= toBit;
+                int to = Long.numberOfTrailingZeros(toBit);
+                if(((Global.mask_between[enemyKing][kingPos] & (1L << to)) == 0 )
+                    && ((Global.mask_between[enemyKing][to] & (1L << kingPos)) == 0) ) {
+                    moveOrder[index] = Hist[side][Global.PIECE_KING][to];
+                    Moves[index++] = MoveFunctions.makeMove(to, kingPos, Global.ORDINARY_MOVE);
+                }
+            }
+        }
+        
+        if (chessBoard.castleFlag[side] > Global.CASTLED)  {
+            long Temp = chessBoard.getKingCastle(((int)(chessBoard.bitboard >>> (56 * side)) & 255));
+            if(chessBoard.castleFlag[side] != Global.SHORT_CASTLE && ((Temp & Global.set_Mask[ 2 ]) != 0 ) ) {
+                if( !chessBoard.isAttacked(side, 2 + (56 * side)) && !chessBoard.isAttacked(side, 3 + (56 * side)) ) {
+                    if( chessBoard.MoveGivesCheck(side, MoveFunctions.makeMove(2 + (56 * side), 4 + 56 * side, Global.LONG_CASTLE), checkInfo)) { 
+                        moveOrder[index] = Hist[side][4][2 + (56 * side)];
+                        Moves[index++] = MoveFunctions.makeMove(2 + (56 * side), 4 + 56 * side, Global.LONG_CASTLE);
                     }
-                    else
-                    {
-                        if( (chessBoard.getQueenMoves(to) & enemyKing ) != 0 )
-                        {
-                            moveOrder[index] = Hist[side][i][to];
-                            Moves[index++] = MoveFunctions.makeMove(to, from, Global.ORDINARY_MOVE);
-                        }
+                }
+            }
+            if(chessBoard.castleFlag[side] != Global.LONG_CASTLE && ((Temp & Global.set_Mask[ 6 ])!=0 ) ) {		
+                if( !chessBoard.isAttacked(side, 5 + (56 * side)) && !chessBoard.isAttacked(side, 6 + (56 * side)) ) {
+                    if( chessBoard.MoveGivesCheck(side, MoveFunctions.makeMove(6 + (56 * side), 4 + 56 * side, Global.SHORT_CASTLE), checkInfo)) { 
+                        moveOrder[index] = Hist[side][4][6 + (56 * side)];
+                        Moves[index++] = MoveFunctions.makeMove(6 + (56 * side), 4 + 56 * side, Global.SHORT_CASTLE);
                     }
                 }
             }
         }
+        
+        
+        
         sortMoves(start, index, Moves);
         return index;
    }
@@ -1032,7 +1084,11 @@ public final class Engine {
     */
     private int getCheckEscapes(int side, int[] escapes) {
         
+        
         int kingPos = chessBoard.pieceList[4 + side * 6][0];
+        
+        assert( chessBoard.checkers == (chessBoard.getAttack2(kingPos)& chessBoard.pieceBits[side^1][Global.PIECE_ALL]) );
+        
         int index = 0;
         //get the king moves
         long toSquares = chessBoard.getAttackBoard(kingPos) & ~chessBoard.pieceBits[side][Global.PIECE_ALL];
@@ -1191,7 +1247,7 @@ public final class Engine {
      *
      */
    
-    private boolean verifyMove(int side, int move, boolean bKillerMove) 
+    private boolean verifyMove(int side, int move, boolean bKillerMove, Board.CheckInfo checkInfo) 
     {  
         
         if ( move == 0) {
@@ -1203,7 +1259,7 @@ public final class Engine {
         int piece = chessBoard.piece_in_square[ from ];
         
         if( bKillerMove ) {
-            if( piece != chessBoard.piece_in_square[from] ) {
+            if( piece != MoveFunctions.getKillerPiece( move ) ) {
                 return false;
             }
         }
@@ -1306,6 +1362,9 @@ public final class Engine {
                 if( piece % 6 != 4 ) {
                     return false;
                 }
+                if( chessBoard.checkers != 0) {
+                    return false;
+                }
                 if( from != chessBoard.pieceList[piece][0] || from != (4 + 56 * side) ) {
                     return false;
                 }
@@ -1329,6 +1388,10 @@ public final class Engine {
                 if( piece % 6 != 4 ) {
                     return false;
                 }
+                if( chessBoard.checkers != 0) {
+                    return false;
+                }
+                
                 if( from != chessBoard.pieceList[piece][0] || from != (4 + 56 * side) ) {
                     return false;
                 }
@@ -1349,6 +1412,34 @@ public final class Engine {
                 
             break;
             
+        }
+        
+        if( chessBoard.checkers != 0 ) {
+            
+            if( chessBoard.MoreThanOne( chessBoard.checkers )) {
+                //only a escape move is acceptable
+                if( piece != Global.PIECE_KING ) {
+                    return false;
+                }
+                else if( chessBoard.isAttacked(side, to, chessBoard.bitboard ^ ((1L << from) | (1L << to)))) {
+                    return false;
+                }
+            }
+            else {
+                //either a move to block or capture the checker, or a king escape move
+                if( piece == Global.PIECE_KING ) {               
+                    if( chessBoard.isAttacked(side, to, chessBoard.bitboard ^ ((1L << from) | (1L << to)))) {
+                        return false;
+                    }
+                }
+                else {
+                    int checker = Long.numberOfTrailingZeros(chessBoard.checkers);
+                    int king = chessBoard.pieceList[side][Global.PIECE_KING];
+                    if(to != checker && (Global.mask_between[king][checker] & (1L << to)) == 0 ) {
+                        return false;
+                    }
+                } 
+            }
         }
         return true;
     }
@@ -1524,7 +1615,7 @@ public final class Engine {
             if (depth - reduce - Global.PLY >= Global.PLY) {
                 value = -Max(SwitchSide(side), depth - reduce - Global.PLY, -beta, -beta + 1, true, false, false, false, 0);
             } else {
-                value = -Quies(SwitchSide(side), 0, -beta, -beta + 1);
+                value = -Quies(SwitchSide(side), 0, -beta, -beta + 1, false);
             }
             thisDepth--;
             chessBoard.SwitchTurn();
@@ -1566,7 +1657,7 @@ public final class Engine {
         int index = 0;
         
         int ttMove = 0;
-        
+        Board.CheckInfo checkInfo = chessBoard.GetCheckInfo();
         while (state != SEARCH_END) {
 
             switch (state) {
@@ -1574,7 +1665,7 @@ public final class Engine {
                 case (SEARCH_HASH):
                     if( hashIndex != -1 ) {
                         theMove = HashTable.getMove(hashIndex);
-                        if (verifyMove(side,theMove, false)) {  
+                        if (verifyMove(side,theMove, false, checkInfo)) {  
                             //int hDepth = MoveFunctions.getTTMoveDepth( ttMove );
                             /*int hDepth = HashTable.getDepth(hashIndex, false);
                             int hVal = HashTable.getValue(hashIndex, false);
@@ -1607,13 +1698,13 @@ public final class Engine {
                         index = 0;
                         endIndex = 0;
 
-                        if (MoveFunctions.getValue(killerMoves[1][thisDepth]) >= 1 && verifyMove(side, killerMoves[1][thisDepth], true)) {
+                        if (MoveFunctions.getValue(killerMoves[1][thisDepth]) >= 1 && verifyMove(side, killerMoves[1][thisDepth], true, checkInfo)) {
                            if( hashArr[0] != (killerMoves[1][thisDepth] & 65535) && hashArr[1] != (killerMoves[1][thisDepth] & 65535)) {
                                 moveArr[index++] = killerMoves[1][thisDepth] & 65535;
                                 hashArr[noHash++] = killerMoves[1][thisDepth] & 65535;
                            }
                         }
-                        if (MoveFunctions.getValue(killerMoves[0][thisDepth]) >= 1 && verifyMove(side, killerMoves[0][thisDepth], true) 
+                        if (MoveFunctions.getValue(killerMoves[0][thisDepth]) >= 1 && verifyMove(side, killerMoves[0][thisDepth], true, checkInfo) 
                                 && (killerMoves[0][thisDepth] & 65535) != (killerMoves[1][thisDepth]  & 65535)) {
                             if (hashArr[0] != (killerMoves[0][thisDepth] & 65535) && hashArr[1] != (killerMoves[0][thisDepth] & 65535)) {
                                 moveArr[index++] = killerMoves[0][thisDepth] & 65535;
@@ -1631,13 +1722,13 @@ public final class Engine {
                     index = 126;
                     endIndex = 126;
                     
-                    if (MoveFunctions.getValue(killerMoves[1][thisDepth]) == 0 && verifyMove(side, killerMoves[1][thisDepth], true)) {
+                    if (MoveFunctions.getValue(killerMoves[1][thisDepth]) == 0 && verifyMove(side, killerMoves[1][thisDepth], true,checkInfo)) {
                        if( (hashArr[0] & 65535) != (killerMoves[1][thisDepth] & 65535) && (hashArr[1] & 65535) != (killerMoves[1][thisDepth] & 65535 )) {
                             moveArr[index++] = killerMoves[1][thisDepth] & 65535;
                             hashArr[noHash++] = killerMoves[1][thisDepth] & 65535;
                        }
                     }
-                    if (MoveFunctions.getValue(killerMoves[0][thisDepth]) == 0 && verifyMove(side, killerMoves[0][thisDepth], true) 
+                    if (MoveFunctions.getValue(killerMoves[0][thisDepth]) == 0 && verifyMove(side, killerMoves[0][thisDepth], true, checkInfo) 
                             && (killerMoves[0][thisDepth] & 65535) != (killerMoves[1][thisDepth] & 65535 )) {
                         if( (hashArr[0] & 65535) != (killerMoves[0][thisDepth] & 16777215) && (hashArr[1] & 65535) != (killerMoves[0][thisDepth] & 65535)) {
                             moveArr[index++] = killerMoves[0][thisDepth] & 65535;
@@ -1658,7 +1749,9 @@ public final class Engine {
                
                 theMove = moveArr[i];
                 
-                if( theMove == excludedMove ) continue;
+                if( theMove == excludedMove ) {
+                    continue;
+                }
                 
                 if( state == BAD_CAPS || state == NON_CAPS || state == GOOD_CAPTURES ) {
                     boolean bDuplicate = false;
@@ -1669,9 +1762,15 @@ public final class Engine {
                             break;
                         }
                     }
-                    if( bDuplicate ) continue;
+                    if( bDuplicate ) {
+                        continue;
+                    }
                 } 
                
+                if( !chessBoard.CheckMove(side, theMove, checkInfo) ) {
+                    continue;
+                }
+                
                 int to = MoveFunctions.getTo(theMove);
                 int from = MoveFunctions.getFrom(theMove);
                 int piece = chessBoard.piece_in_square[from];
@@ -1694,9 +1793,10 @@ public final class Engine {
                         continue;
                     }
                 }
-                int extendAmount = 0;
                 
-               
+                boolean checkingMove = chessBoard.MoveGivesCheck(side, theMove, checkInfo);
+                int extendAmount = checkingMove ? Global.PLY : 0;
+                
                 //singular extension
                 /*if( extendAmount == 0 && theMove == singular_move ) {
                     int testVal = singular_value - depth / 2;
@@ -1708,9 +1808,11 @@ public final class Engine {
                     //singular_testVal = Max(side, depth / 2, testVal-1, testVal, true, isInCheck, false, true, singular_move);
                 }*/
                 
-                
-                int reps = chessBoard.MakeMove(theMove, true);
+                int reps = chessBoard.MakeMove(theMove, true, checkingMove, checkInfo);
               
+                assert( !inCheck( side ));
+                assert( checkingMove == inCheck( side^1));
+                
                 if( reps >= 2)
                 {
                     oneLegal = true;
@@ -1718,17 +1820,6 @@ public final class Engine {
                 }
                 else
                 {
-                    if( inCheck( side ) ) {
-                        chessBoard.UnMake(theMove, true);
-                        continue;
-                    }
-                   
-                    boolean checkingMove = false;
-                    if( inCheck( side^1 )) {
-                        checkingMove = true;
-                        extendAmount += Global.PLY;
-                    }
-                    
                     //recognize moves involving passed pawns
                     //do not want to forward prune/lmr these moves
                     boolean passedPawnMove = false;
@@ -1740,39 +1831,11 @@ public final class Engine {
                         passedPawnMove = Evaluation2.isPassedPawn(side, to); 
                     }
                     
-                    /*if( chessBoard.piece_in_square[chessBoard.pieceList[4][0]] != 4 || chessBoard.piece_in_square[chessBoard.pieceList[10][0]] != 10 ) {
-                        System.out.println("info string big probs 4");
-                    }
-                    
-                    if( inCheck(side) ) {
-                        
-                        chessBoard.UnMake(theMove, true);
-                        index = getCheckEscapes(side, moveArr);
-                        verifyMove(side, theMove, true); 
-                        chessBoard.CheckMove(side, theMove, checkInfo);
-                         chessBoard.MakeMove(theMove, true);
-                        boolean bCheck = inCheck(side^1);
-                        System.out.println("info string big probs");
-                    }
-                    
-                    if( inCheck(side^1) && !checkingMove) {
-                        System.out.println("info string big probs2");
-                    }
-                    
-                    if( !inCheck(side^1) && checkingMove) {
-                        System.out.println("info string big probs3");
-                         chessBoard.UnMake(theMove, true);
-                         chessBoard.MoveGivesCheck(side, theMove, checkInfo);
-                         chessBoard.MakeMove(theMove, true);
-                        boolean bCheck = inCheck(side^1);
-                        System.out.println("info string big probs3");
-                    }*/
-                    
                     /** we have a legal move */
                     oneLegal = true;
 
                     // futility pruning code
-                    if (bFutilityPrune && extendAmount == 0 && !passedPawnMove) {
+                    if (bFutilityPrune && extendAmount == 0 && !isInCheck && !passedPawnMove) {
                         scoreThreshold = chessBoard.GetMaterialScore(side);
                         //int neededValue = alpha - futilityMargin;
                         //scoreThreshold = -Evaluation2.getEval(side^1, neededValue, neededValue+1, thisDepth);
@@ -1798,14 +1861,14 @@ public final class Engine {
                         if (nextDepth >= Global.PLY) {
                             value = -Max(SwitchSide(side), nextDepth, -beta, -alpha, false, checkingMove, extendAmount > 0, false, 0);
                         } else {
-                            value = -Quies(SwitchSide(side), 0, -beta, -alpha);
+                            value = -Quies(SwitchSide(side), 0, -beta, -alpha, false);
                         }    
 			thisDepth--;
                     } else {
                         if (nextDepth >= Global.PLY) {
                             value = -Max(SwitchSide(side), nextDepth, -alpha - 1, -alpha, false, checkingMove, extendAmount > 0, false, 0);
                         } else {
-                            value = -Quies(SwitchSide(side), 0, -alpha - 1, -alpha);
+                            value = -Quies(SwitchSide(side), 0, -alpha - 1, -alpha, false);
                         }
 			thisDepth--;
                         if (value > alpha && value < beta) {
@@ -1815,7 +1878,7 @@ public final class Engine {
                             if (nextDepth >= Global.PLY) {
                                 value = -Max(SwitchSide(side), nextDepth, -beta, -alpha, false, checkingMove, extendAmount > 0, false, 0);
                             } else {
-                                value = -Quies(SwitchSide(side), 0, -beta, -alpha);
+                                value = -Quies(SwitchSide(side), 0, -beta, -alpha, false);
                             }
                             thisDepth--;
                         } else if (value > alpha && (lmr)) {       //use normal depth if lmr move looks interesting
@@ -1906,10 +1969,30 @@ public final class Engine {
         return bMove;
    }
 
-    public boolean IsCheckDangerous( int move, int side )
+    public boolean IsCheckDangerous( int side, int move  )
     {
+        int to = MoveFunctions.getTo(move);
+        int from = MoveFunctions.getFrom(move);
+        long occupancy = chessBoard.bitboard ^ chessBoard.pieceBits[side^1][Global.PIECE_KING] ^ (1L << from);
+        long kingMoves = chessBoard.getAttackBoard(chessBoard.pieceList[Global.PIECE_KING + 6 * (side^1)][0]);
+        long newAttack = chessBoard.getAttackBoard(to, occupancy);
+        long oldAttack = chessBoard.getAttackBoard(to);
+        if( !chessBoard.MoreThanOne(kingMoves & ~(chessBoard.pieceBits[side][Global.PIECE_ALL] | newAttack | (1L << to) ) ) ) {
+            return true;
+        }
+        
+        if( chessBoard.piece_in_square[from] % 6 == 3 && ( (kingMoves & (1L << to)) != 0 ) ) {
+            return true;
+        }
+        
+        long threats = (chessBoard.pieceBits[side^1][Global.PIECE_ALL] ^ chessBoard.pieceBits[side^1][Global.PIECE_KING]) & newAttack & ~oldAttack;
+        if( threats != 0 ) {
+            return true;
+        }
+        
         return false;
     }
+       
     
     /**
      * Method Quies
@@ -1927,38 +2010,40 @@ public final class Engine {
      * @return int - the score from searching the position
      *
      */
-     private int Quies(int side, int depth, int alpha, int beta) {
+     private int Quies(int side, int depth, int alpha, int beta, boolean bInCheck) {
         /* try {
             buffWriter.write("quies "+chessBoard.hashValue+" "+"alpha "+alpha+" beta "+beta);
         } catch (Exception ex2) {};*/
  
+        assert( bInCheck == inCheck( side ));
+         
         thisDepth++;
         
         nodes++;
         
         int hashIndex = HashTable.hasHash(chessBoard.hashValue);
-        
+        int hDepth = (bInCheck || depth > Global.QUIES_CHECK_MAX_DEPTH) ? Global.HASH_QUIES : Global.HASH_QUIES_CHECK;
         if( hashIndex != -1) {
             hashHits++;
             HashTable.setNew(hashIndex);
             
             int hVal = HashTable.getValue(hashIndex);
-
+            int entryDepth = HashTable.getDepth(hashIndex);
             switch (HashTable.getType(hashIndex)) {
                 case (Global.SCORE_UPPER):
-                    if (hVal <= alpha) {
+                    if (entryDepth >= hDepth && hVal <= alpha) {
                         nodes++;
                         return hVal;
                     }   
                 break;
                 case (Global.SCORE_EXACT):
-                    if (hVal > alpha && hVal < beta) {
+                    if (entryDepth >= hDepth && hVal > alpha && hVal < beta) {
                         nodes++;
                         return hVal;
                     }
                 break;
                 case (Global.SCORE_LOWER):
-                    if (hVal >= beta) {
+                    if (entryDepth >= hDepth && hVal >= beta) {
                         nodes++;
                         return hVal;
                     }
@@ -1975,7 +2060,7 @@ public final class Engine {
         int bValue = -Global.MATE_SCORE + thisDepth;
         int testValue = 0;
         int value = 0;
-        boolean bInCheck = ( depth != 0 && inCheck(side));
+       
         if( !bInCheck ) {
             value = Evaluation2.getEval(side, alpha, beta, thisDepth); 
             if (value > alpha) {
@@ -1997,7 +2082,8 @@ public final class Engine {
         int hType = Global.SCORE_UPPER;
         int bestMove = 0;
         int hashMove = 0;
-        while( state != QUIES_END )
+        Board.CheckInfo checkInfo = chessBoard.GetCheckInfo();
+        while( state < QUIES_END )
         {
             switch( state )
             {
@@ -2007,7 +2093,7 @@ public final class Engine {
                     if( !bInCheck && !(type == Global.ORDINARY_CAPTURE || type == Global.PROMO_Q || type == Global.EN_PASSANT_CAP)) {
                         break;
                     }
-                    else if( verifyMove(side, capArr[0], false) ) {                             
+                    else if( verifyMove(side, capArr[0], false, checkInfo) ) {                             
                         hashMove = capArr[0];
                         index = 1;
                     }
@@ -2022,7 +2108,45 @@ public final class Engine {
                  break;
                     
                 case( QUIES_CHECKING ):
-                    index = getCheckingMoves(side, capArr, 0);
+                     /*{
+                       int testArr1[] = new int[128];
+                        int testIndex1 = getMoves( side, testArr1, 0 );
+                        int iNumChecks = 0;
+                        for (int i = testIndex1 - 1; i >= 0; i--) {
+                            if( chessBoard.MoveGivesCheck( side, testArr1[i], checkInfo)) {
+                                iNumChecks++;
+                            }
+                        }
+                        
+                        int testArr2[] = new int[128];
+                        int testIndexChecks = getCheckingMoves(side, testArr2, 0, checkInfo);
+                        
+                        if( iNumChecks != testIndexChecks ) {
+                           
+                            for (int i = testIndex1 - 1; i >= 0; i--) {
+                                if( chessBoard.MoveGivesCheck( side, testArr1[i], checkInfo)) {
+                                    int from = MoveFunctions.getFrom(testArr1[i]);
+                                    int to = MoveFunctions.getTo(testArr1[i]);
+                                    int TestType = MoveFunctions.moveType(testArr1[i]);
+                                    System.out.println( "piece is "+chessBoard.piece_in_square[from]+" type is "+TestType+" from is "+from+" to is "+to );
+                                    iNumChecks++;
+                                }
+                            }
+                            System.out.println();
+                            
+                            for (int i = testIndexChecks - 1; i >= 0; i--) {
+                                if( chessBoard.MoveGivesCheck( side, testArr2[i], checkInfo)) {
+                                    int from = MoveFunctions.getFrom(testArr2[i]);
+                                    int to = MoveFunctions.getTo(testArr2[i]);
+                                    int TestType = MoveFunctions.moveType(testArr2[i]);
+                                    System.out.println( "piece is "+chessBoard.piece_in_square[from]+" type is "+TestType+" from is "+from+" to is "+to );
+                                    iNumChecks++;
+                                }
+                            }
+                        }
+                    }*/
+                    
+                    index = getCheckingMoves(side, capArr, 0, checkInfo);
                 break; 
             }
             
@@ -2030,55 +2154,82 @@ public final class Engine {
                 
                 int to = MoveFunctions.getTo(capArr[i]);
                 int from = MoveFunctions.getFrom(capArr[i]);
-                if (state == QUIES_MOVES ) {
+                
+                boolean bGivesCheck = ( state == QUIES_CHECKING || chessBoard.MoveGivesCheck(side, capArr[i], checkInfo) );
+                
+                if (state != QUIES_HASH ) {
                     
                     if( capArr[i] == hashMove ) {  
                         continue;
                     }
+                    
                     int type = MoveFunctions.moveType(capArr[i]);
-                    if( !bInCheck && (type == Global.ORDINARY_CAPTURE || type == Global.PROMO_Q || type == Global.EN_PASSANT_CAP)  ) {
-                        
-                        int neededScore = (int)Math.max(0, (alpha - testValue));
-                        int initialGain = 0;
-                        if( type < Global.PROMO_Q) {
-                            initialGain = Global.values[chessBoard.piece_in_square[to]]- Global.values[chessBoard.piece_in_square[from]];
-                        } else if( type < Global.EN_PASSANT_CAP) {
-                            initialGain = Global.values[3] - Global.values[5];
+                    
+                    //if( !bNodePV && !bInCheck && bGivesCheck && type == Global.ORDINARY_MOVE && !IsCheckDangerous( side, capArr[i] ) ) {
+                    //    continue;
+                    //}
+                    
+                    /*int enemyKing = chessBoard.pieceList[4 + (side^1) * 6][0];
+                    boolean bDiscoveredCheck = false;
+                    if( (chessBoard.piece_in_square[from] % 6) < 4 ) {
+                        if((checkInfo.dcCandidates & (1L << from)) != 0 ) {
+                            bDiscoveredCheck = true;
                         }
+                    }else if( (checkInfo.dcCandidates & (1L << from)) != 0 && ((Global.mask_between[enemyKing][from] & (1L << to)) == 0) && ((Global.mask_between[enemyKing][to] & (1L << from)) == 0) ) {
+                        bDiscoveredCheck = true;  
+                    }*/
+                    
+                    if (!bInCheck && state == QUIES_MOVES  ) {
+                    
+                        if( (type == Global.ORDINARY_CAPTURE || type == Global.PROMO_Q || type == Global.EN_PASSANT_CAP) ) {
 
-                        if( initialGain < neededScore && (SEE.GetSEE_PinsPlus(side, to, from, type, neededScore)) < neededScore)
-                        {
+                            int neededScore = bGivesCheck ? 0 : (int)Math.max(0, (alpha - testValue));
+                            int initialGain = 0;
+                            if( type < Global.PROMO_Q) {
+                                initialGain = Global.values[chessBoard.piece_in_square[to]]- Global.values[chessBoard.piece_in_square[from]];
+                            } else if( type < Global.EN_PASSANT_CAP) {
+                                initialGain = Global.values[3] - Global.values[5];
+                            }
+
+                            if( initialGain < neededScore && (SEE.GetSEE_PinsPlus(side, to, from, type, neededScore)) < neededScore)
+                            {
+                                bValue = alpha;
+                                continue;
+                            }   
+                        }
+                    } 
+                    else if( state == QUIES_CHECKING ) {
+                        
+                        if( SEE.GetSEE_PinsPlus(side, to, from, type, 0) < 0 ) {
                             bValue = alpha;
                             continue;
-                        }   
+                        }
                     }
                 }
-                else if( state == QUIES_CHECKING )
-                {
-                    if( IsCheckDangerous( capArr[i], side )) continue;
+                
+                if( !chessBoard.CheckMove(side, capArr[i], checkInfo) ) {
+                    continue;
                 }
                 
-                int reps = chessBoard.MakeMove(capArr[i], true);	
+                int reps = chessBoard.MakeMove(capArr[i], true, bGivesCheck, checkInfo);	
+                
+                assert ( bGivesCheck == inCheck(side^1) );
                 
                 if( reps >= 2) {
                     oneLegal = true;
                     value = 0;
                     chessBoard.UnMake(capArr[i], true);
                 }
-                else {
-                    if( inCheck(side)) {
-                        chessBoard.UnMake(capArr[i], true);
-                        continue;
-                    }
+                else { 
                     oneLegal = true;
 
-                    value = -Quies(SwitchSide(side), depth + 1, -beta, -alpha);   
+                    value = -Quies(SwitchSide(side), depth + 1, -beta, -alpha, bGivesCheck);   
                     thisDepth--;
                     chessBoard.UnMake(capArr[i], true);
                 }
                 if (value > bValue) {
                     if (value >= beta) {
-                        HashTable.addHash(capArr[i], value, 0, Global.SCORE_LOWER, 0, chessBoard.hashValue);
+                        HashTable.addHash(capArr[i], value, hDepth, Global.SCORE_LOWER, 0, chessBoard.hashValue);
                         return value;
                     }
                     bValue = value;
@@ -2090,19 +2241,29 @@ public final class Engine {
                 }
             }
             
-            state++;
+            if( state == QUIES_MOVES) {
+                if( bInCheck || depth > Global.QUIES_CHECK_MAX_DEPTH ) {
+                    state = QUIES_END;
+                } else {
+                    state++;
+                }
+            }
+            else {
+                state++;
+            }
         }
         if( bInCheck ) {
             if( !oneLegal) {
-               HashTable.addHash(0, -Global.MATE_SCORE, 0, Global.SCORE_TERMINAL, 0, chessBoard.hashValue);
+               HashTable.addHash(0, -Global.MATE_SCORE, hDepth, Global.SCORE_TERMINAL, 0, chessBoard.hashValue);
                return bValue;
             }
         }
         
-        HashTable.addHash(bestMove, bValue, 0, hType, 0, chessBoard.hashValue);
+        HashTable.addHash(bestMove, bValue, hDepth, hType, 0, chessBoard.hashValue);
         
         return bValue;
     }
+
 
    /**
     * Method PerftTest
@@ -2116,8 +2277,8 @@ public final class Engine {
     public void PerftTest(int depth) {
         perft = 0;
         long temp = System.currentTimeMillis();
-        Perft(chessBoard.getTurn(), depth, inCheck(chessBoard.getTurn()));
-        //PerftDebug(chessBoard.getTurn(), depth);
+        //Perft(chessBoard.getTurn(), depth, inCheck(chessBoard.getTurn()));
+        PerftDebug(chessBoard.getTurn(), depth, inCheck(chessBoard.getTurn()));
         long temp2 = System.currentTimeMillis();
         long time = temp2 - temp;
         System.out.println("Perft value is " + perft);
@@ -2148,22 +2309,23 @@ public final class Engine {
         } else {
             index = getCheckEscapes(side, moveArr);
         }
+        
+        Board.CheckInfo checkInfo = chessBoard.GetCheckInfo();
         for (int i = index - 1; i >= 0; i--) {
             perft = 0;
-            int reps = chessBoard.MakeMove(moveArr[i], false);		
+            //int reps = chessBoard.MakeMove(moveArr[i], false);		
             int to = MoveFunctions.getTo(moveArr[i]);
             int from = MoveFunctions.getFrom(moveArr[i]);
-            if (inCheck(side)) {
-                chessBoard.UnMake(moveArr[i], false);
+            
+            if( !chessBoard.CheckMove(side, moveArr[i], checkInfo) ) {
                 continue;
             }
+            boolean bGivesCheck = chessBoard.MoveGivesCheck(side, moveArr[i], checkInfo);
+            chessBoard.MakeMove(moveArr[i], true, bGivesCheck, checkInfo);
+            Perft(SwitchSide(side), depth - 1, bGivesCheck);
+            
             System.out.print(" to is "+to+" from is "+from+" ");
-            if (reps == 3) {
-                System.out.println("1");
-                    continue;
-            } else {
-                Perft(SwitchSide(side), depth - 1, inCheck(side^1));
-            }
+            
             chessBoard.UnMake(moveArr[i], false);
             System.out.println(" " + perft);
         }
@@ -2179,7 +2341,7 @@ public final class Engine {
      * @param int depth - the depth for the perft test
      *
      */
-    private void PerftDebug(int side, int depth) {
+    private void PerftDebug(int side, int depth, boolean inCheck) {
         if (depth == 0) {
             perft++;
             return;
@@ -2212,22 +2374,24 @@ public final class Engine {
             }
         }
         long perftBefore = perft;
-        boolean inCheck = inCheck(side);
+        
         int index;
         int[] moveArr = new int[128];
+        
         if (!inCheck) {
             index = getCaptures(side, moveArr);
             index = getMoves(side, moveArr, index);
         } else {
             index = getCheckEscapes(side, moveArr);
         }
+        Board.CheckInfo checkInfo = chessBoard.GetCheckInfo();
         for (int i = index - 1; i >= 0; i--) {
-            chessBoard.MakeMove(moveArr[i], true);
-            if (inCheck(side)) {
-                chessBoard.UnMake(moveArr[i], true);
+            if( !chessBoard.CheckMove(side, moveArr[i], checkInfo) ) {
                 continue;
             }
-            PerftDebug(SwitchSide(side), depth - 1);
+            boolean bGivesCheck = chessBoard.MoveGivesCheck(side, moveArr[i], checkInfo);
+            chessBoard.MakeMove(moveArr[i], true, bGivesCheck, checkInfo);
+            PerftDebug(SwitchSide(side), depth - 1, bGivesCheck);
             chessBoard.UnMake(moveArr[i], true);
         }
         if(PERFT_TRANSTABLE) {
@@ -2253,15 +2417,18 @@ public final class Engine {
         } else {
             index = getCheckEscapes(side, moveArr);
         }
-        
+        Board.CheckInfo checkInfo = chessBoard.GetCheckInfo();
         for (int i = index - 1; i >= 0; i--) {
-            chessBoard.MakeMove(moveArr[i], true);
-            if( inCheck(side) ) {
-                chessBoard.UnMake(moveArr[i], true);
+            
+            if( !chessBoard.CheckMove(side, moveArr[i], checkInfo) ) {
                 continue;
             }
+            boolean bGivesCheck = chessBoard.MoveGivesCheck(side, moveArr[i], checkInfo);
+            
+            chessBoard.MakeMove(moveArr[i], true, bGivesCheck, checkInfo);
+            
             if( depth > 1) {
-                Perft(SwitchSide(side), depth - 1, inCheck(side^1));
+                Perft(SwitchSide(side), depth - 1, bGivesCheck);
             } 
             else {
                 perft++;

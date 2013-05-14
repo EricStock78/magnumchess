@@ -41,6 +41,9 @@ abstract class Global {
     
     public static final int MAX_DEPTH = 40;
     
+    public static final int HASH_QUIES = -1;
+    public static final int HASH_QUIES_CHECK = 0;
+    public static final int QUIES_CHECK_MAX_DEPTH = 0;
     public static final int MATE_SCORE = 20000;
     public static final int KNOWN_WIN = 10000;
     public static final int KNOWN_WIN_KPK = 400;    //keep this small to still encourage promotion
