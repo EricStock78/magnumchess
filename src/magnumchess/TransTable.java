@@ -90,7 +90,7 @@ public class TransTable {
     public final void addHash(int move,int value,int depth,int type,int nullFail, long lock) {
         assert( value >= -Global.MATE_SCORE && value <= Global.MATE_SCORE);
         assert( type >= 0 && type < 8);
-        assert( depth >= 0 && depth < 64 );
+        assert( depth >= -1 && depth < 64 );
         assert( nullFail >= 0 && nullFail < 2);
         assert( Board.ancient >= 0 && Board.ancient < 8);
         assert( move >= 0 && move < ( 1<<16) );
@@ -109,7 +109,7 @@ public class TransTable {
                         
                 Table2[slotIndex+1] = move
                                    | type << 16
-                                   | depth << 19
+                                   | (depth + 1) << 19
                                    | nullFail << 25
                                    | Board.ancient << 26;
                 Table2[slotIndex+2] = value + Global.MATE_SCORE;
@@ -125,7 +125,7 @@ public class TransTable {
 
                Table2[slotIndex+1] = move
                                    | type << 16
-                                   | depth << 19
+                                   | (depth + 1) << 19
                                    | nullFail << 25
                                    | Board.ancient << 26;
                 Table2[slotIndex+2] = value + Global.MATE_SCORE;
@@ -150,7 +150,7 @@ public class TransTable {
 
         Table2[index + replaceSlot * SLOT_SIZE + 1] = move
                            | type << 16
-                           | depth << 19
+                           | (depth + 1) << 19
                            | nullFail << 25
                            | Board.ancient << 26;
         Table2[index + replaceSlot * SLOT_SIZE + 2] = value + Global.MATE_SCORE;
@@ -165,7 +165,7 @@ public class TransTable {
     }
     
     private int GetEntityDepth( int bits ) {
-        return (bits >> 19) & 63;
+        return ((bits >> 19) & 63) - 1;
     }
     
     public final int hasHash(long lock) {
@@ -195,7 +195,7 @@ public class TransTable {
     }
     
     public final int getDepth(int index) {
-        return (Table2[index] >> 19) & 63;
+        return ((Table2[index] >> 19) & 63) - 1;
     }
 	
     public final int getType(int index) {

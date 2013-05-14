@@ -186,10 +186,12 @@ public final class HistoryWriter {
             }   
             for(int j=0; j < numberOfMoves; j++)
             {
+                Board.CheckInfo checkInfo = chessBoard.GetCheckInfo();
                 if( strArr[i].length() == 4 && to == MoveFunctions.getTo( moveArr[j] ) && from == MoveFunctions.getFrom( moveArr[j] ))
                 {
+                    boolean bGivesCheck = chessBoard.MoveGivesCheck(chessBoard.getTurn(), moveArr[j], checkInfo);
                     chessBoard.AddMove( moveArr[j] );
-                    chessBoard.MakeMove( moveArr[j], false);
+                    chessBoard.MakeMove( moveArr[j], false, bGivesCheck, checkInfo);
                     chessBoard.AddRepetitionRoot();
                     break;
                 }
@@ -197,8 +199,9 @@ public final class HistoryWriter {
                     if( type == MoveFunctions.moveType( moveArr[j]) || (type >= Global.PROMO_R && type <= Global.PROMO_N) )
                     {
                         int mv = MoveFunctions.makeMove(to, from, type);
+                        boolean bGivesCheck = chessBoard.MoveGivesCheck(chessBoard.getTurn(), moveArr[j], checkInfo);
                         chessBoard.AddMove( mv );
-                        chessBoard.MakeMove( mv, false);
+                        chessBoard.MakeMove( mv, false, bGivesCheck, checkInfo);
                         chessBoard.AddRepetitionRoot();
                     }        
                 }
