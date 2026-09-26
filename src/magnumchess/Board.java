@@ -41,7 +41,7 @@ import java.io.IOException;
 
 public final class Board {
 
-    public class CheckInfo {
+    public static class CheckInfo {
         public long[] checkSquares = new long[Global.PIECE_ALL];
         public long dcCandidates;
         public long pinned; 
@@ -1407,12 +1407,15 @@ public final class Board {
 		(getMagicRookMoves(i, occupancy) & ( pieceBits[eSide][Global.PIECE_ROOK] | pieceBits[eSide][Global.PIECE_QUEEN] )) != 0L );
 		
     }
-    
-     public final CheckInfo GetCheckInfo() {
-        CheckInfo info = new CheckInfo();
+
+    public final CheckInfo GetCheckInfo(CheckInfo info) {
         info.pinned = GetPinnedPieces( turn, false );
         GetGivesCheckInfo( turn, info );
         return info;
+    }
+    
+    public final CheckInfo GetCheckInfo() {
+        return GetCheckInfo(new CheckInfo());
     }
     
     public final void GetGivesCheckInfo(int side, CheckInfo info) {

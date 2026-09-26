@@ -120,6 +120,10 @@ public final class Engine {
     
     private static Random rand = new Random(9L);
 
+    private final int[][] moveStack = new int[Global.MAX_PLY][Global.MAX_MOVES];
+    private final int[][] hashStack = new int[Global.MAX_PLY][4];
+
+    private final Board.CheckInfo[] checkInfoStack = new Board.CheckInfo[Global.MAX_PLY];
     //public BufferedWriter buffWriter;
    /**
     * Constructor Engine
@@ -129,7 +133,9 @@ public final class Engine {
     */
     public Engine() {
         chessBoard = Board.getInstance();
-       
+        for( int i=0; i<Global.MAX_PLY; i++) {
+            checkInfoStack[i] = new Board.CheckInfo();
+        }
        /*File f = new File("debug");
         
         try {
@@ -1650,8 +1656,13 @@ public final class Engine {
         int endIndex = 0;
         int capIndex = 0;
 
-        int[] moveArr = new int[Global.MAX_MOVES];
-        int[] hashArr = new int[4];
+        //int[] moveArr = new int[Global.MAX_MOVES];
+        int[] moveArr = moveStack[thisDepth];
+        
+        //int[] hashArr = new int[4];
+        int[] hashArr = hashStack[thisDepth];
+        hashArr[0] = hashArr[1] = hashArr[2] = hashArr[3] = 0;
+
         int badCapIndex = 0;
         int moveCount = 0;
         
@@ -1660,7 +1671,7 @@ public final class Engine {
         int index = 0;
         
         int ttMove = 0;
-        Board.CheckInfo checkInfo = chessBoard.GetCheckInfo();
+        Board.CheckInfo checkInfo = chessBoard.GetCheckInfo(checkInfoStack[thisDepth]);
         while (state != SEARCH_END) {
 
             switch (state) {
@@ -1801,6 +1812,9 @@ public final class Engine {
                 int extendAmount = checkingMove ? Global.PLY : 0;
                 
                 //singular extension
+                //Do not re-enable without considering how thisDepth 
+                //affects move list as change made Sept26/26 has stack of moves now
+                //which this code will break
                 /*if( extendAmount == 0 && theMove == singular_move ) {
                     int testVal = singular_value - depth / 2;
                     thisDepth--;
@@ -2085,11 +2099,11 @@ public final class Engine {
         
         int state = hashIndex == -1 ? QUIES_MOVES : QUIES_HASH;
         
-        int[] capArr = new int[Global.MAX_MOVES];
+        int[] capArr = moveStack[thisDepth];
         int hType = Global.SCORE_UPPER;
         int bestMove = 0;
         int hashMove = 0;
-        Board.CheckInfo checkInfo = chessBoard.GetCheckInfo();
+        Board.CheckInfo checkInfo = chessBoard.GetCheckInfo(checkInfoStack[thisDepth]);
         while( state < QUIES_END )
         {
             switch( state )
