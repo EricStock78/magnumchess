@@ -1486,9 +1486,13 @@ public final class Engine {
           }
         }
 
-        if (stop || thisDepth >= Global.MAX_PLY - 1) {
-           return 0;
+        if (stop) {
+            return 0;
         }
+        if (thisDepth >= Global.MAX_PLY - 1) {
+            return isInCheck ? 0 : Evaluation2.getEval(side, alpha, beta, thisDepth);
+        }
+
         
         //mate distance pruning
         int nalpha = Math.max( -Global.MATE_SCORE + thisDepth, alpha );
@@ -2036,10 +2040,13 @@ public final class Engine {
          
         thisDepth++;
 
-        if (stop || thisDepth >= Global.MAX_PLY - 1) {
-           return Evaluation2.getEval(side, alpha, beta, thisDepth);
+        if (stop) {
+            return 0;
         }
-        
+        if (thisDepth >= Global.MAX_PLY - 1) {
+            return bInCheck ? 0 : Evaluation2.getEval(side, alpha, beta, thisDepth);
+        }
+
         nodes++;
         
         int hashIndex = HashTable.hasHash(chessBoard.hashValue);
