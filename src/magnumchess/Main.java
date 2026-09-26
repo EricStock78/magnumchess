@@ -151,6 +151,21 @@ public class Main
         System.out.println("option name Hash type spin default 64 min 8 max 512");
         System.out.println("option name Evaluation Table type spin default 8 min 1 max 64");
         System.out.println("option name Pawn Table type spin default 8 min 1 max 64");
+       
+        PrintStream console = System.out;
+        System.setOut(new PrintStream(new OutputStream() {
+            public void write(int b) { }            // discard everything
+        }));
+        Engine.pollInput = false;
+        try {
+            Board.SetStartPosition();
+            HistoryWriter.acceptMoves("e2e4 e7e5 g1f3 b8c6 f1b5 a7a6 b5a4 g8f6 e1g1 f8e7 f1e1 b7b5 a4b3 d7d6 c2c3 e8g8 h2h3 c6a5 b3c2 c7c5 d2d4 d8c7");
+            theSearch.search(250, 250, 20, false);
+        } finally {
+            System.setOut(console);                 // always restore, even if something throws
+        }
+        Board.newGame();
+        Engine.pollInput = true;
         System.out.println("uciok");
         
         while(true) {
@@ -270,25 +285,25 @@ public class Main
                     togo = Math.max(1, GetGoValue(tokens, "movestogo", DEFAULT_TOGO));
                     searchDepth = Global.MAX_DEPTH;
                 
-                    if(Board.getTurn() == Global.COLOUR_BLACK) {		
-                        movetime = Math.max(0,(btime/togo + binc));
-                        //reduce the move time a little, as most of the time we will be extending this time to find the first move of the last iteration
-                        movetime = (int)(((double)movetime)* 0.85);
-                        int  maxTimeLimit = (int)(((double)btime + (double)binc)*0.40);
-                        maxMoveTime = Math.min(movetime * 3, maxTimeLimit);
-                    }
-                    else {
-                        movetime = Math.max(0,(wtime/togo + winc));
-                        //reduce the move time a little, as most of the time we will be extending this time to find the first move of the last iteration
-                        movetime = (int)(((double)movetime)* 0.85);
-                        int  maxTimeLimit = (int)(((double)wtime + (double)winc)*0.40);
-                        maxMoveTime = Math.min(movetime * 3, maxTimeLimit);
-                    }
+                    int overhead = 100;
+                    int time = Board.getTurn() == Global.COLOUR_BLACK ? btime : wtime;
+                    int inc  = Board.getTurn() == Global.COLOUR_BLACK ? binc  : winc;
+
+                    int available = Math.max(0, time - overhead);	
+                    movetime = Math.max(0,(available/togo + inc));
+                    //reduce the move time a little, as most of the time we will be extending this time to find the first move of the last iteration
+                    movetime = (int)(((double)movetime)* 0.85);
+                    int  maxTimeLimit = (int)((double)available * 0.2 + inc);
+                    maxMoveTime = Math.min(movetime * 3, maxTimeLimit);
+          
                     // on the last move before the time is increased, the move time will be higher than the maxMoveTime,
                     // so we adjust the maxMoveTime to be equal to the movetime
                     if(movetime > maxMoveTime)  {
                         maxMoveTime = movetime;
                     }
+
+                    movetime = Math.min(movetime, available);
+                    maxMoveTime = Math.min(maxMoveTime, available);
                 }
                 String move = theSearch.search(movetime, maxMoveTime, searchDepth, infinite);
                 System.out.println("bestmove "+move);

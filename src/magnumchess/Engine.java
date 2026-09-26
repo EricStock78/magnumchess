@@ -38,6 +38,8 @@ import java.util.Random;
  */
 public final class Engine {
 
+    /** used to prevent reading input during engine warmup */
+    public static boolean pollInput = true;
    /** used similar to a C preprocessor define to instruct the move generation to properly generate all moves required for perft scoring */
     private static final boolean PERFT_ENABLED = false;
    
@@ -188,7 +190,7 @@ public final class Engine {
                 endTime = startTime + maximumRootGetAScoreTime;
                 break;
         }
-        nextTimeCheck = nodes + Math.max(nps / 100L , ((endTime - System.currentTimeMillis())/2 * (nps / 1000L)));
+        nextTimeCheck = nodes + 2048;
     }
 
    /**
@@ -201,7 +203,7 @@ public final class Engine {
     public boolean timeLeft() {
 
         try {
-            if (Main.reader.ready()) {
+            if (pollInput && Main.reader.ready()) {
                 if ("stop".equals(Main.reader.readLine())) {
                    return false;
                 }
@@ -211,7 +213,7 @@ public final class Engine {
         long temp = System.currentTimeMillis();
         if (!infiniteTimeControl) {
             if (endTime > temp) {
-                nextTimeCheck = nodes + Math.max(nps / 100L , ((endTime - temp)/2 * (nps / 1000L)));
+                nextTimeCheck = nodes + 2048;
                 return true;
             } else {
                 return false;
@@ -343,7 +345,7 @@ public final class Engine {
         nps = 15;        //start the nps very low, so we can search a few moves, calculate the nps and then set our time checks accordingly
 
         int partialDepthExtension = Global.HALF_EXTENSION;         //added to depth to ensure certain partial extensions will trigger the first time
-        nextTimeCheck = Math.min(1000, time * nps);
+        nextTimeCheck = 2048;
 
         Board.ancient = chessBoard.getCount() % 8;
         
