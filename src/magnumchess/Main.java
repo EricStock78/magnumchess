@@ -118,6 +118,15 @@ public class Main
         System.out.println("*****************Version 4.00***************");
         System.out.println("to play in UCI mode type \"uci\"");
     }
+
+    public static int GetGoValue(String[] tokens, String key, int defaultValue) {
+        for(int i=0; i<tokens.length-1; i++) {
+            if( tokens[i].equals(key)) {
+                return Integer.parseInt(tokens[i+1]);
+            }
+        }
+        return defaultValue;
+    }
     
     /*
      * method uci
@@ -235,19 +244,14 @@ public class Main
                 maxMoveTime = 0;
                 searchDepth = 0;
                 infinite = false;
+                String[] tokens = cmd.trim().split("\\s+");
                 if(cmd.indexOf("depth")!=-1) {
-                    int index = cmd.indexOf("depth");
-                    cmd = cmd.substring(index+5);
-                    cmd = cmd.trim();
-                    searchDepth = Integer.parseInt(cmd.substring(0));
+                    searchDepth = Math.max(GetGoValue(tokens, "depth", 2), 2);
                     movetime = 9999999;
                     maxMoveTime = movetime;
                 }
                 else if(cmd.indexOf("movetime")!=-1) {
-                    int index = cmd.indexOf("movetime");
-                    cmd = cmd.substring(index+8);
-                    cmd = cmd.trim();
-                    movetime = Integer.parseInt(cmd.substring(0));
+                    movetime = GetGoValue(tokens, "movetime", 0);
                     maxMoveTime = movetime;
                     searchDepth = 40;
                 }
@@ -258,82 +262,31 @@ public class Main
                     maxMoveTime = movetime;
                 }	
                 else {
+                    wtime = GetGoValue(tokens,"wtime", DEFAULT_WTIME);
+                    btime = GetGoValue(tokens,"btime", DEFAULT_BTIME);
+                    winc = GetGoValue(tokens, "winc", DEFAULT_WINC);
+                    binc = GetGoValue(tokens, "binc", DEFAULT_BINC);
+                    togo = Math.max(1, GetGoValue(tokens, "movestogo", DEFAULT_TOGO));
                     searchDepth = 40;
-                    String temp;
-                    int index = cmd.indexOf("wtime");
-                    if (index == -1) {
-                        wtime = DEFAULT_WTIME;
+                
+                    if(Board.getTurn() == Global.COLOUR_BLACK) {		
+                        movetime = Math.max(0,(btime/togo + binc));
+                        //reduce the move time a little, as most of the time we will be extending this time to find the first move of the last iteration
+                        movetime = (int)(((double)movetime)* 0.85);
+                        int  maxTimeLimit = (int)(((double)btime + (double)binc)*0.40);
+                        maxMoveTime = Math.min(movetime * 3, maxTimeLimit);
                     }
                     else {
-                        temp = cmd.substring(index+5).trim();
-                        wtime = Integer.parseInt(temp.substring(0,temp.indexOf(" ")));
+                        movetime = Math.max(0,(wtime/togo + winc));
+                        //reduce the move time a little, as most of the time we will be extending this time to find the first move of the last iteration
+                        movetime = (int)(((double)movetime)* 0.85);
+                        int  maxTimeLimit = (int)(((double)wtime + (double)winc)*0.40);
+                        maxMoveTime = Math.min(movetime * 3, maxTimeLimit);
                     }
-                    index = cmd.indexOf("btime");
-                    if (index == -1) {
-                        btime = DEFAULT_BTIME;
-                    }
-                    else {
-                        temp = cmd.substring(index+5).trim();
-                        if(temp.indexOf(" ")!=-1) {
-                            btime = Integer.parseInt(temp.substring(0,temp.indexOf(" ")));
-                        }
-                        else {
-                            btime = Integer.parseInt(temp);
-                        }
-                        index = cmd.indexOf("winc");
-                        if (index == -1) {
-                            winc = DEFAULT_WINC;
-                        }
-                        else {
-                            temp = cmd.substring(index+4).trim();      
-                            if(temp.indexOf(" ")!=-1) {
-                                winc = Integer.parseInt(temp.substring(0,temp.indexOf(" ")));
-                            }
-                            else {
-                                winc = Integer.parseInt(temp);
-                            }
-                        }
-                        index = cmd.indexOf("binc");
-                        if (index == -1) {
-                            binc = DEFAULT_BINC;
-                        }
-                        else {
-                            temp = cmd.substring(index+4);
-                            temp = temp.trim();
-                            if(temp.indexOf(" ")!=-1) {
-                                binc = Integer.parseInt(temp.substring(0,temp.indexOf(" ")));
-                            }
-                            else {
-                                binc = Integer.parseInt(temp);
-                            }
-                        }
-                        index = cmd.indexOf("movestogo");
-                        if(index == -1) {
-                            togo = DEFAULT_TOGO;
-                        }
-                        else {
-                            temp = cmd.substring(index+9).trim();
-                            togo = Integer.parseInt(temp);
-                        }
-                        if(Board.getTurn() == Global.COLOUR_BLACK) {		
-                            movetime = Math.max(0,(btime/togo + binc));
-                            //reduce the move time a little, as most of the time we will be extending this time to find the first move of the last iteration
-                            movetime = (int)(((double)movetime)* 0.85);
-                            int  maxTimeLimit = (int)(((double)btime + (double)binc)*0.40);
-                            maxMoveTime = Math.min(movetime * 3, maxTimeLimit);
-                        }
-                        else {
-                            movetime = Math.max(0,(wtime/togo + winc));
-                            //reduce the move time a little, as most of the time we will be extending this time to find the first move of the last iteration
-                            movetime = (int)(((double)movetime)* 0.85);
-                            int  maxTimeLimit = (int)(((double)wtime + (double)winc)*0.40);
-                            maxMoveTime = Math.min(movetime * 3, maxTimeLimit);
-                        }
-                        // on the last move before the time is increased, the move time will be higher than the maxMoveTime,
-                        // so we adjust the maxMoveTime to be equal to the movetime
-                        if(movetime > maxMoveTime)  {
-                           maxMoveTime = movetime;
-                        }
+                    // on the last move before the time is increased, the move time will be higher than the maxMoveTime,
+                    // so we adjust the maxMoveTime to be equal to the movetime
+                    if(movetime > maxMoveTime)  {
+                        maxMoveTime = movetime;
                     }
                 }
                 String move = theSearch.search(movetime, maxMoveTime, searchDepth, infinite);
