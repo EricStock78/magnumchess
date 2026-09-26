@@ -498,6 +498,7 @@ public final class Engine {
                 int reps = chessBoard.MakeMove( move, true, bGivesCheck, info );
                 
                 pvMoves[moveDepth++] = move;
+                 if( reps >= 3) break;
                 int hashIndex = HashTable.hasHash(chessBoard.hashValue);
                 move = 0;
                 if( hashIndex != -1)
@@ -509,7 +510,7 @@ public final class Engine {
                     pv = pv.concat(" ");
                     pv = pv.concat(HistoryWriter.getUCIMove(move));
                 }
-                if( reps == 3) break;
+               
                     
             } while(move != 0 && moveDepth < 64);
              

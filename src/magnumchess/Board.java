@@ -1951,7 +1951,11 @@ public final class Board {
             case(Global.DOUBLE_PAWN):
             {
                 reversable = false;
-                passant[turn] = to + Global.behindRank[turn];
+                int epSquare = to + Global.behindRank[turn];
+                // only record an en passant square if an enemy pawn could actually capture on it
+                if( (getPawnAttack(turn, epSquare) & pieceBits[turn ^ 1][Global.PIECE_PAWN]) != 0 ) {
+                    passant[turn] = epSquare;
+                }
             }
             break;
 
