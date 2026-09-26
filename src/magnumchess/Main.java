@@ -253,11 +253,11 @@ public class Main
                 else if(cmd.indexOf("movetime")!=-1) {
                     movetime = GetGoValue(tokens, "movetime", 0);
                     maxMoveTime = movetime;
-                    searchDepth = 40;
+                    searchDepth = Global.MAX_DEPTH;
                 }
                 else if(cmd.indexOf("infinite")!=-1) {
                     infinite = true;	
-                    searchDepth = 40;
+                    searchDepth = Global.MAX_DEPTH;
                     movetime = 1000;
                     maxMoveTime = movetime;
                 }	
@@ -267,7 +267,7 @@ public class Main
                     winc = GetGoValue(tokens, "winc", DEFAULT_WINC);
                     binc = GetGoValue(tokens, "binc", DEFAULT_BINC);
                     togo = Math.max(1, GetGoValue(tokens, "movestogo", DEFAULT_TOGO));
-                    searchDepth = 40;
+                    searchDepth = Global.MAX_DEPTH;
                 
                     if(Board.getTurn() == Global.COLOUR_BLACK) {		
                         movetime = Math.max(0,(btime/togo + binc));

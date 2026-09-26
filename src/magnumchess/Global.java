@@ -33,6 +33,9 @@ package magnumchess;
 
 abstract class Global {
 
+   public static final int MAX_MOVES = 256;   // > 218, the most legal moves in any position
+   public static final int MAX_PLY   = 128;   // deepest ply the search may reach
+
     public static final int COLOUR_WHITE = 0;
     public static final int COLOUR_BLACK = 1;
 

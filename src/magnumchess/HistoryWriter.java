@@ -141,7 +141,7 @@ public final class HistoryWriter {
         chessBoard.ResetMovesDepth();
 
         for( int i=movesProcessed; i < strArr.length; i++ ) {
-            int moveArr[] = new int[128];
+            int moveArr[] = new int[Global.MAX_MOVES];
             int numberOfMoves = search.GetAllMoves(chessBoard.getTurn(), moveArr);
             
              switch( strArr[i].length() ) {

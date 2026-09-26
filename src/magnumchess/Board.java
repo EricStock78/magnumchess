@@ -184,10 +184,10 @@ public final class Board {
     private static final int[][] rookDist = new int[64][64];
 	
     /** zorbist key history array -- used for repetition detection */
-    private static final long[] zorbistHistory = new long[202];
+    private static final long[] zorbistHistory = new long[512];
     
     /** array containing index of last reversable move -- used for repetition detection */
-    private static final int[] lastReversableMove = new int[202];
+    private static final int[] lastReversableMove = new int[512];
     
     /** index into zorbistHistory array -- used for repetition detection */
     private int zorbistDepth;

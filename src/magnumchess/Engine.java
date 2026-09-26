@@ -58,9 +58,9 @@ public final class Engine {
     private static TransTable HashTable = new TransTable(Global.HASHSIZE, 0);       //transposition table variable used in the search
 
     /** array for storing moves from the root position */
-    private static final int[] moveOrder = new int[128];
+    private static final int[] moveOrder = new int[Global.MAX_MOVES];
     /** 2D array to store killer moves - 2 slots for each ply in the search */
-    private static final int[][] killerMoves = new int[2][100];
+    private static final int[][] killerMoves = new int[2][Global.MAX_PLY];
 
     /** global boolean flag to trigger then end of the search when out of time */
     private static boolean stop;
@@ -112,7 +112,7 @@ public final class Engine {
     private static final int BETA_START = Global.MATE_SCORE;
     private static final int VALUE_START = -Global.MATE_SCORE;
     /** variable used to track how deep in the search we are */
-    private static byte thisDepth;
+    private static short thisDepth;
     /** boolean which represents if we are using infinite time control */
     private static boolean infiniteTimeControl = false;
     /** count of moves generated when debugging move gen using perft command */
@@ -241,7 +241,7 @@ public final class Engine {
     public int RandomSearch() 
     {
         int side = chessBoard.getTurn();
-        int[] moveArr = new int[128];
+        int[] moveArr = new int[Global.MAX_MOVES];
         boolean bInCheck = inCheck(side);
         int numberOfMoves = inCheck(side) ? getCheckEscapes(side, moveArr) : GetAllMoves(side, moveArr);
         Board.CheckInfo checkInfo = chessBoard.GetCheckInfo();
@@ -304,7 +304,7 @@ public final class Engine {
         int theSide = chessBoard.getTurn();
 
         // array of moves
-        int[] moveArr = new int[128];
+        int[] moveArr = new int[Global.MAX_MOVES];
 
         // temporary varible to store the value returned from a search
         int value;
@@ -366,7 +366,7 @@ public final class Engine {
 
         thisDepth = 0;
 
-        int[] compareArray = new int[128];           //array used to store values of moves for sorting the move list
+        int[] compareArray = new int[Global.MAX_MOVES];           //array used to store values of moves for sorting the move list
         
         //remove illegal moves
         //mark moves which result in a draw
@@ -521,10 +521,10 @@ public final class Engine {
                 nps = (int)(((double)nodes) / (((double)(elapsedTime))/(1000.0f)));
             }
 
-            if (bestValue >= (Global.MATE_SCORE - Global.MAX_DEPTH)) {			//this is a winning mate score
+            if (bestValue >= (Global.MATE_SCORE - Global.MAX_PLY)) {			//this is a winning mate score
                 long mate = (Global.MATE_SCORE - bestValue) / 2;
                 System.out.println("info depth " + depth + " score mate " + mate + " nodes " + nodes + " nps " + nps + " pv " + pv);
-            } else if (bestValue <= -(Global.MATE_SCORE - Global.MAX_DEPTH)) {  //losing mate score
+            } else if (bestValue <= -(Global.MATE_SCORE - Global.MAX_PLY)) {  //losing mate score
                 long mate = (-Global.MATE_SCORE - bestValue) / 2;
                 System.out.println("info depth " + depth + " score mate " + mate + " nodes " + nodes + " nps " + nps + " pv " + pv);
             } else {
@@ -561,7 +561,7 @@ public final class Engine {
      ************************************************************************/
     private boolean isStaleMate(int side) {
         if (!inCheck(side)) {				//side to move must not be in check...otherwise could be checkmate
-            int[] Moves = new int[128];
+            int[] Moves = new int[Global.MAX_MOVES];
             int numberOfMoves = GetAllMoves(side, Moves);
             Board.CheckInfo checkInfo = chessBoard.GetCheckInfo();
             for (int i = 0; i < numberOfMoves; i++) {
@@ -1480,7 +1480,7 @@ public final class Engine {
           }
         }
 
-        if (stop || thisDepth > 99) {
+        if (stop || thisDepth >= Global.MAX_PLY - 1) {
            return 0;
         }
         
@@ -1628,7 +1628,7 @@ public final class Engine {
                 }
                 return value;
             }
-            if (value <= (-Global.MATE_SCORE + Global.MAX_DEPTH )) {
+            if (value <= (-Global.MATE_SCORE + Global.MAX_PLY )) {
                 nullFail = 1;
             }
         }
@@ -1650,7 +1650,7 @@ public final class Engine {
         int endIndex = 0;
         int capIndex = 0;
 
-        int[] moveArr = new int[128];
+        int[] moveArr = new int[Global.MAX_MOVES];
         int[] hashArr = new int[4];
         int badCapIndex = 0;
         int moveCount = 0;
@@ -1722,8 +1722,8 @@ public final class Engine {
                     badCapIndex = index - 1; 
                     break;
                 case (KILLER_MOVES):
-                    index = 126;
-                    endIndex = 126;
+                    index = Global.MAX_MOVES -2;
+                    endIndex = Global.MAX_MOVES -2;
                     
                     if (MoveFunctions.getValue(killerMoves[1][thisDepth]) == 0 && verifyMove(side, killerMoves[1][thisDepth], true,checkInfo)) {
                        if( (hashArr[0] & 65535) != (killerMoves[1][thisDepth] & 65535) && (hashArr[1] & 65535) != (killerMoves[1][thisDepth] & 65535 )) {
@@ -1913,7 +1913,7 @@ public final class Engine {
                                 int killerMove = MoveFunctions.makeKillerMove(theMove, piece);
                                 if (killerMove != killerMoves[0][thisDepth]) {
                                     int temp1 = killerMoves[0][thisDepth];
-                                    if (value >= (Global.MATE_SCORE - Global.MAX_DEPTH)) {  //mark this move as a mate killer
+                                    if (value >= (Global.MATE_SCORE - Global.MAX_PLY)) {  //mark this move as a mate killer
                                         killerMoves[0][thisDepth] = MoveFunctions.setValue(killerMove, 1);
                                     }
                                     else {
@@ -2021,6 +2021,10 @@ public final class Engine {
         assert( bInCheck == inCheck( side ));
          
         thisDepth++;
+
+        if (stop || thisDepth >= Global.MAX_PLY - 1) {
+           return Evaluation2.getEval(side, alpha, beta, thisDepth);
+        }
         
         nodes++;
         
@@ -2081,7 +2085,7 @@ public final class Engine {
         
         int state = hashIndex == -1 ? QUIES_MOVES : QUIES_HASH;
         
-        int[] capArr = new int[60];
+        int[] capArr = new int[Global.MAX_MOVES];
         int hType = Global.SCORE_UPPER;
         int bestMove = 0;
         int hashMove = 0;
@@ -2112,7 +2116,7 @@ public final class Engine {
                     
                 case( QUIES_CHECKING ):
                      /*{
-                       int testArr1[] = new int[128];
+                       int testArr1[] = new int[Global.MAX_MOVES];
                         int testIndex1 = getMoves( side, testArr1, 0 );
                         int iNumChecks = 0;
                         for (int i = testIndex1 - 1; i >= 0; i--) {
@@ -2121,7 +2125,7 @@ public final class Engine {
                             }
                         }
                         
-                        int testArr2[] = new int[128];
+                        int testArr2[] = new int[Global.MAX_MOVES];
                         int testIndexChecks = getCheckingMoves(side, testArr2, 0, checkInfo);
                         
                         if( iNumChecks != testIndexChecks ) {
@@ -2305,7 +2309,7 @@ public final class Engine {
         if (inCheck(side)) {
             inCheck = true;
         }
-        int[] moveArr = new int[128];
+        int[] moveArr = new int[Global.MAX_MOVES];
         if (!inCheck) {
             int index2 = getCaptures(side, moveArr);
             index = getMoves(side, moveArr, index2);
@@ -2379,7 +2383,7 @@ public final class Engine {
         long perftBefore = perft;
         
         int index;
-        int[] moveArr = new int[128];
+        int[] moveArr = new int[Global.MAX_MOVES];
         
         if (!inCheck) {
             index = getCaptures(side, moveArr);
@@ -2413,7 +2417,7 @@ public final class Engine {
     */
     private void Perft(int side, int depth, boolean inCheck) {
         int index;
-        int[] moveArr = new int[128];
+        int[] moveArr = new int[Global.MAX_MOVES];
         if (!inCheck) {
             index = getCaptures(side, moveArr);
             index = getMoves(side, moveArr, index);
