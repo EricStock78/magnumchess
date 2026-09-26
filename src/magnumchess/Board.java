@@ -67,16 +67,11 @@ public final class Board {
     public final int pieceList[][] = new int[12][16];
     public final int pieceTotals[] = new int[12];
 
-    public static int materialValues[] = new int[9 * 9 * 3 * 3 * 3 * 3 * 3 * 3 * 2 * 2];
+    public static int materialValues[] = new int[9 * 9 * 3 * 3 * 3 * 3 * 3 * 3 * 3 * 3];
     public static int materialKey = 0;
     
     public int[] noPieces = new int[2];
     
-    /** value used to adjust material table when 2 queens of a side or both are present */
-    private int materialAdjust;
-
-    private int[][] QueenMaterialAdjustArray = new int[8][8];
-
     /** total material on the board */
     public int totalValue;
 	
@@ -733,7 +728,6 @@ public final class Board {
     public void ClearBoard()
     {
         materialKey = 0;
-        materialAdjust = 0;
         zorbistDepth = 1;
         moveCount = 0;
         drawCount = 0;
@@ -763,7 +757,6 @@ public final class Board {
     public void FlipPosition() {
         hashValue = 0;
         materialKey = 0;
-        materialAdjust = 0;
         bitboard = 0;
         Arrays.fill( pieceBits[Global.COLOUR_BLACK], 0 );
         Arrays.fill( pieceBits[Global.COLOUR_WHITE], 0 );
@@ -842,12 +835,6 @@ public final class Board {
         Global.totalValue = Global.values[0] * 4 + Global.values[1] * 4 + Global.values[2] * 4 + Global.values[3] * 2 + Global.values[5] * 16;
         int noReps = 0;
 
-        QueenMaterialAdjustArray[2][0] = 2 * -Global.values[3] - Global.values[9];
-        QueenMaterialAdjustArray[2][1] = -Global.values[3] + Global.values[5];
-        QueenMaterialAdjustArray[2][2] = -Global.values[9] + Global.values[5];
-        QueenMaterialAdjustArray[1][2] = 2 * Global.values[9] + Global.values[5];
-        QueenMaterialAdjustArray[0][2] = 2 * Global.values[9] + Global.values[5];
-
         for(int wRook = 0; wRook < 3; wRook++) {
 
             for(int bRook = 0; bRook < 3; bRook++) {
@@ -860,9 +847,9 @@ public final class Board {
 
                             for(int bKnight = 0; bKnight < 3; bKnight++) {
 
-                                for(int wQueen = 0; wQueen < 2; wQueen++) {
+                                for(int wQueen = 0; wQueen < 3; wQueen++) {
 
-                                    for(int bQueen = 0; bQueen < 2; bQueen++) {
+                                    for(int bQueen = 0; bQueen < 3; bQueen++) {
 
                                         for(int wPawn = 0; wPawn < 9; wPawn++) {
 
@@ -881,9 +868,9 @@ public final class Board {
                                                                     wKnight * 3 * 3 * 3 * 3 +
                                                                     bKnight * 3 * 3 * 3 * 3 * 3 +
                                                                     wQueen  * 3 * 3 * 3 * 3 * 3 * 3 +
-                                                                    bQueen  * 3 * 3 * 3 * 3 * 3 * 3 * 2 +
-                                                                    wPawn   * 3 * 3 * 3 * 3 * 3 * 3 * 2 * 2 +
-                                                                    bPawn   * 3 * 3 * 3 * 3 * 3 * 3 * 2 * 2 * 9;
+                                                                    bQueen  * 3 * 3 * 3 * 3 * 3 * 3 * 3 +
+                                                                    wPawn   * 3 * 3 * 3 * 3 * 3 * 3 * 3 * 3 +
+                                                                    bPawn   * 3 * 3 * 3 * 3 * 3 * 3 * 3 * 3 * 9;
 
                                                 // set global constants used to recognize special endgames
                                                 int test;
@@ -1122,7 +1109,6 @@ public final class Board {
         pieceBits[side][Global.PIECE_ALL] |= Global.set_Mask[i];
         materialKey += Global.materialOffset[piece];
         totalValue +=Global.values[piece];
-        materialAdjust = QueenMaterialAdjustArray[pieceTotals[3]][pieceTotals[9]];
         pawnHash ^= pawnKingHash[i][piece];
     }
 	
@@ -1169,10 +1155,15 @@ public final class Board {
         materialKey -= Global.materialOffset[piece];
         totalValue -=Global.values[piece];
         piece_in_square[i] = -1;
-        materialAdjust = QueenMaterialAdjustArray[pieceTotals[3]][pieceTotals[9]];
         pawnHash ^= pawnKingHash[i][piece];
     }
 	
+    /** returns true if every piece count fits in its materialKey digit (promotions can push it past 2) */
+    public final boolean MaterialKeyInRange() {
+        return pieceTotals[0] <= 2 && pieceTotals[1] <=2 && pieceTotals[2] <=2 && pieceTotals[3] <= 2 &&
+        pieceTotals[6] <=2 && pieceTotals[7] <=2 && pieceTotals[8] <= 2 && pieceTotals[9] <= 2;
+    }
+
     /** 
      *  method getMaterialScore
      * 
@@ -1183,7 +1174,21 @@ public final class Board {
      * 
      */
     public  final int GetRawMaterialScore() {
-         return materialValues[materialKey] + materialAdjust;
+        if( MaterialKeyInRange() ) {
+            return materialValues[materialKey];
+        }
+        else {
+            return -pieceTotals[0] * Global.values[0] -
+                   pieceTotals[1] * Global.values[1] - 
+                   pieceTotals[2] * Global.values[2] - 
+                   pieceTotals[3] * Global.values[3] - 
+                   pieceTotals[5] * Global.values[5] +
+                   pieceTotals[6] * Global.values[6] +
+                   pieceTotals[7] * Global.values[7] + 
+                   pieceTotals[8] * Global.values[8] + 
+                   pieceTotals[9] * Global.values[9] + 
+                   pieceTotals[11] * Global.values[11]; 
+        }
     }
 
     /**
@@ -1196,13 +1201,14 @@ public final class Board {
      *
      */
     public  final int GetMaterialScore(int side) {
-        if(materialValues[materialKey] == Global.materialDraw)
+        int score = GetRawMaterialScore();
+        if(score == Global.materialDraw)
         {
             return 0;
         }
         else
         {
-            return (-1 + side * 2) * (materialValues[materialKey] + materialAdjust);  
+            return (-1 + side * 2) * score;  
         }
     }
     

@@ -490,71 +490,73 @@ public class Evaluation2 {
         }
         /** get the material score */
         material = chessBoard.GetRawMaterialScore();
-        if( material > 100000) {
+        if( material == Global.materialDraw) {
             return 0;
         }
         
         int sideMult = side == Global.COLOUR_WHITE ? -1 : 1;
-        switch( Board.materialKey )
-        {
-            case( Global.whiteKBNK ):
+        if( chessBoard.MaterialKeyInRange()) {
+            switch( Board.materialKey )
             {
-                finalScore = sideMult * -EvaluateKBNK( Global.COLOUR_WHITE);
-                return finalScore;
-            }
-            
-            case( Global.blackKBNK ):
-            {
-                finalScore =  sideMult * EvaluateKBNK( Global.COLOUR_BLACK);
-                return finalScore;
-            }
+                case( Global.whiteKBNK ):
+                {
+                    finalScore = sideMult * -EvaluateKBNK( Global.COLOUR_WHITE);
+                    return finalScore;
+                }
                 
-            case( Global.whiteKRKB ):
-            {
-                finalScore =  sideMult * -EvaluateKRKB( Global.COLOUR_WHITE );
-                return finalScore;
-            }   
-            
-            case( Global.blackKRKB ):
-            {
-                finalScore =  sideMult * EvaluateKRKB( Global.COLOUR_BLACK );
-                return finalScore;
-            }
+                case( Global.blackKBNK ):
+                {
+                    finalScore =  sideMult * EvaluateKBNK( Global.COLOUR_BLACK);
+                    return finalScore;
+                }
+                    
+                case( Global.whiteKRKB ):
+                {
+                    finalScore =  sideMult * -EvaluateKRKB( Global.COLOUR_WHITE );
+                    return finalScore;
+                }   
                 
-             case( Global.whiteKRKN ):
-            {
-                finalScore =  sideMult * -EvaluateKRKN( Global.COLOUR_WHITE );
-                return finalScore;
-            }   
-            
-            case( Global.blackKRKN ):
-            {
-                finalScore =  sideMult * EvaluateKRKN( Global.COLOUR_BLACK );
-                return finalScore;
-            }
-            
-            case( Global.whiteKRKP ):
-            {
-                finalScore =  sideMult * -EvaluateKRKP( Global.COLOUR_WHITE, side );
-                return finalScore;
-            }   
-            
-            case( Global.blackKRKP ):
-            {
-                finalScore =  sideMult * EvaluateKRKP( Global.COLOUR_BLACK, side );
-                return finalScore;
-            }
-            
-            case( Global.whiteKPK ):
-            {
-               finalScore = sideMult * -EvaluateKPK( Global.COLOUR_WHITE, side, depth );
-               return finalScore;
-            }
+                case( Global.blackKRKB ):
+                {
+                    finalScore =  sideMult * EvaluateKRKB( Global.COLOUR_BLACK );
+                    return finalScore;
+                }
+                    
+                case( Global.whiteKRKN ):
+                {
+                    finalScore =  sideMult * -EvaluateKRKN( Global.COLOUR_WHITE );
+                    return finalScore;
+                }   
                 
-            case( Global.blackKPK ):
-            {
-                finalScore = sideMult * EvaluateKPK( Global.COLOUR_BLACK, side^1, depth );
-                return finalScore;
+                case( Global.blackKRKN ):
+                {
+                    finalScore =  sideMult * EvaluateKRKN( Global.COLOUR_BLACK );
+                    return finalScore;
+                }
+                
+                case( Global.whiteKRKP ):
+                {
+                    finalScore =  sideMult * -EvaluateKRKP( Global.COLOUR_WHITE, side );
+                    return finalScore;
+                }   
+                
+                case( Global.blackKRKP ):
+                {
+                    finalScore =  sideMult * EvaluateKRKP( Global.COLOUR_BLACK, side );
+                    return finalScore;
+                }
+                
+                case( Global.whiteKPK ):
+                {
+                    finalScore = sideMult * -EvaluateKPK( Global.COLOUR_WHITE, side, depth );
+                    return finalScore;
+                }
+                    
+                case( Global.blackKPK ):
+                {
+                    finalScore = sideMult * EvaluateKPK( Global.COLOUR_BLACK, side^1, depth );
+                    return finalScore;
+                }
             }
         }
         

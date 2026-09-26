@@ -56,16 +56,29 @@ abstract class Global {
     public static final int PIECE_PAWN = 5;
     public static final int PIECE_ALL = 6;
 
+   public static final int[] materialOffset = new int[] {1, //wRook
+                                                      81,   //wKnight 
+                                                      9,    //wBishop
+                                                      729,  //wQueen
+                                                      0,    //wKing
+                                                      6561, //wPawn
+                                                      3,    //bRook 
+                                                      243,  //bKnight
+                                                      27,   //bBishop
+                                                      2187, //bQueen 
+                                                      0,    //bKing
+                                                      59049};//bPawn
+
     public static final int whiteKBNK = 90;
     public static final int blackKBNK = 270;
     public static final int whiteKRKB = 28;
     public static final int blackKRKB = 12;
     public static final int whiteKRKN = 244;
     public static final int blackKRKN = 84;
-    public static final int whiteKRKP = 26245;
-    public static final int blackKRKP = 2919;
-    public static final int blackKPK = 26244;
-    public static final int whiteKPK = 2916;
+    public static final int whiteKRKP = 59050;
+    public static final int blackKRKP = 6564;
+    public static final int blackKPK = 59049;
+    public static final int whiteKPK = 6561;
     
     public static final int PLY = 4;
     public static final int HALF_EXTENSION = 2;
@@ -80,8 +93,6 @@ abstract class Global {
     public static final int values[] = new int[] {753,454,515,1421,20000,132,753,454,515,1421,20000,132};
 
     public static int totalValue;
-
-    public static final int[] materialOffset = new int[] {1, 81, 9, 729, 0, 2916, 3, 243, 27, 1458, 0, 26244};
 
     public static final int materialDraw = 999999;
 
