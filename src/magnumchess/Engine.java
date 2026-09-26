@@ -362,9 +362,6 @@ public final class Engine {
             numberOfMoves = GetAllMoves(theSide, moveArr);
         } else {
             numberOfMoves = getCheckEscapes(theSide, moveArr); 
-            if( numberOfMoves == 0) {
-                return "info string no legal move";
-            }
         }
 
         thisDepth = 0;
@@ -404,6 +401,12 @@ public final class Engine {
             }
             chessBoard.UnMake(moveArr[i], true);
         }
+
+        //no legal moves: checkmate or stalemate
+        if( numberOfMoves == 0) {
+            return "0000";
+        }
+
         sortMoves(0, numberOfMoves, moveArr, compareArray);
 
         //iteratively deepened search starting at depth 2
