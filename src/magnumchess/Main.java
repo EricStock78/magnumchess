@@ -183,6 +183,7 @@ public class Main
             }
             if(cmd.startsWith("position")) {
                 if(cmd.indexOf(("startpos"))!= -1) {
+                    Board.SetStartPosition();
                     int mstart = cmd.indexOf("moves");
                     if(mstart>-1) {
                         String moves = cmd.substring(mstart+5);

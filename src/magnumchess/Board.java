@@ -521,6 +521,13 @@ public final class Board {
      * sets the board up for a new game
      */
     public final void newGame() {
+        SetStartPosition();
+        Engine.resetHash();
+        Evaluation2.clearEvalHash();
+        Evaluation2.clearPawnHash();
+    }
+
+    public final void SetStartPosition() {
         ClearBoard();
         for(int i=0;i<64;i++) {
             if(init[i]!=-1) {
@@ -532,9 +539,6 @@ public final class Board {
         hashValue ^= CastleHash[Global.COLOUR_WHITE][castleFlag[Global.COLOUR_WHITE]];
         hashValue ^= passantHashW[passant[Global.COLOUR_WHITE]%9];
         hashValue ^= passantHashB[passant[Global.COLOUR_BLACK]%9];
-        Engine.resetHash();
-        Evaluation2.clearEvalHash();
-        Evaluation2.clearPawnHash();
     }
 
     /**
@@ -688,16 +692,18 @@ public final class Board {
             castleFlag[Global.COLOUR_BLACK] = Global.NO_CASTLE;
         }
         else {
-            if( fenArr[2].matches("[K]")) {
+            castleFlag[Global.COLOUR_WHITE] = Global.NO_CASTLE;
+            castleFlag[Global.COLOUR_BLACK] = Global.NO_CASTLE;
+            if( fenArr[2].contains("K")) {
                  castleFlag[Global.COLOUR_WHITE] |= Global.SHORT_CASTLE;
             }
-            if( fenArr[2].matches("[Q]")) {
+            if( fenArr[2].contains("Q")) {
                 castleFlag[Global.COLOUR_WHITE] |= Global.LONG_CASTLE;
             }
-            if( fenArr[2].matches("[k]")) {
+            if( fenArr[2].contains("k")) {
                  castleFlag[Global.COLOUR_BLACK] |= Global.SHORT_CASTLE;
             }
-            if( fenArr[2].matches("[q]")) {
+            if( fenArr[2].contains("q")) {
                 castleFlag[Global.COLOUR_BLACK] |= Global.LONG_CASTLE;
             }
             hashValue ^= CastleHash[Global.COLOUR_BLACK][castleFlag[Global.COLOUR_BLACK]];
@@ -707,11 +713,11 @@ public final class Board {
         /**process the passant square*/
         if( !fenArr[3].matches("[-]")) {  
             if(turn == Global.COLOUR_WHITE)  {  
-                passant[Global.COLOUR_BLACK] = ((fenArr[3].charAt(0) - 97) * 8) + fenArr[3].charAt(1) - 49;
+                passant[Global.COLOUR_BLACK] = ((fenArr[3].charAt(1) - 49) * 8) + fenArr[3].charAt(0) - 97;
                 hashValue ^= passantHashB[passant[Global.COLOUR_BLACK]%9];
             }
             else {
-                passant[Global.COLOUR_WHITE] = ((fenArr[3].charAt(0) - 97) * 8) + fenArr[3].charAt(1) - 49;
+                passant[Global.COLOUR_WHITE] = ((fenArr[3].charAt(1) - 49) * 8) + fenArr[3].charAt(0) - 97;
                 hashValue ^= passantHashW[passant[Global.COLOUR_WHITE]%9];
             }
         }
