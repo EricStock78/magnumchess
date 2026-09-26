@@ -1,0 +1,13 @@
+# Build output (dist/ is committed on purpose: it holds the release jar)
+build/
+MagnumDataWriter/build/
+*.class
+
+# Crash log written by Main on an uncaught exception
+error
+
+# IDE / OS files
+.vscode/
+.idea/
+*.iml
+Thumbs.db
